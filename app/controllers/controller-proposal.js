@@ -245,10 +245,10 @@ module.exports = {
           pn = "62" + pn.substring(3).trim()
         }
 
-        // const msgId = await sendWhatsapp({
-        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        //   text: "Proposal Atas Nama " + nama + " dan NIK " + nik_mustahiq + " pada program " + program_title + " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
-        // });
+        const msgId = await sendWhatsapp({
+          wa_number: pn.replace(/[^0-9\.]+/g, ""),
+          text: "Proposal Atas Nama " + nama + " dan NIK " + nik_mustahiq + " pada program " + program_title + " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
+        });
       }
 
       return res.status(200).json({

@@ -21,11 +21,11 @@ module.exports = {
       const user = await prisma.user.findUnique({
         include: {
           type: true
-       },
-        where: {          
+        },
+        where: {
           username,
-          user_type: { in: [10,11,15,16] },          
-       },
+          user_type: { in: [10, 11, 15, 16] },
+        },
       });
 
       if (!user) {

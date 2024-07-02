@@ -6,16 +6,16 @@ const sendWhatsapp = async ({ wa_number, text }) => {
   const agent = new https.Agent({
     rejectUnauthorized: false,
   });
-  
+
   let config = {
-    method: 'post',    
+    method: 'post',
     url: 'https://erpapi.zisindosat.id/v1/messages',
-    headers: { 
-      'Content-Type': 'application/json', 
+    headers: {
+      'Content-Type': 'application/json',
       'Authorization': 'Bearer secret'
     },
     httpsAgent: agent,
-    data : {
+    data: {
       "clientId": "ziswaf3",
       // "phone": "6289657528745",
       "phone": wa_number,
@@ -23,15 +23,16 @@ const sendWhatsapp = async ({ wa_number, text }) => {
     }
   };
 
-  const send = await axios.request(config)
-  .then((response) => {
-    console.log("----> WA SEND", JSON.stringify(response.data));
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+  // const send = await axios.request(config)
+  // .then((response) => {
+  //   console.log("----> WA SEND", JSON.stringify(response.data));
+  // })
+  // .catch((error) => {
+  //   console.log(error);
+  // });
 
-  return send;
+  // return send;
+  return true;
 };
 
 
