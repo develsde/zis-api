@@ -36,8 +36,10 @@
         "nodemailer": "^6.9.5",
         "nusantara-valid": "^0.4.0",
         "parsenik": "^1.0.3",
+        "patch-package": "^8.0.0",
         "path": "^0.12.7",
         "phone-formatter": "^0.0.2",
+        "postinstall-postinstall": "^2.1.0",
         "read-excel-file": "^5.7.1",
         "swiftmessageparser": "^1.2.1",
         "zod": "^3.22.4"
