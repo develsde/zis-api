@@ -1,10 +1,10 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
-
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
-
+const { midtransfer, cekstatus } = require("../helper/midtrans")
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", 8);
+const moment = require("moment")
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -25,7 +25,7 @@ module.exports = {
         program_title: {
           contains: keyword,
         },
-        isinternal:isinternal,
+        isinternal: isinternal,
         iswakaf: iswakaf,
         ...(category ? { program_category_id: Number(category) } : {}),
       };
@@ -129,7 +129,7 @@ module.exports = {
             },
           },
         }),
-      
+
         prisma.transactions.aggregate({
           where: {
             program_id: parseInt(id),
@@ -344,4 +344,247 @@ module.exports = {
       });
     }
   },
+
+  async getFormAct(req, res) {
+    try {
+      const id = req.params.id;
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+
+      const [count, programAct] = await prisma.$transaction([
+        prisma.program_form_activity.count({
+          where: {
+            program_id: Number(id),
+          },
+        }),
+        prisma.program_form_activity.findFirst({
+          where: {
+            program_id: Number(id),
+          },
+          include: {
+            program: {
+              select: {
+                program_id: true,
+                program_title: true,
+                program_activity_biaya: true
+              },
+            },
+          },
+        }),
+      ]);
+      console.log(programAct);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: programAct,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async postFormAct(req, res) {
+    try {
+      const {
+        program_registered_value,
+        program_form_id,
+        program_id,
+        program_registered_virtual_account,
+        program_registered_bank,
+      } = req.body;
+      console.log(req.body);
+      const program = await prisma.program.findUnique({
+        where: {
+          program_id: Number(program_id),
+        },
+        select: {
+          program_activity_biaya: true,
+        },
+      });
+
+      const program_biaya = program ? program.program_activity_biaya : 0;
+      let actResult;
+
+      if (program_biaya === 0) {
+        actResult = await prisma.program_registered_activity.create({
+          data: {
+            program: {
+              connect: {
+                program_id: Number(program_id),
+              },
+            },
+            program_form_activity: {
+              connect: {
+                id: Number(program_form_id),
+              },
+            },
+            program_registered_value,
+            program_registered_virtual_account,
+            program_registered_bank,
+          },
+        });
+
+        res.status(200).json({
+          message: "Sukses Kirim Data",
+          data: actResult,
+        });
+      } else if (program_biaya > 0) {
+        // const randomNumber = Math.floor(Math.random() * 999) + 1;
+        const timesg = String(+new Date());
+        const bayarkan = Number(program_biaya);
+
+        actResult = await prisma.program_registered_activity.create({
+          data: {
+            program: {
+              connect: {
+                program_id: Number(program_id),
+              },
+            },
+            program_form_activity: {
+              connect: {
+                id: Number(program_form_id),
+              },
+            },
+            program_registered_value,
+            program_registered_virtual_account: `${timesg}P${program_id}`,
+            program_registered_bank,
+          },
+        });
+
+        if (actResult) {
+          const midtrans = await midtransfer({
+            order: `${timesg}P${program_id}`,
+            price: bayarkan,
+          });
+
+          console.log(midtrans);
+
+          res.status(200).json({
+            message: "Sukses Kirim Data",
+            data: {
+              actResult,
+              midtrans,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async getRegAct(req, res) {
+    try {
+      const id = req.params.id;
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+
+      const [count, programAct] = await prisma.$transaction([
+        prisma.program_registered_activity.count({
+          where: {
+            program_registered_virtual_account: Number(id),
+          },
+        }),
+        prisma.program_registered_activity.findFirst({
+          where: {
+            program_registered_virtual_account: Number(id),
+          },
+          include: {
+            program: {
+              select: {
+                program_id: true,
+                program_title: true,
+                program_activity_biaya: true
+              },
+            },
+          },
+        }),
+      ]);
+      const stat = await cekstatus({
+        order: id,
+      });
+      console.log(stat);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data:
+        {
+          programAct,
+          stat
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async postMidTrans(req, res) {
+    try {
+      const {
+        order_id,
+        datetime,
+        amount,
+        midtrans_status_log,
+        status_transaction,
+        program_id,
+        register_id,
+        bank_selected_midtrans,
+        bank_va,
+        non_bank_account,
+        non_bank_selected_midtrans
+      } = req.body;
+      console.log(req.body);
+      const trans = await prisma.program_transaction_activity.findFirst({
+        where: {
+          order_id: order_id,
+        },
+      });
+      if (trans) {
+        return res.status(400).json({
+          message: "Order ID telah diverifikasi",
+        });
+      }
+      let actResult;
+
+      actResult = await prisma.program_transaction_activity.create({
+        data: {
+          program: {
+            connect: {
+              program_id: Number(program_id),
+            },
+          },
+          program_registered_activity: {
+            connect: {
+              id: Number(register_id),
+            },
+          },
+          order_id,
+          datetime: moment().toISOString(datetime),
+          amount: Number(amount),
+          midtrans_status_log,
+          status_transaction: Number(status_transaction),
+          bank_selected_midtrans,
+          bank_va,
+          non_bank_account,
+          non_bank_selected_midtrans,
+        },
+      });
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: actResult
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
 };

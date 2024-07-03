@@ -37,39 +37,43 @@ model institusi {
 }
 
 model program {
-  program_id            Int                     @id @default(autoincrement())
-  program_kode          String?                 @db.VarChar(10)
-  program_title         String                  @db.VarChar(100)
-  program_short_desc    String?                 @db.Text
-  program_start_date    DateTime?               @db.DateTime(0)
-  program_end_date      DateTime?               @db.DateTime(0)
-  program_description   String?                 @db.Text
-  program_institusi_id  Int?
-  program_target_amount BigInt
-  program_create        DateTime?               @default(now()) @db.Timestamp(0)
-  program_status        Int?                    @default(0) @db.SmallInt
-  program_isheadline    Int?                    @default(0) @db.SmallInt
-  program_banner_id     Int                     @unique
-  user_id               Int
-  program_category_id   Int?
-  beneficiary_id        Int?
-  kat_penyaluran_id     Int?
-  iswakaf               Int?                    @default(0) @db.SmallInt
-  program_wakaf_type    Int?                    @default(0)
-  isinternal            Int?                    @default(0) @db.SmallInt
-  budget                budget[]
-  mitra                 mitra[]
-  mitra_register        mitra_register[]
-  notification          notification[]
-  kategori_penyaluran   kategori_penyaluran?    @relation(fields: [kat_penyaluran_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_FK")
-  beneficiary           beneficiary?            @relation(fields: [beneficiary_id], references: [id])
-  program_banner        banners                 @relation(fields: [program_banner_id], references: [banners_id])
-  program_category      program_category?       @relation(fields: [program_category_id], references: [id])
-  program_institusi     institusi?              @relation(fields: [program_institusi_id], references: [institusi_id])
-  proposal              proposal[]
-  recurring_transaction recurring_transaction[]
-  transactions          transactions[]
-  waqif_register        waqif_register[]
+  program_id                   Int                            @id @default(autoincrement())
+  program_kode                 String?                        @db.VarChar(10)
+  program_title                String                         @db.VarChar(100)
+  program_short_desc           String?                        @db.Text
+  program_start_date           DateTime?                      @db.DateTime(0)
+  program_end_date             DateTime?                      @db.DateTime(0)
+  program_description          String?                        @db.Text
+  program_institusi_id         Int?
+  program_target_amount        BigInt
+  program_create               DateTime?                      @default(now()) @db.Timestamp(0)
+  program_status               Int?                           @default(0) @db.SmallInt
+  program_isheadline           Int?                           @default(0) @db.SmallInt
+  program_banner_id            Int                            @unique
+  user_id                      Int
+  program_category_id          Int?
+  beneficiary_id               Int?
+  kat_penyaluran_id            Int?
+  iswakaf                      Int?                           @default(0) @db.SmallInt
+  program_wakaf_type           Int?                           @default(0)
+  isinternal                   Int?                           @default(0) @db.SmallInt
+  program_activity_biaya       Int?                           @default(0)
+  budget                       budget[]
+  mitra                        mitra[]
+  mitra_register               mitra_register[]
+  notification                 notification[]
+  kategori_penyaluran          kategori_penyaluran?           @relation(fields: [kat_penyaluran_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_FK")
+  beneficiary                  beneficiary?                   @relation(fields: [beneficiary_id], references: [id])
+  program_banner               banners                        @relation(fields: [program_banner_id], references: [banners_id])
+  program_category             program_category?              @relation(fields: [program_category_id], references: [id])
+  program_institusi            institusi?                     @relation(fields: [program_institusi_id], references: [institusi_id])
+  program_form_activity        program_form_activity[]
+  program_registered_activity  program_registered_activity[]
+  program_transaction_activity program_transaction_activity[]
+  proposal                     proposal[]
+  recurring_transaction        recurring_transaction[]
+  transactions                 transactions[]
+  waqif_register               waqif_register[]
 
   @@index([program_institusi_id], map: "program_program_institusi_id_fkey")
   @@index([beneficiary_id], map: "program_beneficiary_id_fkey")
@@ -975,4 +979,53 @@ model mitra_penarikan_dana {
   mitra        mitra?    @relation(fields: [mitra_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mitra_penarikan_dana_mitra_FK")
 
   @@index([mitra_id], map: "mitra_penarikan_dana_mitra_FK")
+}
+
+model program_form_activity {
+  id                          Int                           @id @default(autoincrement())
+  create_date                 DateTime?                     @default(now()) @db.Timestamp(0)
+  program_id                  Int?
+  program_form                String?                       @db.LongText
+  program_form_status         Int?                          @default(1) @db.SmallInt
+  program                     program?                      @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_form_activity_program_FK")
+  program_registered_activity program_registered_activity[]
+
+  @@index([program_id], map: "program_form_activity_program_FK")
+}
+
+model program_registered_activity {
+  id                                 Int                            @id @default(autoincrement())
+  create_date                        DateTime?                      @default(now()) @db.Timestamp(0)
+  program_registered_value           String?                        @db.LongText
+  program_form_id                    Int?
+  program_id                         Int?
+  program_registered_virtual_account String?                        @db.VarChar(30)
+  program_registered_bank            String?                        @db.VarChar(20)
+  program                            program?                       @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_registered_activity_program_FK")
+  program_form_activity              program_form_activity?         @relation(fields: [program_form_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_registered_activity_program_form_activity_FK")
+  program_transaction_activity       program_transaction_activity[]
+
+  @@index([program_id], map: "program_registered_activity_program_FK")
+  @@index([program_form_id], map: "program_registered_activity_program_form_activity_FK")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model program_transaction_activity {
+  id                          Int                          @id @default(autoincrement())
+  order_id                    String?                      @db.VarChar(25)
+  datetime                    DateTime?                    @db.DateTime(0)
+  amount                      Int?                         @default(0)
+  midtrans_status_log         String?                      @db.Text
+  status_transaction          Int?                         @default(0)
+  program_id                  Int?
+  register_id                 Int?
+  bank_selected_midtrans      String?                      @db.VarChar(25)
+  bank_va                     String?                      @db.VarChar(25)
+  non_bank_account            String?                      @db.VarChar(25)
+  non_bank_selected_midtrans  String?                      @db.VarChar(25)
+  program                     program?                     @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_transaction_activity_program_FK")
+  program_registered_activity program_registered_activity? @relation(fields: [register_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_transaction_activity_program_registered_activity_FK")
+
+  @@index([program_id], map: "program_transaction_activity_program_FK")
+  @@index([register_id], map: "program_transaction_activity_program_registered_activity_FK")
 }
