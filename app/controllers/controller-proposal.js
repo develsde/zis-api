@@ -240,9 +240,9 @@ module.exports = {
         let pn = no_telp_pemberi_rekomendasi
         pn = pn.replace(/\D/g, '');
         if (pn.substring(0, 1) == '0') {
-          pn = "62" + pn.substring(1).trim()
+          pn = "0" + pn.substring(1).trim()
         } else if (pn.substring(0, 3) == '62') {
-          pn = "62" + pn.substring(3).trim()
+          pn = "0" + pn.substring(3).trim()
         }
 
         const msgId = await sendWhatsapp({
