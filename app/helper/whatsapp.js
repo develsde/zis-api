@@ -12,7 +12,7 @@ const sendWhatsapp = async ({ wa_number, text }) => {
     url: 'https://erpapi.zisindosat.id/wapi/send_message',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer secret'
+      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUB6aXNpbmRvc2F0LmlkIiwiaWF0IjoxNzIwMDEzODQ5LCJhdWQiOlsiMTIzNDU2Nzg5Il0sImlzcyI6InozcjBieXRlcyJ9.7Ooh3xUkhG-f_jAPNBCm7LxWV3E751W0JpgTN8ys-Ss'
     },
     httpsAgent: agent,
     data: {
