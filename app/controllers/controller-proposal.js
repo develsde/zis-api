@@ -603,9 +603,9 @@ module.exports = {
         !id ||
         !user_id ||
         !program_id ||
-        !proposal_kategori ||
-        !nama_pemberi_rekomendasi ||
-        !alamat_pemberi_rekomendasi ||
+        // !proposal_kategori ||
+        // !nama_pemberi_rekomendasi ||
+        // !alamat_pemberi_rekomendasi ||
         !no_telp_pemberi_rekomendasi
       ) {
         return res.status(400).json({
