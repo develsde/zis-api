@@ -16,23 +16,22 @@ const sendWhatsapp = async ({ wa_number, text }) => {
     },
     httpsAgent: agent,
     data: {
-      "client_d": "e84b1720148217601",
-      // "phone": "6289657528745",
+      "client_id": "e84b1720148217601",
       "number": wa_number,
       "message": text,
     }
   };
 
-  // const send = await axios.request(config)
-  // .then((response) => {
-  //   console.log("----> WA SEND", JSON.stringify(response.data));
-  // })
-  // .catch((error) => {
-  //   console.log(error);
-  // });
+  const send = await axios.request(config)
+  .then((response) => {
+    console.log("----> WA SEND", JSON.stringify(response.data));
+  })
+  .catch((error) => {
+    console.log(error);
+  });
 
-  // return send;
-  return true;
+  return send;
+  // return true;
 };
 
 

@@ -240,9 +240,9 @@ module.exports = {
         let pn = no_telp_pemberi_rekomendasi
         pn = pn.replace(/\D/g, '');
         if (pn.substring(0, 1) == '0') {
-          pn = "62" + pn.substring(1).trim()
+          pn = "0" + pn.substring(1).trim()
         } else if (pn.substring(0, 3) == '62') {
-          pn = "62" + pn.substring(3).trim()
+          pn = "0" + pn.substring(3).trim()
         }
 
         const msgId = await sendWhatsapp({
@@ -419,9 +419,9 @@ module.exports = {
           let pn = no_telp_pemberi_rekomendasi
           pn = pn.replace(/\D/g, '');
           if (pn.substring(0, 1) == '0') {
-            pn = "62" + pn.substring(1).trim()
+            pn = "0" + pn.substring(1).trim()
           } else if (pn.substring(0, 3) == '62') {
-            pn = "62" + pn.substring(3).trim()
+            pn = "0" + pn.substring(3).trim()
           }
 
           const msgId = await sendWhatsapp({
@@ -516,9 +516,9 @@ module.exports = {
 
           let pn = ref
           if (pn.substring(0, 1) == '0') {
-            pn = "62" + pn.substring(1).trim()
+            pn = "0" + pn.substring(1).trim()
           } else if (pn.substring(0, 3) == '+62') {
-            pn = "62" + pn.substring(3).trim()
+            pn = "0" + pn.substring(3).trim()
           }
 
           const formattedDana = proposal.dana_yang_disetujui.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
@@ -603,9 +603,9 @@ module.exports = {
         !id ||
         !user_id ||
         !program_id ||
-        !proposal_kategori ||
-        !nama_pemberi_rekomendasi ||
-        !alamat_pemberi_rekomendasi ||
+        // !proposal_kategori ||
+        // !nama_pemberi_rekomendasi ||
+        // !alamat_pemberi_rekomendasi ||
         !no_telp_pemberi_rekomendasi
       ) {
         return res.status(400).json({

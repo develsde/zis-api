@@ -376,6 +376,15 @@ module.exports = {
           message: "Gagal Tambah Program",
         });
       }
+      // if (program){
+      //   if (program_cat_id == 100) {
+      //     await prisma.program_form_activity.create({
+      //       data: {
+      //         program_id: program.program_id
+      //       }
+      //     })
+      //   }
+      // }
 
       res.status(200).json({
         message: "Sukses Tambah Program",
@@ -631,4 +640,51 @@ module.exports = {
       });
     }
   },
+
+  // async createForm(req, res) {
+  //   try {
+  //     const id = req.params.id;
+  //     const program_id = req.body.program_id;
+  //     const program_form = req.body.program_form;
+  //     const program_activity_biaya = req.body.program_activity_biaya
+
+  //     const program_biaya = await prisma.program.findUnique({
+  //       where: {
+  //         program_id: Number(program_id)
+  //       },
+  //       select: {
+  //         program_activity_biaya: true
+  //       }
+  //     })
+
+  //     if (program_activity_biaya != program_biaya) {
+  //       await prisma.program.update({
+  //         where: {
+  //           program_id: Number(program_id)
+  //         },
+  //         data: {
+  //           program_activity_biaya: Number(program_activity_biaya)
+  //         }
+  //       })
+  //     }
+
+  //     const form = await prisma.program_form_activity.update({
+  //       where: {
+  //         id: Number(id),
+  //       },
+  //       data: {
+  //         program_form: program_form
+  //       },
+  //     });
+
+  //     res.status(200).json({
+  //       message: "Berhasil membuat form",
+  //       data: form,
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({
+  //       message: error?.message,
+  //     });
+  //   }
+  // },
 };
