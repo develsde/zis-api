@@ -587,4 +587,132 @@ module.exports = {
     }
   },
 
+  async postAdditionalActivity(req, res) {
+    try {
+      const {
+        nama,
+        no_wa,
+        email,
+        province_id,
+        city_id,
+        district_id,
+        alamat,
+        kodepos,
+        jumlah_peserta,
+        paket_id,
+        zakat,
+        wakaf,
+        total_biaya,
+        excel,
+        iskomunitas,
+        nama_komunitas,
+        program_id,
+        nama_user,
+        no_wa_user,
+        ukuran,
+        gender,
+        no_peserta = '0',
+      } = req.body;
+      console.log(req.body);
+
+      // const program_biaya = program ? program.program_activity_biaya : 0;
+      let actResult;
+
+      actResult = await prisma.activity_additional.create({
+        data: {
+          nama,
+          no_wa,
+          email,
+          province_id: Number(province_id),
+          city_id: Number(city_id),
+          district_id: Number(district_id),
+          alamat,
+          kodepos,
+          jumlah_peserta,
+          activity_paket: {
+            connect: {
+              id: Number(paket_id)
+            },
+          },
+          zakat,
+          wakaf,
+          total_biaya,
+          excel,
+          iskomunitas,
+          nama_komunitas,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: actResult,
+      });
+
+      if (actResult && iskomunitas === 1) {
+        const accUser = await prisma.activity_user.create({
+          data: {
+            program: {
+              connect: {
+                program_id: Number(program_id)
+              }
+            },
+            additional_id: Number(actResult.id),
+            nama: nama_user,
+            no_wa: no_wa_user,
+            ukuran,
+            gender,
+            no_peserta
+          },
+        });
+
+        res.status(200).json({
+          message: "Sukses Kirim Data",
+          data: accUser,
+        });
+      } else if (actResult && iskomunitas === 0) {
+        const accUser = await prisma.activity_user.createMany({
+          data: {
+            program: {
+              connect: {
+                program_id: Number(program_id)
+              }
+            },
+            additional_id: Number(actResult.id),
+            nama,
+            no_wa,
+            ukuran,
+            gender,
+            no_peserta: '0'
+          },
+        });
+
+        res.status(200).json({
+          message: "Sukses Kirim Data",
+          data: accUser,
+        });
+      }
+      // if (actResult) {
+      //   const midtrans = await midtransfer({
+      //     order: `${timesg}P${program_id}`,
+      //     price: bayarkan,
+      //   });
+
+      //   console.log(midtrans);
+
+      //   res.status(200).json({
+      //     message: "Sukses Kirim Data",
+      //     data: {
+      //       actResult,
+      //       midtrans,
+      //     },
+      //   });
+      // }
+
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
 };

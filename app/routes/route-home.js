@@ -14,5 +14,6 @@ router.get("/formAct/:id", home.getFormAct);
 router.post("/sendAct", home.postFormAct);
 router.get("/regAct/:id", home.getRegAct);
 router.post("/postMidTrans", home.postMidTrans);
+router.post("/postAdd", home.postAdditionalActivity);
 
 module.exports = router;
