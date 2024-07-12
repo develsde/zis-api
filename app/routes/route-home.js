@@ -14,6 +14,12 @@ router.get("/formAct/:id", home.getFormAct);
 router.post("/sendAct", home.postFormAct);
 router.get("/regAct/:id", home.getRegAct);
 router.post("/postMidTrans", home.postMidTrans);
-router.post("/postAdd", home.postAdditionalActivity);
+router.post("/act-add", upload.single("excel"), home.postAdditionalActivity)
+
+router.post("/addPaket", home.postPaket)
+router.put("/editPaket/:id", home.putPaket)
+router.delete("/delPaket/:id", home.delPaket)
+router.get("/getActAdd", home.getAdditional)
+router.get("/getActUser/:id", home.getActUser)
 
 module.exports = router;
