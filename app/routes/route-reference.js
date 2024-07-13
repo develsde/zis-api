@@ -32,5 +32,5 @@ router.get("/institusi/:id", refData.institusi)
 router.get("/glaccBayar", authentication, refData.glaccountPerBayar);
 router.post("/imkasSaldo", refData.checkImkas)
 
-router.get("/activity-paket", refData.paket);
+router.get("/activity-paket/:id", refData.paket);
 module.exports = router;

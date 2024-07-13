@@ -798,7 +798,7 @@ module.exports = {
     try {
       const { program_id, kategori, biaya, keterangan } = req.body;
 
-      const postResult = await prisma.activity_additional.create({
+      const postResult = await prisma.activity_paket.create({
         data: {
           program: {
             connect: {
@@ -827,9 +827,9 @@ module.exports = {
       const { kategori, biaya, keterangan } = req.body;
       const id = req.params.id;
 
-      const putResult = await prisma.activity_additional.update({
+      const putResult = await prisma.activity_paket.update({
         where: {
-          id: Number(id),
+          id: Number(id)
         },
         data: {
           kategori,
@@ -853,7 +853,7 @@ module.exports = {
     try {
       const id = req.params.id;
 
-      const delResult = await prisma.activity_additional.delete({
+      const delResult = await prisma.activity_paket.delete({
         where: {
           id: Number(id),
         },

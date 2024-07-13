@@ -997,13 +997,14 @@ module.exports = {
       });
     }
   },
-  
+
   async paket(req, res) {
     try {
-      //const userId = req.user_id;
-
+      const id_program = req.params.id;
       const paket = await prisma.activity_paket.findMany({
-
+        where: {
+          program_id: Number(id_program),
+        },
       });
 
       if (!paket) {
