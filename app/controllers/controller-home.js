@@ -5,6 +5,7 @@ const { z } = require("zod");
 const { midtransfer, cekstatus } = require("../helper/midtrans")
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", 8);
 const moment = require("moment")
+const ExcelJS = require('exceljs')
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -583,6 +584,378 @@ module.exports = {
     } catch (error) {
       res.status(500).json({
         message: error.message,
+      });
+    }
+  },
+
+  async postAdditionalActivity(req, res) {
+    try {
+      const {
+        nama,
+        no_wa,
+        email,
+        province_id,
+        city_id,
+        district_id,
+        alamat,
+        kodepos,
+        jumlah_peserta,
+        paket_id,
+        zakat,
+        wakaf,
+        jasa_kirim,
+        ongkir,
+        // total_biaya,
+        // excel,
+        iskomunitas,
+        nama_komunitas,
+        program_id,
+        // nama_user,
+        // no_wa_user,
+        ukuran,
+        gender,
+        // no_peserta = '0',
+      } = req.body;
+      console.log(req.body);
+
+      let file = req.file;
+
+      if (iskomunitas == 1) {
+        if (!file) {
+          return res.status(400).json({
+            message: "File excel harus diupload",
+          });
+        }
+
+        const maxSize = 5000000;
+        if (file.size > maxSize) {
+          await fs.unlink(file.path);
+
+          return res.status(400).json({
+            message: "Ukuran File Terlalu Besar",
+          });
+        }
+      }
+
+      const paket = await prisma.activity_paket.findUnique({
+        where: {
+          id: Number(paket_id),
+        },
+      });
+      let biaya_paket = paket ? paket.biaya : 0;
+      let zak = zakat ? zakat : 0;
+      let wak = wakaf ? wakaf : 0;
+      let ong = ongkir ? ongkir : 0;
+      let total = Number(biaya_paket) + Number(zak) + Number(wak) + Number(ong)
+      let actResult;
+
+      actResult = await prisma.activity_additional.create({
+        data: {
+          nama,
+          program: {
+            connect: {
+              program_id: Number(program_id),
+            },
+          },
+          no_wa,
+          activity_paket: {
+            connect: {
+              id: Number(paket_id),
+            },
+          },
+          email,
+          // provinces: {
+          //   connect: {
+          //     prov_id: Number(province_id),
+          //   },
+          // },
+          province_id: Number(province_id),
+          // cities: {
+          //   connect: {
+          //     city_id: Number(city_id),
+          //   },
+          // },
+          city_id: Number(city_id),
+          // districts: {
+          //   connect: {
+          //     dis_id: Number(district_id),
+          //   },
+          // },
+          district_id: Number(district_id),
+          alamat,
+          kodepos,
+          jumlah_peserta: Number(jumlah_peserta),
+          activity_paket: {
+            connect: {
+              id: Number(paket_id),
+            }
+          },
+          zakat: zak,
+          wakaf: wak,
+          jasa_kirim,
+          ongkir: ong,
+          total_biaya: Number(total),
+          excel: `uploads/${file.filename}`,
+          iskomunitas: Number(iskomunitas),
+          nama_komunitas,
+        },
+      });
+
+      const timesg = String(+new Date());
+      if (actResult) {
+        const midtrans = await midtransfer({
+          order: `${timesg}P${program_id}A${actResult?.id}`,
+          price: total,
+        });
+
+        if (actResult && iskomunitas == 0) {
+          const accUser = await prisma.activity_user.create({
+            data: {
+              program: {
+                connect: {
+                  program_id: Number(program_id),
+                },
+              },
+              // activity_additional: {
+              //   connect: {
+              //     id: Number(actResult.id),
+              //   },
+              // },
+              additional_id: Number(actResult?.id),
+              nama: nama,
+              no_wa: no_wa,
+              ukuran,
+              gender,
+              // no_peserta
+            },
+          });
+  
+          const no_peserta = String(accUser.id).padStart(6, "0");
+          await prisma.activity_user.update({
+            where: { id: accUser.id },
+            data: { no_peserta },
+          });
+  
+          res.status(200).json({
+            message: "Sukses Kirim Data",
+            data: {
+              accUser,
+              actResult,
+              midtrans
+            },
+          });
+        } else if (actResult && iskomunitas == 1) {
+          const workbook = new ExcelJS.Workbook();
+          await workbook.xlsx.readFile(file.path);
+          const worksheet = workbook.getWorksheet(1);
+  
+          await workbook.xlsx.writeFile(file.path);
+  
+          let users = [];
+          console.log(users);
+          worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber > 1) {
+              const user = {
+                program_id: Number(program_id),
+                additional_id: Number(actResult?.id),
+                //samain rownya nanti
+                nama: row.getCell("A").value,
+                no_wa: row.getCell("B").value,
+                ukuran: row.getCell("C").value,
+                gender: row.getCell("D").value,
+              };
+              users.push(user);
+            }
+          });
+  
+          const createdUsers = [];
+          for (let i = 0; i < users.length; i++) {
+            const createdUser = await prisma.activity_user.create({
+              data: users[i],
+            });
+  
+            const no_peserta = String(createdUser.id).padStart(6, '0');
+            await prisma.activity_user.update({
+              where: { id: createdUser.id },
+              data: { no_peserta },
+            });
+  
+            createdUsers.push(createdUser);
+          }
+  
+          return res.status(200).json({
+            message: "Sukses Kirim Data",
+            data: {
+              createdUsers,
+              actResult,
+              midtrans
+            },
+          });
+        }
+      }
+
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async postPaket(req, res) {
+    try {
+      const { program_id, kategori, biaya, keterangan } = req.body;
+
+      const postResult = await prisma.activity_paket.create({
+        data: {
+          program: {
+            connect: {
+              program_id: Number(program_id),
+            },
+          },
+          kategori,
+          biaya: Number(biaya),
+          keterangan,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: postResult,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async putPaket(req, res) {
+    try {
+      const { kategori, biaya, keterangan } = req.body;
+      const id = req.params.id;
+
+      const putResult = await prisma.activity_paket.update({
+        where: {
+          id: Number(id)
+        },
+        data: {
+          kategori,
+          biaya: Number(biaya),
+          keterangan,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ubah Data",
+        data: putResult,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async delPaket(req, res) {
+    try {
+      const id = req.params.id;
+
+      const delResult = await prisma.activity_paket.delete({
+        where: {
+          id: Number(id),
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Hapus Data",
+        data: delResult,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async getAdditional(req, res) {
+    try {
+      const id = req.params.id;
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+
+      const [count, ActAdditional] = await prisma.$transaction([
+        prisma.activity_additional.count({
+          // where: {
+          //   program_id: Number(id),
+          // },
+        }),
+        prisma.activity_additional.findMany({
+          // where: {
+          //   program_id: Number(id),
+          // },
+          include: {
+            program: {
+              select: {
+                program_id: true,
+                program_title: true,
+                program_activity_biaya: true,
+              },
+            },
+            provinces: true,
+            cities: true,
+            districts: true,
+            activity_paket: true,
+          },
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ubah Data",
+        data: ActAdditional,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getActUser(req, res) {
+    try {
+      const id = req.params.id;
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+
+      const [count, ActUser] = await prisma.$transaction([
+        prisma.activity_user.count({
+          where: {
+            additional_id: Number(id),
+          },
+        }),
+        prisma.activity_user.findMany({
+          where: {
+            additional_id: Number(id),
+          },
+          include: {
+            program: {
+              select: {
+                program_id: true,
+                program_title: true,
+                program_activity_biaya: true,
+              },
+            },
+            activity_additional: true,
+          },
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ubah Data",
+        data: ActUser,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
       });
     }
   },

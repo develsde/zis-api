@@ -1058,11 +1058,11 @@ model activity_additional {
   program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
   activity_user  activity_user[]
 
-  @@index([program_id], map: "activity_additional_program_FK")
   @@index([province_id], map: "activity_additional_unique")
   @@index([city_id], map: "activity_additional_unique_1")
   @@index([district_id], map: "activity_additional_unique_2")
   @@index([paket_id], map: "activity_additional_unique_3")
+  @@index([program_id], map: "activity_additional_program_FK")
 }
 
 model activity_paket {
