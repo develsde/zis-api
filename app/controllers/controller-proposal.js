@@ -541,7 +541,7 @@ module.exports = {
   },
 
 
-  async doneProposalRev(req, res) {
+  async doneProposal(req, res) {
     try {
       const id = req.params.id
       const ispaid = req.body.ispaid;
