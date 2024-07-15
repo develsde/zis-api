@@ -58,6 +58,9 @@ model program {
   program_wakaf_type           Int?                           @default(0)
   isinternal                   Int?                           @default(0) @db.SmallInt
   program_activity_biaya       Int?                           @default(0)
+  activity_additional          activity_additional[]
+  activity_paket               activity_paket[]
+  activity_user                activity_user[]
   budget                       budget[]
   mitra                        mitra[]
   mitra_register               mitra_register[]
@@ -1028,4 +1031,73 @@ model program_transaction_activity {
 
   @@index([program_id], map: "program_transaction_activity_program_FK")
   @@index([register_id], map: "program_transaction_activity_program_registered_activity_FK")
+}
+
+model activity_additional {
+  id             Int             @id @default(autoincrement())
+  program_id     Int
+  nama           String?         @db.VarChar(100)
+  no_wa          String?         @db.VarChar(15)
+  email          String?         @db.VarChar(150)
+  province_id    Int
+  city_id        Int
+  district_id    Int
+  alamat         String?         @db.Text
+  kodepos        String?         @db.VarChar(10)
+  jumlah_peserta Int?
+  paket_id       Int
+  zakat          Int?
+  wakaf          Int?
+  jasa_kirim     String?         @db.VarChar(100)
+  ongkir         Int?
+  total_biaya    Int?
+  excel          String?         @db.Text
+  iskomunitas    Int?            @default(0) @db.SmallInt
+  nama_komunitas String?         @db.VarChar(100)
+  activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
+  program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
+  activity_user  activity_user[]
+
+  @@index([program_id], map: "activity_additional_program_FK")
+  @@index([province_id], map: "activity_additional_unique")
+  @@index([city_id], map: "activity_additional_unique_1")
+  @@index([district_id], map: "activity_additional_unique_2")
+  @@index([paket_id], map: "activity_additional_unique_3")
+}
+
+model activity_paket {
+  id                  Int                   @id @default(autoincrement())
+  program_id          Int
+  kategori            String?               @db.VarChar(100)
+  biaya               Int?
+  keterangan          String?               @db.Text
+  activity_additional activity_additional[]
+  program             program               @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_paket_program_FK")
+
+  @@index([program_id], map: "activity_paket_unique")
+}
+
+model activity_user {
+  id                  Int                 @id @default(autoincrement())
+  program_id          Int
+  additional_id       Int
+  nama                String?             @db.VarChar(100)
+  no_wa               String?             @db.VarChar(15)
+  ukuran              String?             @db.VarChar(100)
+  gender              String?             @db.VarChar(2)
+  no_peserta          String?             @db.VarChar(6)
+  activity_additional activity_additional @relation(fields: [additional_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_user_activity_additional_FK")
+  program             program             @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_user_program_FK")
+
+  @@index([program_id], map: "activity_user_unique")
+  @@index([additional_id], map: "activity_user_unique_1")
+}
+
+model imkas_trans {
+  id                Int       @id @default(autoincrement())
+  imkas_ref_number  Int?
+  imkas_amount      Int       @default(0)
+  imkas_datetime    DateTime? @default(now()) @db.Timestamp(0)
+  imkas_proposal_id Int?
+  imkas_no          String?   @db.VarChar(15)
 }
