@@ -2,10 +2,15 @@ const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
-const { midtransfer, cekstatus } = require("../helper/midtrans")
-const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", 8);
-const moment = require("moment")
-const ExcelJS = require('exceljs')
+const { midtransfer, cekstatus } = require("../helper/midtrans");
+const nanoid = customAlphabet(
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+  8
+);
+const moment = require("moment");
+const ExcelJS = require("exceljs");
+const axios = require("axios");
+const qs = require("qs")
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -168,11 +173,20 @@ module.exports = {
   async registerProgram(req, res) {
     try {
       const schema = z.object({
-        program_title: z.string({ required_error: "Judul Harus Diisi" }).min(3, "Judul Terlalu Pendek").max(255),
+        program_title: z
+          .string({ required_error: "Judul Harus Diisi" })
+          .min(3, "Judul Terlalu Pendek")
+          .max(255),
         program_short_desc: z.string().optional(),
-        program_start_date: z.date({ required_error: "Tanggal Mulai Harus Diisi" }),
-        program_end_date: z.date({ required_error: "Tanggal Berakhir Harus Diisi" }),
-        program_description: z.string({ required_error: "Deskripsi Harus Diis" }).min(3),
+        program_start_date: z.date({
+          required_error: "Tanggal Mulai Harus Diisi",
+        }),
+        program_end_date: z.date({
+          required_error: "Tanggal Berakhir Harus Diisi",
+        }),
+        program_description: z
+          .string({ required_error: "Deskripsi Harus Diis" })
+          .min(3),
         program_institusi_id: z.number().optional(),
         program_target_amount: z.number({
           required_error: "Target Dana Harus Diisi",
@@ -189,10 +203,12 @@ module.exports = {
         program_end_date: new Date(req.body.program_end_date),
         program_start_date: new Date(req.body.program_start_date),
         program_target_amount: Number(req.body.program_target_amount),
-        program_institusi_id: req.body.program_institusi_id ? parseInt(req.body.program_institusi_id) : undefined,
+        program_institusi_id: req.body.program_institusi_id
+          ? parseInt(req.body.program_institusi_id)
+          : undefined,
       });
 
-      const program_cat_id = Number(req.body.program_category_id)
+      const program_cat_id = Number(req.body.program_category_id);
 
       let errorObj = {};
 
@@ -231,7 +247,7 @@ module.exports = {
       const { program_institusi_id, ...rest } = body.data;
 
       const userId = req.user_id;
-      console.log(body)
+      console.log(body);
       const program = await prisma.program.create({
         data: {
           ...rest,
@@ -261,12 +277,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -284,7 +300,8 @@ module.exports = {
               user_id: Number(userId),
             },
           },
-          description: "Program Anda Telah Berhasil Dibuat, Silahkan Tunggu Konfirmasi Dari Admin",
+          description:
+            "Program Anda Telah Berhasil Dibuat, Silahkan Tunggu Konfirmasi Dari Admin",
           title: "Program Baru",
           type: "program",
           program: {
@@ -297,7 +314,12 @@ module.exports = {
 
       res.status(200).json({
         message: "Sukses Tambah Program",
-        data: JSON.parse(JSON.stringify({ ...program, program_target_amount: Number(program.program_target_amount) })),
+        data: JSON.parse(
+          JSON.stringify({
+            ...program,
+            program_target_amount: Number(program.program_target_amount),
+          })
+        ),
       });
     } catch (error) {
       res.status(500).json({
@@ -317,7 +339,7 @@ module.exports = {
         where: {
           program_status: 1,
           program_isheadline: 1,
-          iswakaf: iswakaf
+          iswakaf: iswakaf,
         },
         include: {
           program_banner: {
@@ -368,7 +390,7 @@ module.exports = {
               select: {
                 program_id: true,
                 program_title: true,
-                program_activity_biaya: true
+                program_activity_biaya: true,
               },
             },
           },
@@ -501,7 +523,7 @@ module.exports = {
               select: {
                 program_id: true,
                 program_title: true,
-                program_activity_biaya: true
+                program_activity_biaya: true,
               },
             },
           },
@@ -513,10 +535,9 @@ module.exports = {
       console.log(stat);
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data:
-        {
+        data: {
           programAct,
-          stat
+          stat,
         },
       });
     } catch (error) {
@@ -539,7 +560,7 @@ module.exports = {
         bank_selected_midtrans,
         bank_va,
         non_bank_account,
-        non_bank_selected_midtrans
+        non_bank_selected_midtrans,
       } = req.body;
       console.log(req.body);
       const trans = await prisma.program_transaction_activity.findFirst({
@@ -579,7 +600,7 @@ module.exports = {
       });
       res.status(200).json({
         message: "Sukses Kirim Data",
-        data: actResult
+        data: actResult,
       });
     } catch (error) {
       res.status(500).json({
@@ -605,8 +626,8 @@ module.exports = {
         wakaf,
         jasa_kirim,
         ongkir,
-        // total_biaya,
-        // excel,
+        jasa_kirim_barang,
+        etd,
         iskomunitas,
         nama_komunitas,
         program_id,
@@ -646,67 +667,104 @@ module.exports = {
       let zak = zakat ? zakat : 0;
       let wak = wakaf ? wakaf : 0;
       let ong = ongkir ? ongkir : 0;
-      let total = Number(biaya_paket) + Number(zak) + Number(wak) + Number(ong)
+      let total = Number(biaya_paket) + Number(zak) + Number(wak) + Number(ong);
       let actResult;
 
-      actResult = await prisma.activity_additional.create({
-        data: {
-          nama,
-          program: {
-            connect: {
-              program_id: Number(program_id),
-            },
+      // actResult = await prisma.activity_additional.create({
+      //   data: {
+      //     nama,
+      //     program: {
+      //       connect: {
+      //         program_id: Number(program_id),
+      //       },
+      //     },
+      //     no_wa,
+      //     activity_paket: {
+      //       connect: {
+      //         id: Number(paket_id),
+      //       },
+      //     },
+      //     email,
+      //     // provinces: {
+      //     //   connect: {
+      //     //     prov_id: Number(province_id),
+      //     //   },
+      //     // },
+      //     province_id: Number(province_id),
+      //     // cities: {
+      //     //   connect: {
+      //     //     city_id: Number(city_id),
+      //     //   },
+      //     // },
+      //     city_id: Number(city_id),
+      //     // districts: {
+      //     //   connect: {
+      //     //     dis_id: Number(district_id),
+      //     //   },
+      //     // },
+      //     district_id: Number(district_id),
+      //     alamat,
+      //     kodepos,
+      //     jumlah_peserta: Number(jumlah_peserta),
+      //     activity_paket: {
+      //       connect: {
+      //         id: Number(paket_id),
+      //       },
+      //     },
+      //     zakat: zak,
+      //     wakaf: wak,
+      //     jasa_kirim,
+      //     layanan_kirim: jasa_kirim_barang,
+      //     etd,
+      //     ongkir: ong,
+      //     total_biaya: Number(total),
+      //     excel: `uploads/${file.filename}`,
+      //     iskomunitas: Number(iskomunitas),
+      //     nama_komunitas,
+      //   },
+      // });
+
+      let data = {
+        nama,
+        program: {
+          connect: {
+            program_id: Number(program_id),
           },
-          no_wa,
-          activity_paket: {
-            connect: {
-              id: Number(paket_id),
-            },
-          },
-          email,
-          // provinces: {
-          //   connect: {
-          //     prov_id: Number(province_id),
-          //   },
-          // },
-          province_id: Number(province_id),
-          // cities: {
-          //   connect: {
-          //     city_id: Number(city_id),
-          //   },
-          // },
-          city_id: Number(city_id),
-          // districts: {
-          //   connect: {
-          //     dis_id: Number(district_id),
-          //   },
-          // },
-          district_id: Number(district_id),
-          alamat,
-          kodepos,
-          jumlah_peserta: Number(jumlah_peserta),
-          activity_paket: {
-            connect: {
-              id: Number(paket_id),
-            }
-          },
-          zakat: zak,
-          wakaf: wak,
-          jasa_kirim,
-          ongkir: ong,
-          total_biaya: Number(total),
-          excel: `uploads/${file.filename}`,
-          iskomunitas: Number(iskomunitas),
-          nama_komunitas,
         },
+        no_wa,
+        activity_paket: {
+          connect: {
+            id: Number(paket_id),
+          },
+        },
+        email,
+        province_id: Number(province_id),
+        city_id: Number(city_id),
+        district_id: Number(district_id),
+        alamat,
+        kodepos,
+        jumlah_peserta: Number(jumlah_peserta),
+        zakat: Number(zak),
+        wakaf: Number(wak),
+        jasa_kirim,
+        layanan_kirim: jasa_kirim_barang,
+        etd,
+        ongkir: Number(ong),
+        total_biaya: Number(total),
+        iskomunitas: Number(iskomunitas),
+        nama_komunitas,
+      };
+      
+      if (iskomunitas == 1) {
+        data.excel = `uploads/${file.filename}`;
+      }
+      
+      actResult = await prisma.activity_additional.create({
+        data: data,
       });
 
       const timesg = String(+new Date());
       if (actResult) {
-        const midtrans = await midtransfer({
-          order: `${timesg}P${program_id}A${actResult?.id}`,
-          price: total,
-        });
 
         if (actResult && iskomunitas == 0) {
           const accUser = await prisma.activity_user.create({
@@ -716,12 +774,12 @@ module.exports = {
                   program_id: Number(program_id),
                 },
               },
-              // activity_additional: {
-              //   connect: {
-              //     id: Number(actResult.id),
-              //   },
-              // },
-              additional_id: Number(actResult?.id),
+              activity_additional: {
+                connect: {
+                  id: Number(actResult.id),
+                },
+              },
+              // additional_id: Number(actResult?.id),
               nama: nama,
               no_wa: no_wa,
               ukuran,
@@ -729,71 +787,80 @@ module.exports = {
               // no_peserta
             },
           });
-  
+
           const no_peserta = String(accUser.id).padStart(6, "0");
           await prisma.activity_user.update({
             where: { id: accUser.id },
             data: { no_peserta },
           });
-  
+
+          const midtrans = await midtransfer({
+            order: `${timesg}P${program_id}A${actResult?.id}`,
+            price: Number(total),
+          });
+
           res.status(200).json({
             message: "Sukses Kirim Data",
             data: {
               accUser,
               actResult,
-              midtrans
+              midtrans,
             },
           });
         } else if (actResult && iskomunitas == 1) {
           const workbook = new ExcelJS.Workbook();
           await workbook.xlsx.readFile(file.path);
           const worksheet = workbook.getWorksheet(1);
-  
+
           await workbook.xlsx.writeFile(file.path);
-  
+
           let users = [];
           console.log(users);
           worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 1) {
+            if (rowNumber > 5) {
               const user = {
                 program_id: Number(program_id),
                 additional_id: Number(actResult?.id),
                 //samain rownya nanti
-                nama: row.getCell("A").value,
-                no_wa: row.getCell("B").value,
-                ukuran: row.getCell("C").value,
+                nama: row.getCell("B").value,
+                no_wa: row.getCell("C").value,
+                ukuran: row.getCell("E").value,
                 gender: row.getCell("D").value,
               };
               users.push(user);
             }
           });
-  
+
           const createdUsers = [];
           for (let i = 0; i < users.length; i++) {
             const createdUser = await prisma.activity_user.create({
               data: users[i],
             });
-  
-            const no_peserta = String(createdUser.id).padStart(6, '0');
+
+            const no_peserta = String(createdUser.id).padStart(6, "0");
             await prisma.activity_user.update({
               where: { id: createdUser.id },
               data: { no_peserta },
             });
-  
+
             createdUsers.push(createdUser);
           }
-  
+
+          const midtrans = await midtransfer({
+            order: `${timesg}P${program_id}A${actResult?.id}`,
+            price: Number(total),
+          });
+
           return res.status(200).json({
             message: "Sukses Kirim Data",
             data: {
               createdUsers,
               actResult,
-              midtrans
+              midtrans,
             },
           });
         }
       }
-
     } catch (error) {
       res.status(500).json({
         message: error.message,
@@ -836,7 +903,7 @@ module.exports = {
 
       const putResult = await prisma.activity_paket.update({
         where: {
-          id: Number(id)
+          id: Number(id),
         },
         data: {
           kategori,
@@ -959,5 +1026,98 @@ module.exports = {
       });
     }
   },
+  async checkProv(req, res) {
+    try {
+      const response = await axios.get("https://pro.rajaongkir.com/api/province", {
+        headers: {
+          key: "017746b2ce942519918096b4d136b79f",
+        },
+      });
+      console.log(response.data);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error || "An error occurred",
+      });
+    }
+  },
 
+  async checkCities(req, res) {
+    const id = req.params.id;
+    try {
+      const response = await axios.get(`https://pro.rajaongkir.com/api/city?province=${id}`, {
+        headers: {
+          key: "017746b2ce942519918096b4d136b79f",
+        },
+      });
+      console.log(response.data);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error || "An error occurred",
+      });
+    }
+  },
+
+  async checkKec(req, res) {
+    const id = req.params.id;
+    try {
+      const response = await axios.get(`https://pro.rajaongkir.com/api/subdistrict?city=${id}`, {
+        headers: {
+          key: "017746b2ce942519918096b4d136b79f",
+        },
+      });
+      console.log(response.data);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error || "An error occurred",
+      });
+    }
+  },
+  async checkOngkir(req, res) {
+    console.log(req.body);
+    try {
+      const data = {
+        origin: req.body.city_id,
+        originType: 'city',
+        destination: req.body.district_id,
+        destinationType: 'subdistrict',
+        weight: req.body.jumlah_peserta ? (250 * Number(req.body.jumlah_peserta)) : 250,
+        courier: req.body.jasa_kirim
+      };
+      const response = await axios.post(
+        'https://pro.rajaongkir.com/api/cost',
+        qs.stringify(req.body),
+        {
+          headers: {
+            key: '017746b2ce942519918096b4d136b79f',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+      console.log(response.data);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error || "An error occurred",
+      });
+    }
+  },
 };

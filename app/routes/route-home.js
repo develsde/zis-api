@@ -22,4 +22,9 @@ router.delete("/delPaket/:id", home.delPaket)
 router.get("/getActAdd", home.getAdditional)
 router.get("/getActUser/:id", home.getActUser)
 
+router.get("/rajaOngkirProv", home.checkProv)
+router.get("/rajaOngkirCities/:id", home.checkCities)
+router.get("/rajaOngkirKec/:id", home.checkKec)
+router.post("/rajaOngkirBayar",home.checkOngkir)
+
 module.exports = router;
