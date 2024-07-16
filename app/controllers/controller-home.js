@@ -815,9 +815,10 @@ module.exports = {
           await workbook.xlsx.writeFile(file.path);
 
           let users = [];
+          let max = 4 + Number(jumlah_peserta)
           console.log(users);
           worksheet.eachRow((row, rowNumber) => {
-            if (rowNumber > 5) {
+            if (rowNumber > 4 && rowNumber <= max) {
               const user = {
                 program_id: Number(program_id),
                 additional_id: Number(actResult?.id),
