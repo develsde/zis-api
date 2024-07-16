@@ -556,7 +556,7 @@ module.exports = {
         midtrans_status_log,
         status_transaction,
         program_id,
-        register_id,
+        // register_id,
         bank_selected_midtrans,
         bank_va,
         non_bank_account,
@@ -582,11 +582,11 @@ module.exports = {
               program_id: Number(program_id),
             },
           },
-          program_registered_activity: {
-            connect: {
-              id: Number(register_id),
-            },
-          },
+          // program_registered_activity: {
+          //   connect: {
+          //     id: Number(register_id),
+          //   },
+          // },
           order_id,
           datetime: moment().toISOString(datetime),
           amount: Number(amount),
