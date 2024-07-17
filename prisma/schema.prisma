@@ -997,16 +997,15 @@ model program_form_activity {
 }
 
 model program_registered_activity {
-  id                                 Int                            @id @default(autoincrement())
-  create_date                        DateTime?                      @default(now()) @db.Timestamp(0)
-  program_registered_value           String?                        @db.LongText
+  id                                 Int                    @id @default(autoincrement())
+  create_date                        DateTime?              @default(now()) @db.Timestamp(0)
+  program_registered_value           String?                @db.LongText
   program_form_id                    Int?
   program_id                         Int?
-  program_registered_virtual_account String?                        @db.VarChar(30)
-  program_registered_bank            String?                        @db.VarChar(20)
-  program                            program?                       @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_registered_activity_program_FK")
-  program_form_activity              program_form_activity?         @relation(fields: [program_form_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_registered_activity_program_form_activity_FK")
-  program_transaction_activity       program_transaction_activity[]
+  program_registered_virtual_account String?                @db.VarChar(30)
+  program_registered_bank            String?                @db.VarChar(20)
+  program                            program?               @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_registered_activity_program_FK")
+  program_form_activity              program_form_activity? @relation(fields: [program_form_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_registered_activity_program_form_activity_FK")
 
   @@index([program_id], map: "program_registered_activity_program_FK")
   @@index([program_form_id], map: "program_registered_activity_program_form_activity_FK")
@@ -1014,23 +1013,20 @@ model program_registered_activity {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model program_transaction_activity {
-  id                          Int                          @id @default(autoincrement())
-  order_id                    String?                      @db.VarChar(25)
-  datetime                    DateTime?                    @db.DateTime(0)
-  amount                      Int?                         @default(0)
-  midtrans_status_log         String?                      @db.Text
-  status_transaction          Int?                         @default(0)
-  program_id                  Int?
-  register_id                 Int?
-  bank_selected_midtrans      String?                      @db.VarChar(25)
-  bank_va                     String?                      @db.VarChar(25)
-  non_bank_account            String?                      @db.VarChar(25)
-  non_bank_selected_midtrans  String?                      @db.VarChar(25)
-  program                     program?                     @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_transaction_activity_program_FK")
-  program_registered_activity program_registered_activity? @relation(fields: [register_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "program_transaction_activity_program_registered_activity_FK")
+  id                         Int       @id @default(autoincrement())
+  order_id                   String?   @db.VarChar(25)
+  datetime                   DateTime? @db.DateTime(0)
+  amount                     Int?      @default(0)
+  midtrans_status_log        String?   @db.Text
+  status_transaction         Int?      @default(0)
+  program_id                 Int?
+  bank_selected_midtrans     String?   @db.VarChar(25)
+  bank_va                    String?   @db.VarChar(25)
+  non_bank_account           String?   @db.VarChar(25)
+  non_bank_selected_midtrans String?   @db.VarChar(25)
+  program                    program?  @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "program_transaction_activity_program_FK")
 
   @@index([program_id], map: "program_transaction_activity_program_FK")
-  @@index([register_id], map: "program_transaction_activity_program_registered_activity_FK")
 }
 
 model activity_additional {
@@ -1049,11 +1045,14 @@ model activity_additional {
   zakat          Int?
   wakaf          Int?
   jasa_kirim     String?         @db.VarChar(100)
+  layanan_kirim  String?         @db.VarChar(100)
+  etd            String?         @db.VarChar(10)
   ongkir         Int?
   total_biaya    Int?
   excel          String?         @db.Text
   iskomunitas    Int?            @default(0) @db.SmallInt
   nama_komunitas String?         @db.VarChar(100)
+  created_date   DateTime?       @default(now()) @db.Timestamp(0)
   activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
   program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
   activity_user  activity_user[]
@@ -1083,7 +1082,7 @@ model activity_user {
   additional_id       Int
   nama                String?             @db.VarChar(100)
   no_wa               String?             @db.VarChar(15)
-  ukuran              String?             @db.VarChar(100)
+  ukuran              String?             @db.LongText
   gender              String?             @db.VarChar(2)
   no_peserta          String?             @db.VarChar(6)
   activity_additional activity_additional @relation(fields: [additional_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_user_activity_additional_FK")
