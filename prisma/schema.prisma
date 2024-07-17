@@ -1049,11 +1049,14 @@ model activity_additional {
   zakat          Int?
   wakaf          Int?
   jasa_kirim     String?         @db.VarChar(100)
+  layanan_kirim  String?         @db.VarChar(100)
+  etd            String?         @db.VarChar(10)
   ongkir         Int?
   total_biaya    Int?
   excel          String?         @db.Text
   iskomunitas    Int?            @default(0) @db.SmallInt
   nama_komunitas String?         @db.VarChar(100)
+  created_date   DateTime?       @default(now()) @db.Timestamp(0)
   activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
   program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
   activity_user  activity_user[]
@@ -1091,4 +1094,13 @@ model activity_user {
 
   @@index([program_id], map: "activity_user_unique")
   @@index([additional_id], map: "activity_user_unique_1")
+}
+
+model imkas_trans {
+  id                Int       @id @default(autoincrement())
+  imkas_ref_number  Int?
+  imkas_amount      Int       @default(0)
+  imkas_datetime    DateTime? @default(now()) @db.Timestamp(0)
+  imkas_proposal_id Int?
+  imkas_no          String?   @db.VarChar(15)
 }
