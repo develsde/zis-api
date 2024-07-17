@@ -799,6 +799,29 @@ module.exports = {
             price: Number(total),
           });
 
+          let stat = await cekstatus({
+            order: `${timesg}P${program_id}A${actResult?.id}`,
+          });
+        
+          if (stat == null) {
+            setTimeout(async () => {
+              stat = await cekstatus({
+                order: `${timesg}P${program_id}A${actResult?.id}`,
+              });
+        
+              if (stat == null) {
+                await prisma.activity_additional.delete({
+                  where: { id: Number(actResult?.id) },
+                });
+                await prisma.activity_user.delete({
+                  where: { additional_id: Number(actResult?.id) },
+                });
+              }
+            }, 5000
+            // 24 * 60 * 60 * 1000
+          ); 
+          }
+
           res.status(200).json({
             message: "Sukses Kirim Data",
             data: {
@@ -851,6 +874,29 @@ module.exports = {
             order: `${timesg}P${program_id}A${actResult?.id}`,
             price: Number(total),
           });
+
+          let stat = await cekstatus({
+            order: `${timesg}P${program_id}A${actResult?.id}`,
+          });
+        
+          if (stat == null) {
+            setTimeout(async () => {
+              stat = await cekstatus({
+                order: `${timesg}P${program_id}A${actResult?.id}`,
+              });
+        
+              if (stat == null) {
+                await prisma.activity_additional.delete({
+                  where: { id: Number(actResult?.id) },
+                });
+                await prisma.activity_user.delete({
+                  where: { additional_id: Number(actResult?.id) },
+                });
+              }
+            }, 5000
+            // 24 * 60 * 60 * 1000
+          ); 
+          }
 
           return res.status(200).json({
             message: "Sukses Kirim Data",
