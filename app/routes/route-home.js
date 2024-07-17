@@ -14,7 +14,7 @@ router.get("/formAct/:id", home.getFormAct);
 router.post("/sendAct", home.postFormAct);
 router.get("/regAct/:id", home.getRegAct);
 router.post("/postMidTrans", home.postMidTrans);
-router.post("/act-add", upload.single("excel"), home.postAdditionalActivity)
+router.post("/act-add", home.postAdditionalActivity)
 
 router.post("/addPaket", home.postPaket)
 router.put("/editPaket/:id", home.putPaket)
