@@ -1156,7 +1156,7 @@ module.exports = {
     const order_id = req.body.order_id
     try {
       const stat = await cekstatus({
-        order: order_id,
+        order: id,
       });
       console.log(stat);
       res.status(200).json({
