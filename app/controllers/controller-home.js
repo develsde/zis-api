@@ -953,17 +953,27 @@ module.exports = {
       const id = req.params.id;
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const sortBy = req.query.sortBy || "created_date";
+      const sortType = req.query.order || "desc";
+
+      const params = {
+        // program_status: status,
+        nama: {
+          contains: keyword,
+        },
+      };
 
       const [count, ActAdditional] = await prisma.$transaction([
         prisma.activity_additional.count({
-          // where: {
-          //   program_id: Number(id),
-          // },
+          where: params,
         }),
         prisma.activity_additional.findMany({
-          // where: {
-          //   program_id: Number(id),
-          // },
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
           include: {
             program: {
               select: {
@@ -972,17 +982,25 @@ module.exports = {
                 program_activity_biaya: true,
               },
             },
-            provinces: true,
-            cities: true,
-            districts: true,
+            // provinces: true,
+            // cities: true,
+            // districts: true,
             activity_paket: true,
           },
+          skip,
+          take: perPage,
         }),
       ]);
 
       res.status(200).json({
-        message: "Sukses Ubah Data",
+        message: "Sukses Ambil Data",
         data: ActAdditional,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
       });
     } catch (error) {
       res.status(500).json({
