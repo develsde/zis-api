@@ -26,5 +26,6 @@ router.get("/rajaOngkirProv", home.checkProv)
 router.get("/rajaOngkirCities/:id", home.checkCities)
 router.get("/rajaOngkirKec/:id", home.checkKec)
 router.post("/rajaOngkirBayar",home.checkOngkir)
+router.get("/checkStat/:id",home.checkStat)
 
 module.exports = router;
