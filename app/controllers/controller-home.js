@@ -768,6 +768,14 @@ module.exports = {
       if (actResult) {
 
         // if (actResult && iskomunitas == 0) {
+        await prisma.activity_additional.update({
+          where:{
+            id: Number(actResult?.id)
+          },
+          data:{
+            order_id: `${timesg}P${program_id}A${actResult?.id}`
+          }
+        })
         const accUser = await prisma.activity_user.create({
           data: {
             program: {
@@ -1134,6 +1142,26 @@ module.exports = {
       res.status(200).json({
         message: "Sukses Ambil Data",
         data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error || "An error occurred",
+      });
+    }
+  },
+
+  async checkStat(req, res) {
+    const id = req.params.id;
+    const order_id = req.body.order_id
+    try {
+      const stat = await cekstatus({
+        order: order_id,
+      });
+      console.log(stat);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: stat,
       });
     } catch (error) {
       console.error(error.message);
