@@ -622,29 +622,32 @@ module.exports = {
         } else if (pn.substring(0, 3) == "62") {
           pn = "0" + pn.substring(3).trim();
         }
-
+        const dateString = actResult.datetime;
+        const date = new Date(dateString);
+        const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' , hour : '2-digit', minute : '2-digit',second :'2-digit' });
+        const formattedDana = add.total_biaya.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
           text:
             "Terima kasih atas partisipasi kamu, pendaftaran dan pembayaran kamu sudah kami terima.\n" +
-            "Dengan informasi sebagai berikut :" +
-            "\n Tanggal/waktu :" +
-            actResult.datetime +
-            "\n Nama" +
+            "\nDengan informasi sebagai berikut :" +
+            "\nTanggal/waktu : " +
+            formattedDate +
+            "\nNama : " +
             add.nama +
-            "\n No whatsapp" +
+            "\nNo whatsapp : " +
             add.no_wa +
-            "\n Alamat" +
+            "\nAlamat : " +
             add.alamat +
-            "\n Paket" +
+            "\nPaket : " +
             paket.kategori +
-            "\n Pengiriman" +
+            "\nPengiriman : " +
             add.layanan_kirim +
-            "\n Jumlah yang dibayar" +
-            add.total_biaya +
-            "\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
-            "Salam zisindosat\n" +
-            "Admin",
+            "\n Jumlah yang dibayar : " +
+            formattedDana +
+            "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+            "\nSalam zisindosat\n" +
+            "\nAdmin",
         });
       }
       res.status(200).json({
