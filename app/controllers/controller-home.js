@@ -7,10 +7,11 @@ const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
 );
+const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
 const ExcelJS = require("exceljs");
 const axios = require("axios");
-const qs = require("qs")
+const qs = require("qs");
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -277,12 +278,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -563,11 +564,13 @@ module.exports = {
         non_bank_selected_midtrans,
       } = req.body;
       console.log(req.body);
+
       const trans = await prisma.program_transaction_activity.findFirst({
         where: {
           order_id: order_id,
         },
       });
+
       if (trans) {
         return res.status(400).json({
           message: "Order ID telah diverifikasi",
@@ -598,6 +601,52 @@ module.exports = {
           non_bank_selected_midtrans,
         },
       });
+
+      const add = await prisma.activity_additional.findFirst({
+        where: {
+          order_id: order_id,
+        },
+      });
+
+      const paket = await prisma.activity_paket.findFirst({
+        where: {
+          id: add.paket_id,
+        },
+      });
+
+      if (actResult.status_transaction == 200) {
+        let pn = add.no_wa;
+        pn = pn.replace(/\D/g, "");
+        if (pn.substring(0, 1) == "0") {
+          pn = "0" + pn.substring(1).trim();
+        } else if (pn.substring(0, 3) == "62") {
+          pn = "0" + pn.substring(3).trim();
+        }
+
+        const msgId = await sendWhatsapp({
+          wa_number: pn.replace(/[^0-9\.]+/g, ""),
+          text:
+            "Terima kasih atas partisipasi kamu, pendaftaran dan pembayaran kamu sudah kami terima.\n" +
+            "Dengan informasi sebagai berikut :" +
+            "\n Tanggal/waktu :" +
+            actResult.datetime +
+            "\n Nama" +
+            add.nama +
+            "\n No whatsapp" +
+            add.no_wa +
+            "\n Alamat" +
+            add.alamat +
+            "\n Paket" +
+            paket.kategori +
+            "\n Pengiriman" +
+            add.layanan_kirim +
+            "\n Jumlah yang dibayar" +
+            add.total_biaya +
+            "\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+            "Salam zisindosat\n" +
+            "Admin",
+        });
+      }
       res.status(200).json({
         message: "Sukses Kirim Data",
         data: actResult,
@@ -667,8 +716,12 @@ module.exports = {
       let zak = zakat ? zakat : 0;
       let wak = wakaf ? wakaf : 0;
       let ong = ongkir ? ongkir : 0;
-      let jml = jumlah_peserta ? jumlah_peserta : 1
-      let total = (Number(biaya_paket) * Number(jml)) + Number(zak) + Number(wak) + Number(ong);
+      let jml = jumlah_peserta ? jumlah_peserta : 1;
+      let total =
+        Number(biaya_paket) * Number(jml) +
+        Number(zak) +
+        Number(wak) +
+        Number(ong);
       let actResult;
 
       // actResult = await prisma.activity_additional.create({
@@ -766,16 +819,15 @@ module.exports = {
 
       const timesg = String(+new Date());
       if (actResult) {
-
         // if (actResult && iskomunitas == 0) {
         await prisma.activity_additional.update({
-          where:{
-            id: Number(actResult?.id)
+          where: {
+            id: Number(actResult?.id),
           },
-          data:{
-            order_id: `${timesg}P${program_id}A${actResult?.id}`
-          }
-        })
+          data: {
+            order_id: `${timesg}P${program_id}A${actResult?.id}`,
+          },
+        });
         const accUser = await prisma.activity_user.create({
           data: {
             program: {
@@ -894,8 +946,7 @@ module.exports = {
           biaya: Number(biaya),
           keterangan,
         },
-      }
-      );
+      });
 
       res.status(200).json({
         message: "Sukses Kirim Data",
@@ -1058,11 +1109,14 @@ module.exports = {
   },
   async checkProv(req, res) {
     try {
-      const response = await axios.get("https://pro.rajaongkir.com/api/province", {
-        headers: {
-          key: "017746b2ce942519918096b4d136b79f",
-        },
-      });
+      const response = await axios.get(
+        "https://pro.rajaongkir.com/api/province",
+        {
+          headers: {
+            key: "017746b2ce942519918096b4d136b79f",
+          },
+        }
+      );
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1079,11 +1133,14 @@ module.exports = {
   async checkCities(req, res) {
     const id = req.params.id;
     try {
-      const response = await axios.get(`https://pro.rajaongkir.com/api/city?province=${id}`, {
-        headers: {
-          key: "017746b2ce942519918096b4d136b79f",
-        },
-      });
+      const response = await axios.get(
+        `https://pro.rajaongkir.com/api/city?province=${id}`,
+        {
+          headers: {
+            key: "017746b2ce942519918096b4d136b79f",
+          },
+        }
+      );
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1100,11 +1157,14 @@ module.exports = {
   async checkKec(req, res) {
     const id = req.params.id;
     try {
-      const response = await axios.get(`https://pro.rajaongkir.com/api/subdistrict?city=${id}`, {
-        headers: {
-          key: "017746b2ce942519918096b4d136b79f",
-        },
-      });
+      const response = await axios.get(
+        `https://pro.rajaongkir.com/api/subdistrict?city=${id}`,
+        {
+          headers: {
+            key: "017746b2ce942519918096b4d136b79f",
+          },
+        }
+      );
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1122,19 +1182,21 @@ module.exports = {
     try {
       const data = {
         origin: req.body.city_id,
-        originType: 'city',
+        originType: "city",
         destination: req.body.district_id,
-        destinationType: 'subdistrict',
-        weight: req.body.jumlah_peserta ? (250 * Number(req.body.jumlah_peserta)) : 250,
-        courier: req.body.jasa_kirim
+        destinationType: "subdistrict",
+        weight: req.body.jumlah_peserta
+          ? 250 * Number(req.body.jumlah_peserta)
+          : 250,
+        courier: req.body.jasa_kirim,
       };
       const response = await axios.post(
-        'https://pro.rajaongkir.com/api/cost',
+        "https://pro.rajaongkir.com/api/cost",
         qs.stringify(req.body),
         {
           headers: {
-            key: '017746b2ce942519918096b4d136b79f',
-            'Content-Type': 'application/x-www-form-urlencoded',
+            key: "017746b2ce942519918096b4d136b79f",
+            "Content-Type": "application/x-www-form-urlencoded",
           },
         }
       );
@@ -1153,7 +1215,7 @@ module.exports = {
 
   async checkStat(req, res) {
     const id = req.params.id;
-    const order_id = req.body.order_id
+    const order_id = req.body.order_id;
     try {
       const stat = await cekstatus({
         order: id,
