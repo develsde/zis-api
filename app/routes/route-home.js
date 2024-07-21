@@ -28,4 +28,6 @@ router.get("/rajaOngkirKec/:id", home.checkKec)
 router.post("/rajaOngkirBayar",home.checkOngkir)
 router.get("/checkStat/:id",home.checkStat)
 
+router.get("/getPenjualan",home.getPenjualan)
+
 module.exports = router;
