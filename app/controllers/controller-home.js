@@ -1,6 +1,7 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
 const { customAlphabet } = require("nanoid");
+const { subMonths, subDays, format, endOfMonth } = require('date-fns');
 const { z } = require("zod");
 const { midtransfer, cekstatus } = require("../helper/midtrans");
 const nanoid = customAlphabet(
@@ -278,12 +279,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -622,29 +623,32 @@ module.exports = {
         } else if (pn.substring(0, 3) == "62") {
           pn = "0" + pn.substring(3).trim();
         }
-
+        const dateString = actResult.datetime;
+        const date = new Date(dateString);
+        const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const formattedDana = add.total_biaya.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
           text:
             "Terima kasih atas partisipasi kamu, pendaftaran dan pembayaran kamu sudah kami terima.\n" +
-            "Dengan informasi sebagai berikut :" +
-            "\n Tanggal/waktu :" +
-            actResult.datetime +
-            "\n Nama" +
+            "\nDengan informasi sebagai berikut :" +
+            "\nTanggal/waktu : " +
+            formattedDate +
+            "\nNama : " +
             add.nama +
-            "\n No whatsapp" +
+            "\nNo whatsapp : " +
             add.no_wa +
-            "\n Alamat" +
+            "\nAlamat : " +
             add.alamat +
-            "\n Paket" +
+            "\nPaket : " +
             paket.kategori +
-            "\n Pengiriman" +
+            "\nPengiriman : " +
             add.layanan_kirim +
-            "\n Jumlah yang dibayar" +
-            add.total_biaya +
-            "\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
-            "Salam zisindosat\n" +
-            "Admin",
+            "\n Jumlah yang dibayar : " +
+            formattedDana +
+            "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+            "\nSalam zisindosat\n" +
+            "\nAdmin",
         });
       }
       res.status(200).json({
@@ -1016,13 +1020,29 @@ module.exports = {
       const keyword = req.query.keyword || "";
       const sortBy = req.query.sortBy || "created_date";
       const sortType = req.query.order || "desc";
+      const status = Number(req.query.status || 0);
+      const bulan = Number(req.query.bulan || 0);
+      const tahun = Number(req.query.tahun || 2024);
 
       const params = {
-        // program_status: status,
         nama: {
           contains: keyword,
         },
       };
+
+      if (bulan == 0 && tahun !== 0) {
+        params.created_date = {
+          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+      }
+
+      if (bulan !== 0) {
+        params.created_date = {
+          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+      }
 
       const [count, ActAdditional] = await prisma.$transaction([
         prisma.activity_additional.count({
@@ -1046,6 +1066,7 @@ module.exports = {
             // districts: true,
             activity_paket: true,
           },
+          where: params,
           skip,
           take: perPage,
         }),
@@ -1232,4 +1253,53 @@ module.exports = {
       });
     }
   },
+
+  async getPenjualan(req, res) {
+    try {
+
+      const pendapatan = await prisma.$queryRaw`
+      SELECT SUM(t.amount) AS totalPendapatan
+FROM program_transaction_activity t 
+INNER JOIN activity_additional a ON t.order_id COLLATE UTF8MB4_GENERAL_CI = a.order_id COLLATE UTF8MB4_GENERAL_CI
+WHERE t.midtrans_status_log  = 'settlement'
+      `
+      const zakatWakaf = await prisma.$queryRaw`
+      SELECT SUM(wakaf) AS total_wakaf, SUM(a.zakat) AS total_zakat
+FROM activity_additional a
+INNER JOIN program_transaction_activity t 
+ON a.order_id COLLATE UTF8MB4_GENERAL_CI = t.order_id COLLATE UTF8MB4_GENERAL_CI
+WHERE t.midtrans_status_log = 'settlement'
+`
+      const penjualan = await prisma.$queryRaw`
+      SELECT a.paket_id, p.kategori,  sum(jumlah_peserta) AS jumlah_pemesanan, p.biaya,  
+p.biaya * SUM(a.jumlah_peserta) AS hasil_penjualan
+FROM activity_additional a INNER JOIN activity_paket p ON a.paket_id = p.id
+INNER JOIN program_transaction_activity t ON a.order_id COLLATE UTF8MB4_GENERAL_CI = t.order_id COLLATE UTF8MB4_GENERAL_CI
+WHERE t.midtrans_status_log = 'settlement'
+GROUP BY a.paket_id
+`
+
+      const ongkir = await prisma.$queryRaw`
+      SELECT SUM(ongkir) AS total_ongkir
+FROM activity_additional a
+INNER JOIN program_transaction_activity t 
+ON a.order_id COLLATE UTF8MB4_GENERAL_CI = t.order_id COLLATE UTF8MB4_GENERAL_CI
+WHERE t.midtrans_status_log = 'settlement'
+`
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        dataPenjualan: penjualan,
+        totalZakat: zakatWakaf[0].total_zakat,
+        totalWakaf: zakatWakaf[0].total_wakaf,
+        ongkir: ongkir[0].total_ongkir,
+        totalPendapatan: pendapatan[0].totalPendapatan
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
 };
