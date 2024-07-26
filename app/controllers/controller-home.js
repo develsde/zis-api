@@ -728,60 +728,6 @@ module.exports = {
         Number(ong);
       let actResult;
 
-      // actResult = await prisma.activity_additional.create({
-      //   data: {
-      //     nama,
-      //     program: {
-      //       connect: {
-      //         program_id: Number(program_id),
-      //       },
-      //     },
-      //     no_wa,
-      //     activity_paket: {
-      //       connect: {
-      //         id: Number(paket_id),
-      //       },
-      //     },
-      //     email,
-      //     // provinces: {
-      //     //   connect: {
-      //     //     prov_id: Number(province_id),
-      //     //   },
-      //     // },
-      //     province_id: Number(province_id),
-      //     // cities: {
-      //     //   connect: {
-      //     //     city_id: Number(city_id),
-      //     //   },
-      //     // },
-      //     city_id: Number(city_id),
-      //     // districts: {
-      //     //   connect: {
-      //     //     dis_id: Number(district_id),
-      //     //   },
-      //     // },
-      //     district_id: Number(district_id),
-      //     alamat,
-      //     kodepos,
-      //     jumlah_peserta: Number(jumlah_peserta),
-      //     activity_paket: {
-      //       connect: {
-      //         id: Number(paket_id),
-      //       },
-      //     },
-      //     zakat: zak,
-      //     wakaf: wak,
-      //     jasa_kirim,
-      //     layanan_kirim: jasa_kirim_barang,
-      //     etd,
-      //     ongkir: ong,
-      //     total_biaya: Number(total),
-      //     excel: `uploads/${file.filename}`,
-      //     iskomunitas: Number(iskomunitas),
-      //     nama_komunitas,
-      //   },
-      // });
-
       let data = {
         nama,
         program: {
@@ -865,6 +811,38 @@ module.exports = {
           price: Number(total),
         });
 
+        if (accUser) {
+          let pn = no_wa;
+          pn = pn.replace(/\D/g, "");
+          if (pn.substring(0, 1) == "0") {
+            pn = "0" + pn.substring(1).trim();
+          } else if (pn.substring(0, 3) == "62") {
+            pn = "0" + pn.substring(3).trim();
+          }
+          const dateString = actResult.created_date;
+          const date = new Date(dateString);
+          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' , hour : '2-digit', minute : '2-digit',second :'2-digit' });
+          const formattedDana = total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+          const msgId = await sendWhatsapp({
+            wa_number: pn.replace(/[^0-9\.]+/g, ""),
+            text:
+              "Terima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
+              "Mohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai\n"+
+              "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
+              "\nTanggal/waktu : " +
+              formattedDate +
+              "\nNama : " +
+              nama +
+              "\nNo whatsapp : " +
+              no_wa +
+              "\n Jumlah yang harus dibayarkan : " +
+              formattedDana +
+              "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+              "\nSalam zisindosat\n" +
+              "\nAdmin",
+          });
+        }
+        
         res.status(200).json({
           message: "Sukses Kirim Data",
           data: {
@@ -874,60 +852,7 @@ module.exports = {
           },
         });
       }
-      // else if (actResult && iskomunitas == 1) {
-      //   const workbook = new ExcelJS.Workbook();
-      //   await workbook.xlsx.readFile(file.path);
-      //   const worksheet = workbook.getWorksheet(1);
-
-      //   await workbook.xlsx.writeFile(file.path);
-
-      //   let users = [];
-      //   let max = 4 + Number(jumlah_peserta)
-      //   console.log(users);
-      //   worksheet.eachRow((row, rowNumber) => {
-      //     if (rowNumber > 4 && rowNumber <= max) {
-      //       const user = {
-      //         program_id: Number(program_id),
-      //         additional_id: Number(actResult?.id),
-      //         //samain rownya nanti
-      //         nama: row.getCell("B").value,
-      //         no_wa: row.getCell("C").value,
-      //         ukuran: row.getCell("E").value,
-      //         gender: row.getCell("D").value,
-      //       };
-      //       users.push(user);
-      //     }
-      //   });
-
-      //   const createdUsers = [];
-      //   for (let i = 0; i < users.length; i++) {
-      //     const createdUser = await prisma.activity_user.create({
-      //       data: users[i],
-      //     });
-
-      //     const no_peserta = String(createdUser.id).padStart(6, "0");
-      //     await prisma.activity_user.update({
-      //       where: { id: createdUser.id },
-      //       data: { no_peserta },
-      //     });
-
-      //     createdUsers.push(createdUser);
-      //   }
-
-      //   const midtrans = await midtransfer({
-      //     order: `${timesg}P${program_id}A${actResult?.id}`,
-      //     price: Number(total),
-      //   });
-
-      //   return res.status(200).json({
-      //     message: "Sukses Kirim Data",
-      //     data: {
-      //       createdUsers,
-      //       actResult,
-      //       midtrans,
-      //     },
-      //   });
-      // }
+      
     } catch (error) {
       res.status(500).json({
         message: error.message,
