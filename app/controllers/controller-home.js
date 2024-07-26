@@ -821,13 +821,13 @@ module.exports = {
           }
           const dateString = actResult.created_date;
           const date = new Date(dateString);
-          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' , hour : '2-digit', minute : '2-digit',second :'2-digit' });
+          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
           const formattedDana = total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
             text:
               "Terima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
-              "Mohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai\n"+
+              "Mohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai\n" +
               "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
               "\nTanggal/waktu : " +
               formattedDate +
@@ -842,7 +842,7 @@ module.exports = {
               "\nAdmin",
           });
         }
-        
+
         res.status(200).json({
           message: "Sukses Kirim Data",
           data: {
@@ -852,7 +852,7 @@ module.exports = {
           },
         });
       }
-      
+
     } catch (error) {
       res.status(500).json({
         message: error.message,
@@ -941,7 +941,6 @@ module.exports = {
       const id = req.params.id;
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
-      const skip = (page - 1) * perPage;
       const keyword = req.query.keyword || "";
       const sortBy = req.query.sortBy || "created_date";
       const sortType = req.query.order || "desc";
@@ -969,47 +968,62 @@ module.exports = {
         };
       }
 
-      const [count, ActAdditional] = await prisma.$transaction([
-        prisma.activity_additional.count({
-          where: params,
-        }),
-        prisma.activity_additional.findMany({
-          orderBy: {
-            [sortBy]: sortType,
-          },
-          where: params,
-          include: {
-            program: {
-              select: {
-                program_id: true,
-                program_title: true,
-                program_activity_biaya: true,
-              },
+      // Ambil semua data dari activity_additional tanpa pagination
+      const ActAdditional = await prisma.activity_additional.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        where: params,
+        include: {
+          program: {
+            select: {
+              program_id: true,
+              program_title: true,
+              program_activity_biaya: true,
             },
-            // provinces: true,
-            // cities: true,
-            // districts: true,
-            activity_paket: true,
           },
-          where: params,
-          skip,
-          take: perPage,
-        }),
-      ]);
+          activity_paket: true,
+        },
+      });
+
+      // Mengumpulkan order_id dari ActAdditional
+      const orderIds = ActAdditional.map(item => item.order_id);
+
+      // Inisialisasi array untuk menyimpan hasil cekstatus
+      const statuses = [];
+
+      // Memanggil cekstatus untuk setiap order_id
+      for (const orderId of orderIds) {
+        const status = await cekstatus({ order: orderId });
+        statuses.push(status);
+      }
+
+      // Filter ActAdditional berdasarkan status yang diinginkan (settlement)
+      const filteredActAdditional = ActAdditional.filter((item, index) => {
+        return statuses[index].transaction_status === 'settlement';
+      });
+
+      // Hitung ulang total data yang terfilter
+      const totalFiltered = filteredActAdditional.length;
+
+      // Lakukan pagination berdasarkan data yang telah difilter
+      const startIdx = (page - 1) * perPage;
+      const endIdx = startIdx + perPage;
+      const paginatedData = filteredActAdditional.slice(startIdx, endIdx);
 
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: ActAdditional,
+        data: paginatedData,
         pagination: {
-          total: count,
+          total: totalFiltered,
           page,
-          hasNext: count > page * perPage,
-          totalPage: Math.ceil(count / perPage),
+          hasNext: endIdx < totalFiltered,
+          totalPage: Math.ceil(totalFiltered / perPage),
         },
       });
     } catch (error) {
       res.status(500).json({
-        message: error?.message,
+        message: error?.message || "Terjadi kesalahan dalam mengambil data tambahan",
       });
     }
   },
