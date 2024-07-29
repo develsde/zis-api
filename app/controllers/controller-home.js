@@ -1142,8 +1142,8 @@ module.exports = {
     console.log(req.body);
     try {
       const data = {
-        origin: 152,
-        originType: "city",
+        origin: 2096,
+        originType: "subdistrict",
         destination: req.body.district_id,
         destinationType: "subdistrict",
         weight: req.body.jumlah_peserta
