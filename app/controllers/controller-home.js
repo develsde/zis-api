@@ -1142,7 +1142,7 @@ module.exports = {
     console.log(req.body);
     try {
       const data = {
-        origin: req.body.city_id,
+        origin: 152,
         originType: "city",
         destination: req.body.district_id,
         destinationType: "subdistrict",
