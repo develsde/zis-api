@@ -821,12 +821,12 @@ module.exports = {
           }
           const dateString = actResult.created_date;
           const date = new Date(dateString);
-          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'});
+          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
           const formattedDana = total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
             text:
-              "Menunggu Pembayaran\n"+
+              "Menunggu Pembayaran\n" +
               "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
               "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
               "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
@@ -843,7 +843,7 @@ module.exports = {
               "\nAdmin",
           });
         }
-        console.log(msgId);
+
         res.status(200).json({
           message: "Sukses Kirim Data",
           data: {
@@ -946,30 +946,30 @@ module.exports = {
       const sortBy = req.query.sortBy || "created_date";
       const sortType = req.query.order || "desc";
       const status = Number(req.query.status || 0);
-      const bulan = Number(req.query.bulan || 0);
-      const tahun = Number(req.query.tahun || 2024);
+
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd = (!isNaN(end.getTime()) && end >= validStart) ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
 
       const params = {
         nama: {
           contains: keyword,
         },
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
       };
 
-      if (bulan == 0 && tahun !== 0) {
-        params.created_date = {
-          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
-        };
-      }
-
-      if (bulan !== 0) {
-        params.created_date = {
-          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
-        };
-      }
-
-      // Ambil semua data dari activity_additional tanpa pagination
       const ActAdditional = await prisma.activity_additional.findMany({
         orderBy: {
           [sortBy]: sortType,
@@ -987,27 +987,21 @@ module.exports = {
         },
       });
 
-      // Mengumpulkan order_id dari ActAdditional
       const orderIds = ActAdditional.map(item => item.order_id);
 
-      // Inisialisasi array untuk menyimpan hasil cekstatus
       const statuses = [];
 
-      // Memanggil cekstatus untuk setiap order_id
       for (const orderId of orderIds) {
         const status = await cekstatus({ order: orderId });
         statuses.push(status);
       }
 
-      // Filter ActAdditional berdasarkan status yang diinginkan (settlement)
       const filteredActAdditional = ActAdditional.filter((item, index) => {
         return statuses[index].transaction_status === 'settlement';
       });
 
-      // Hitung ulang total data yang terfilter
       const totalFiltered = filteredActAdditional.length;
 
-      // Lakukan pagination berdasarkan data yang telah difilter
       const startIdx = (page - 1) * perPage;
       const endIdx = startIdx + perPage;
       const paginatedData = filteredActAdditional.slice(startIdx, endIdx);
@@ -1196,36 +1190,84 @@ module.exports = {
 
   async getPenjualan(req, res) {
     try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
 
-      const pendapatan = await prisma.$queryRaw`
-      SELECT SUM(t.amount) AS totalPendapatan
-FROM program_transaction_activity t 
-INNER JOIN activity_additional a ON t.order_id COLLATE UTF8MB4_GENERAL_CI = a.order_id COLLATE UTF8MB4_GENERAL_CI
-WHERE t.midtrans_status_log  = 'settlement'
-      `
-      const zakatWakaf = await prisma.$queryRaw`
-      SELECT SUM(wakaf) AS total_wakaf, SUM(a.zakat) AS total_zakat
-FROM activity_additional a
-INNER JOIN program_transaction_activity t 
-ON a.order_id COLLATE UTF8MB4_GENERAL_CI = t.order_id COLLATE UTF8MB4_GENERAL_CI
-WHERE t.midtrans_status_log = 'settlement'
-`
-      const penjualan = await prisma.$queryRaw`
-      SELECT a.paket_id, p.kategori,  sum(jumlah_peserta) AS jumlah_pemesanan, p.biaya,  
-p.biaya * SUM(a.jumlah_peserta) AS hasil_penjualan
-FROM activity_additional a INNER JOIN activity_paket p ON a.paket_id = p.id
-INNER JOIN program_transaction_activity t ON a.order_id COLLATE UTF8MB4_GENERAL_CI = t.order_id COLLATE UTF8MB4_GENERAL_CI
-WHERE t.midtrans_status_log = 'settlement'
-GROUP BY a.paket_id
-`
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd = (!isNaN(end.getTime()) && end >= validStart) ? end : new Date();
 
-      const ongkir = await prisma.$queryRaw`
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const ActAdditional = await prisma.activity_additional.findMany({
+        where: params,
+        include: {
+          program: {
+            select: {
+              program_id: true,
+              program_title: true,
+              program_activity_biaya: true,
+            },
+          },
+          activity_paket: true,
+        },
+      });
+
+      const orderIds = ActAdditional.map(item => item.order_id);
+
+      const statuses = [];
+      for (const orderId of orderIds) {
+        const status = await cekstatus({ order: orderId });
+        statuses.push(status);
+      }
+
+      const filteredActAdditional = ActAdditional.filter((item, index) => {
+        return statuses[index].transaction_status === 'settlement';
+      });
+
+      const additionalIds = filteredActAdditional
+        .map(item => item.id)
+        .filter(id => id !== undefined && id !== null);
+
+      const additionalIdsString = additionalIds.join(',');
+
+      const pendapatan = await prisma.$queryRawUnsafe(`
+      SELECT SUM(total_biaya) AS totalPendapatan
+      FROM activity_additional
+      WHERE id IN (${additionalIdsString})
+      `);
+
+      const zakatWakaf = await prisma.$queryRawUnsafe(`
+      SELECT SUM(wakaf) AS total_wakaf, SUM(zakat) AS total_zakat
+      FROM activity_additional
+      WHERE id IN (${additionalIdsString})
+      `);
+
+      const penjualan = await prisma.$queryRawUnsafe(`
+      SELECT a.paket_id, p.kategori, SUM(jumlah_peserta) AS jumlah_pemesanan, p.biaya,  
+      p.biaya * SUM(a.jumlah_peserta) AS hasil_penjualan
+      FROM activity_additional a
+      INNER JOIN activity_paket p ON a.paket_id = p.id
+      WHERE a.id IN (${additionalIdsString})
+      GROUP BY a.paket_id
+      `);
+
+      const ongkir = await prisma.$queryRawUnsafe(`
       SELECT SUM(ongkir) AS total_ongkir
-FROM activity_additional a
-INNER JOIN program_transaction_activity t 
-ON a.order_id COLLATE UTF8MB4_GENERAL_CI = t.order_id COLLATE UTF8MB4_GENERAL_CI
-WHERE t.midtrans_status_log = 'settlement'
-`
+      FROM activity_additional
+      WHERE id IN (${additionalIdsString})
+      `);
 
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1238,6 +1280,170 @@ WHERE t.midtrans_status_log = 'settlement'
     } catch (error) {
       res.status(500).json({
         message: error?.message,
+      });
+    }
+  },
+
+  async getAllActUser(req, res) {
+    try {
+      const id = req.params.id;
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "created_date";
+      const sortType = req.query.order || "desc";
+      const keyword = req.query.keyword || "";
+
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      // Validate date range
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd = (!isNaN(end.getTime()) && end >= validStart) ? end : new Date();
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      // Query parameters
+      const params = {
+        nama: {
+          contains: keyword,
+        },
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      // Fetch Activity Additional
+      const ActAdditional = await prisma.activity_additional.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        where: params,
+        include: {
+          program: {
+            select: {
+              program_id: true,
+              program_title: true,
+              program_activity_biaya: true,
+            },
+          },
+          activity_paket: true,
+        },
+      });
+
+      const orderIds = ActAdditional.map(item => item.order_id);
+
+      // Fetch status asynchronously
+      const statusPromises = orderIds.map(orderId => cekstatus({ order: orderId }));
+      const statuses = await Promise.all(statusPromises);
+
+      // Filter based on status
+      const filteredActAdditional = ActAdditional.filter((item, index) => {
+        return statuses[index].transaction_status === 'settlement';
+      });
+
+      // Extract subdistrict IDs from filteredActAdditional
+      const subdistrictIds = filteredActAdditional
+        .map(item => item.district_id) // Adjust the property if necessary
+        .filter(id => id !== undefined && id !== null);
+
+      console.log('Subdistrict IDs:', subdistrictIds);
+
+      // Example of using subdistrictIds:
+      // Fetch subdistrict data
+      const subdistrictPromises = subdistrictIds.map(subdistrictId =>
+        axios.get(`https://pro.rajaongkir.com/api/subdistrict?id=${subdistrictId}`, {
+          headers: {
+            key: "017746b2ce942519918096b4d136b79f",
+          },
+        })
+      );
+      const subdistrictResponses = await Promise.all(subdistrictPromises);
+
+      // Fetch Activity User data
+      const [count, ActUser] = await prisma.$transaction([
+        prisma.activity_user.count({
+          where: {
+            additional_id: {
+              in: filteredActAdditional.map(item => item.id),
+            },
+          },
+        }),
+        prisma.activity_user.findMany({
+          where: {
+            additional_id: {
+              in: filteredActAdditional.map(item => item.id),
+            },
+          },
+          include: {
+            program: {
+              select: {
+                program_id: true,
+                program_title: true,
+                program_activity_biaya: true,
+              },
+            },
+            activity_additional: {
+              include: {
+                activity_paket: true,
+              },
+            },
+          },
+          skip,
+          take: perPage,
+          orderBy: {
+            activity_additional: {
+              created_date: sortType,
+            },
+          },
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: ActUser,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+        subdistrictData: subdistrictResponses.map(response => response.data),
+      });
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      res.status(500).json({
+        message: error.message || 'Internal Server Error',
+      });
+    }
+  },
+
+  async rajaOngkirKota(req, res) {
+    const id = req.params.id;
+    try {
+      const response = await axios.get(
+        `https://pro.rajaongkir.com/api/subdistrict?id=${id}`,
+        {
+          headers: {
+            key: "017746b2ce942519918096b4d136b79f",
+          },
+        }
+      );
+      console.log(response.data);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error || "An error occurred",
       });
     }
   },

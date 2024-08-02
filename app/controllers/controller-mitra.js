@@ -124,7 +124,10 @@ module.exports = {
         // mitra_kodepos,
         mitra_badan_usaha_category,
         mitra_no_kontrak,
-        mitra_reg_program_id
+        mitra_reg_program_id,
+        mitra_bank,
+        mitra_no_rekening,
+        mitra_nama_rekening
       } = req.body;
 
       //console.log(JSON.stringify(req.body))      
@@ -140,6 +143,7 @@ module.exports = {
 
       const mitraResult = await prisma.mitra.create({
         data: {
+          status_request_penarikan: 1,
           // user: {
           //   connect: {
           //     user_id: Number(userId),
@@ -172,6 +176,9 @@ module.exports = {
           //     city_id: Number(mitra_city_id),
           //   }
           // }
+          mitra_bank,
+          mitra_no_rekening,
+          mitra_nama_rekening,
         },
       });
 
@@ -1268,6 +1275,7 @@ module.exports = {
       const sortType = req.query.order || "asc";
       const params = {
         status_request_penarikan: 1,
+        approved: 1,
         status_bayar: 0,
       };
 
@@ -1314,5 +1322,5 @@ module.exports = {
       });
     }
   },
-  
+
 };
