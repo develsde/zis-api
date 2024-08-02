@@ -843,7 +843,7 @@ module.exports = {
               "\nAdmin",
           });
         }
-
+        console.log(msgId);
         res.status(200).json({
           message: "Sukses Kirim Data",
           data: {
