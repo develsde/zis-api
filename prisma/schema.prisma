@@ -907,7 +907,7 @@ model mitra {
   mitra_no_rekening          String?                @db.VarChar(16)
   mitra_nama_rekening        String?                @db.VarChar(100)
   mitra_status               Int?                   @default(1) @db.SmallInt
-  mitra_no_kontrak           String?                @db.VarChar(16)
+  mitra_no_kontrak           String?                @db.VarChar(55)
   mitra_program_id           Int?
   created_date               DateTime?              @default(now()) @db.Timestamp(0)
   all_notes                  String?                @db.Text
