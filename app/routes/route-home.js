@@ -30,4 +30,7 @@ router.get("/checkStat/:id",home.checkStat)
 
 router.get("/getPenjualan",home.getPenjualan)
 
+router.get("/getAllActUser/", home.getAllActUser)
+router.get("/rajaOngkirKota/:id", home.rajaOngkirKota)
+
 module.exports = router;
