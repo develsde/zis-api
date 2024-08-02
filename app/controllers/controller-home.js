@@ -625,7 +625,7 @@ module.exports = {
         }
         const dateString = actResult.datetime;
         const date = new Date(dateString);
-        const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
         const formattedDana = add.total_biaya.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
@@ -644,7 +644,7 @@ module.exports = {
             paket.kategori +
             "\nPengiriman : " +
             add.layanan_kirim +
-            "\n Jumlah yang dibayar : " +
+            "\nJumlah yang dibayar : " +
             formattedDana +
             "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
             "\nSalam zisindosat\n" +
@@ -821,13 +821,14 @@ module.exports = {
           }
           const dateString = actResult.created_date;
           const date = new Date(dateString);
-          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric'});
           const formattedDana = total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
             text:
-              "Terima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
-              "Mohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai\n" +
+              "Menunggu Pembayaran\n"+
+              "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
+              "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
               "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
               "\nTanggal/waktu : " +
               formattedDate +
@@ -835,14 +836,14 @@ module.exports = {
               nama +
               "\nNo whatsapp : " +
               no_wa +
-              "\n Jumlah yang harus dibayarkan : " +
+              "\nJumlah yang harus dibayarkan : " +
               formattedDana +
               "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
               "\nSalam zisindosat\n" +
               "\nAdmin",
           });
         }
-
+        console.log(msgId);
         res.status(200).json({
           message: "Sukses Kirim Data",
           data: {
@@ -1141,8 +1142,8 @@ module.exports = {
     console.log(req.body);
     try {
       const data = {
-        origin: req.body.city_id,
-        originType: "city",
+        origin: 2096,
+        originType: "subdistrict",
         destination: req.body.district_id,
         destinationType: "subdistrict",
         weight: req.body.jumlah_peserta
