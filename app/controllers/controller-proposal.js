@@ -374,12 +374,23 @@ module.exports = {
       }
       console.log(pn)
       console.log(pn.replace(/[^0-9\.]+/g, ""))
-      const check = await sendImkas({
+      const checks = await sendImkas({
         phone: pn.replace(/[^0-9\.]+/g, ""),
         nom: '50',
         id: `10${userId}`,
         desc: "Pengecekan Nomor",
       });
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: check?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(check.headers),
+          api_body: check?.config?.data,
+          api_response: JSON.stringify(check.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      const check = checks?.data
       console.log(check);
 
       if (check.responseCode != '00') {
@@ -472,12 +483,24 @@ module.exports = {
         imkas = "0" + imkas.substring(3).trim()
       }
 
-      const check = await sendImkas({
+      const checks = await sendImkas({
         phone: imkas.replace(/[^0-9\.]+/g, ""),
         nom: proposalss.dana_yang_disetujui,
         id: id,
         desc: "Dana telah dikirimkan",
       });
+      console.log(check);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: check?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(check.headers),
+          api_body: check?.config?.data,
+          api_response: JSON.stringify(check.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      const check = checks?.data
       console.log(check);
 
       if (check.responseCode != '00') {

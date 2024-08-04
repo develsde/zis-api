@@ -1,8 +1,10 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
 const { customAlphabet } = require("nanoid");
-const { subMonths, subDays, format, endOfMonth } = require('date-fns');
+const { subMonths, subDays, format, endOfMonth } = require("date-fns");
 const { z } = require("zod");
+var serverkeys = process.env.SERVER_KEY;
+var clientkeys = process.env.CLIENT_KEY;
 const { midtransfer, cekstatus } = require("../helper/midtrans");
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -279,12 +281,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -485,6 +487,25 @@ module.exports = {
             price: bayarkan,
           });
 
+          const header = {
+            isProduction: true,
+            serverKey: serverkeys,
+            clientKey: clientkeys,
+          };
+
+          const log = await prisma.log_vendor.create({
+            data: {
+              vendor_api: "Snap MidTrans",
+              url_api: req.originalUrl,
+              api_header: JSON.stringify(header),
+              api_body: JSON.stringify({
+                order: `${timesg}P${program_id}`,
+                price: bayarkan,
+              }),
+              api_response: JSON.stringify(midtrans),
+              payload: JSON.stringify(req.body),
+            },
+          });
           console.log(midtrans);
 
           res.status(200).json({
@@ -531,9 +552,20 @@ module.exports = {
           },
         }),
       ]);
-      const stat = await cekstatus({
+      const stats = await cekstatus({
         order: id,
       });
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: stats?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(stats.headers),
+          api_body: stats?.config?.data,
+          api_response: JSON.stringify(stats.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      const stat = stats.data;
       console.log(stat);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -625,12 +657,20 @@ module.exports = {
         }
         const dateString = actResult.datetime;
         const date = new Date(dateString);
-        const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-        const formattedDana = add.total_biaya.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+        const formattedDate = date.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+        const formattedDana = add.total_biaya.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        });
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
           text:
-            "Terima kasih atas partisipasi kamu, pendaftaran dan pembayaran kamu sudah kami terima.\n" +
+            "Transaksi Berhasil\n" +
+            "\nTerima kasih atas partisipasi kamu, pendaftaran dan pembayaran kamu sudah kami terima.\n" +
             "\nDengan informasi sebagai berikut :" +
             "\nTanggal/waktu : " +
             formattedDate +
@@ -648,8 +688,20 @@ module.exports = {
             formattedDana +
             "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
             "\nSalam zisindosat\n" +
-            "\nAdmin",
+            "\nAdmin\n" +
+            "\nPanitia Virtual Run For Palestine\n" +
+            "0899-8387-090",
         });
+        // const log = await prisma.log_vendor.create({
+        //   data: {
+        //     vendor_api: "https://erpapi.zisindosat.id/wapi/send_message",
+        //     url_api: req.originalUrl,
+        //     api_header,
+        //     api_body,
+        //     api_response: msgId,
+        //     payload: req.body,
+        //   },
+        // });
       }
       res.status(200).json({
         message: "Sukses Kirim Data",
@@ -684,7 +736,7 @@ module.exports = {
         iskomunitas,
         nama_komunitas,
         program_id,
-        // jumlah_kaos,
+        referentor,
         // no_wa_user,
         ukuran,
         gender,
@@ -757,6 +809,7 @@ module.exports = {
         total_biaya: Number(total),
         iskomunitas: Number(iskomunitas),
         nama_komunitas,
+        referentor,
       };
 
       // if (iskomunitas == 1) {
@@ -811,6 +864,26 @@ module.exports = {
           price: Number(total),
         });
 
+        const header = {
+          isProduction: true,
+          serverKey: serverkeys,
+          clientKey: clientkeys,
+        };
+
+        const log = await prisma.log_vendor.create({
+          data: {
+            vendor_api: "Snap MidTrans",
+            url_api: req.originalUrl,
+            api_header: JSON.stringify(header),
+            api_body: JSON.stringify({
+              order: `${timesg}P${program_id}A${actResult?.id}`,
+              price: Number(total),
+            }),
+            api_response: JSON.stringify(midtrans),
+            payload: JSON.stringify(req.body),
+          },
+        });
+
         if (accUser) {
           let pn = no_wa;
           pn = pn.replace(/\D/g, "");
@@ -821,8 +894,15 @@ module.exports = {
           }
           const dateString = actResult.created_date;
           const date = new Date(dateString);
-          const formattedDate = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-          const formattedDana = total.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+          const formattedDate = date.toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
+          const formattedDana = total.toLocaleString("id-ID", {
+            style: "currency",
+            currency: "IDR",
+          });
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
             text:
@@ -840,8 +920,20 @@ module.exports = {
               formattedDana +
               "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
               "\nSalam zisindosat\n" +
-              "\nAdmin",
+              "\nAdmin\n" +
+              "\nPanitia Virtual Run For Palestine\n" +
+              "0899-8387-090",
           });
+          // const log = await prisma.log_vendor.create({
+          //   data: {
+          //     vendor_api: "https://erpapi.zisindosat.id/wapi/send_message",
+          //     url_api: req.originalUrl,
+          //     api_header,
+          //     api_body,
+          //     api_response: msgId,
+          //     payload: req.body,
+          //   },
+          // });
         }
 
         res.status(200).json({
@@ -853,7 +945,6 @@ module.exports = {
           },
         });
       }
-
     } catch (error) {
       res.status(500).json({
         message: error.message,
@@ -951,7 +1042,8 @@ module.exports = {
       const end = new Date(req.query.end);
 
       const validStart = !isNaN(start.getTime()) ? start : new Date();
-      const validEnd = (!isNaN(end.getTime()) && end >= validStart) ? end : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
 
       validStart.setHours(0, 0, 0, 0);
       validEnd.setHours(23, 59, 59, 999);
@@ -987,17 +1079,28 @@ module.exports = {
         },
       });
 
-      const orderIds = ActAdditional.map(item => item.order_id);
+      const orderIds = ActAdditional.map((item) => item.order_id);
 
       const statuses = [];
 
       for (const orderId of orderIds) {
-        const status = await cekstatus({ order: orderId });
+        const statuss = await cekstatus({ order: orderId });
+        const log = await prisma.log_vendor.create({
+          data: {
+            vendor_api: statuss?.config?.url,
+            url_api: req.originalUrl,
+            api_header: JSON.stringify(statuss.headers),
+            api_body: statuss?.config?.data,
+            api_response: JSON.stringify(statuss.data),
+            payload: JSON.stringify(req.body),
+          },
+        });
+        const status = statuss.data;
         statuses.push(status);
       }
 
       const filteredActAdditional = ActAdditional.filter((item, index) => {
-        return statuses[index].transaction_status === 'settlement';
+        return statuses[index].transaction_status === "settlement";
       });
 
       const totalFiltered = filteredActAdditional.length;
@@ -1018,7 +1121,8 @@ module.exports = {
       });
     } catch (error) {
       res.status(500).json({
-        message: error?.message || "Terjadi kesalahan dalam mengambil data tambahan",
+        message:
+          error?.message || "Terjadi kesalahan dalam mengambil data tambahan",
       });
     }
   },
@@ -1072,6 +1176,17 @@ module.exports = {
           },
         }
       );
+      console.log(response);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: response?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(response.headers),
+          api_body: response?.config?.data,
+          api_response: JSON.stringify(response.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1096,6 +1211,17 @@ module.exports = {
           },
         }
       );
+      console.log(response);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: response?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(response.headers),
+          api_body: response?.config?.data,
+          api_response: JSON.stringify(response.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1120,6 +1246,17 @@ module.exports = {
           },
         }
       );
+      console.log(response);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: response?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(response.headers),
+          api_body: response?.config?.data,
+          api_response: JSON.stringify(response.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1155,6 +1292,17 @@ module.exports = {
           },
         }
       );
+      console.log(response);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: response?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(response.headers),
+          api_body: response?.config?.data,
+          api_response: JSON.stringify(response.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1168,13 +1316,75 @@ module.exports = {
     }
   },
 
+  async loh(req, res) {
+    try {
+      // WA
+      // const msgId = await sendWhatsapp({
+      //   wa_number: "085331026363",
+      //   text:
+      //     "Testing",
+      // });
+      // console.log(msgId);
+
+      // RAJA ONGKIR
+      // const data = {
+      //   origin: 2096,
+      //   originType: "subdistrict",
+      //   destination: 2095,
+      //   destinationType: "subdistrict",
+      //   weight: 500,
+      //   courier: "jne",
+      // };
+      // const response = await axios.post(
+      //   "https://pro.rajaongkir.com/api/cost",
+      //   qs.stringify(data),
+      //   {
+      //     headers: {
+      //       key: "017746b2ce942519918096b4d136b79f",
+      //       "Content-Type": "application/x-www-form-urlencoded",
+      //     },
+      //   }
+      // );
+      // console.log(response);
+      // const log = await prisma.log_vendor.create({
+      //   data: {
+      //     vendor_api: response?.config?.url,
+      //     url_api: req.originalUrl,
+      //     api_header: JSON.stringify(response.headers),
+      //     api_body: response?.config?.data,
+      //     api_response: JSON.stringify(response.data),
+      //     payload: JSON.stringify(req.body),
+      //   },
+      // });
+
+      res.status(200).json({
+        message: "Wok",
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
   async checkStat(req, res) {
     const id = req.params.id;
     const order_id = req.body.order_id;
     try {
-      const stat = await cekstatus({
+      const stats = await cekstatus({
         order: id,
       });
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: stats?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(stats.headers),
+          api_body: stats?.config?.data,
+          api_response: JSON.stringify(stats.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      const stat = stats.data;
       console.log(stat);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1194,7 +1404,8 @@ module.exports = {
       const end = new Date(req.query.end);
 
       const validStart = !isNaN(start.getTime()) ? start : new Date();
-      const validEnd = (!isNaN(end.getTime()) && end >= validStart) ? end : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
 
       validStart.setHours(0, 0, 0, 0);
       validEnd.setHours(23, 59, 59, 999);
@@ -1224,23 +1435,34 @@ module.exports = {
         },
       });
 
-      const orderIds = ActAdditional.map(item => item.order_id);
+      const orderIds = ActAdditional.map((item) => item.order_id);
 
       const statuses = [];
       for (const orderId of orderIds) {
-        const status = await cekstatus({ order: orderId });
+        const statuss = await cekstatus({ order: orderId });
+        const log = await prisma.log_vendor.create({
+          data: {
+            vendor_api: statuss?.config?.url,
+            url_api: req.originalUrl,
+            api_header: JSON.stringify(statuss.headers),
+            api_body: statuss?.config?.data,
+            api_response: JSON.stringify(statuss.data),
+            payload: JSON.stringify(req.body),
+          },
+        });
+        const status = statuss.data;
         statuses.push(status);
       }
 
       const filteredActAdditional = ActAdditional.filter((item, index) => {
-        return statuses[index].transaction_status === 'settlement';
+        return statuses[index].transaction_status === "settlement";
       });
 
       const additionalIds = filteredActAdditional
-        .map(item => item.id)
-        .filter(id => id !== undefined && id !== null);
+        .map((item) => item.id)
+        .filter((id) => id !== undefined && id !== null);
 
-      const additionalIdsString = additionalIds.join(',');
+      const additionalIdsString = additionalIds.join(",");
 
       const pendapatan = await prisma.$queryRawUnsafe(`
       SELECT SUM(total_biaya) AS totalPendapatan
@@ -1275,7 +1497,7 @@ module.exports = {
         totalZakat: zakatWakaf[0].total_zakat,
         totalWakaf: zakatWakaf[0].total_wakaf,
         ongkir: ongkir[0].total_ongkir,
-        totalPendapatan: pendapatan[0].totalPendapatan
+        totalPendapatan: pendapatan[0].totalPendapatan,
       });
     } catch (error) {
       res.status(500).json({
@@ -1299,7 +1521,8 @@ module.exports = {
 
       // Validate date range
       const validStart = !isNaN(start.getTime()) ? start : new Date();
-      const validEnd = (!isNaN(end.getTime()) && end >= validStart) ? end : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
       validStart.setHours(0, 0, 0, 0);
       validEnd.setHours(23, 59, 59, 999);
 
@@ -1336,32 +1559,37 @@ module.exports = {
         },
       });
 
-      const orderIds = ActAdditional.map(item => item.order_id);
+      const orderIds = ActAdditional.map((item) => item.order_id);
 
       // Fetch status asynchronously
-      const statusPromises = orderIds.map(orderId => cekstatus({ order: orderId }));
+      const statusPromises = orderIds.map((orderId) =>
+        cekstatus({ order: orderId })
+      );
       const statuses = await Promise.all(statusPromises);
 
       // Filter based on status
       const filteredActAdditional = ActAdditional.filter((item, index) => {
-        return statuses[index].transaction_status === 'settlement';
+        return statuses[index].transaction_status === "settlement";
       });
 
       // Extract subdistrict IDs from filteredActAdditional
       const subdistrictIds = filteredActAdditional
-        .map(item => item.district_id) // Adjust the property if necessary
-        .filter(id => id !== undefined && id !== null);
+        .map((item) => item.district_id) // Adjust the property if necessary
+        .filter((id) => id !== undefined && id !== null);
 
-      console.log('Subdistrict IDs:', subdistrictIds);
+      console.log("Subdistrict IDs:", subdistrictIds);
 
       // Example of using subdistrictIds:
       // Fetch subdistrict data
-      const subdistrictPromises = subdistrictIds.map(subdistrictId =>
-        axios.get(`https://pro.rajaongkir.com/api/subdistrict?id=${subdistrictId}`, {
-          headers: {
-            key: "017746b2ce942519918096b4d136b79f",
-          },
-        })
+      const subdistrictPromises = subdistrictIds.map((subdistrictId) =>
+        axios.get(
+          `https://pro.rajaongkir.com/api/subdistrict?id=${subdistrictId}`,
+          {
+            headers: {
+              key: "017746b2ce942519918096b4d136b79f",
+            },
+          }
+        )
       );
       const subdistrictResponses = await Promise.all(subdistrictPromises);
 
@@ -1370,14 +1598,14 @@ module.exports = {
         prisma.activity_user.count({
           where: {
             additional_id: {
-              in: filteredActAdditional.map(item => item.id),
+              in: filteredActAdditional.map((item) => item.id),
             },
           },
         }),
         prisma.activity_user.findMany({
           where: {
             additional_id: {
-              in: filteredActAdditional.map(item => item.id),
+              in: filteredActAdditional.map((item) => item.id),
             },
           },
           include: {
@@ -1413,13 +1641,12 @@ module.exports = {
           hasNext: count > page * perPage,
           totalPage: Math.ceil(count / perPage),
         },
-        subdistrictData: subdistrictResponses.map(response => response.data),
+        subdistrictData: subdistrictResponses.map((response) => response.data),
       });
-
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
       res.status(500).json({
-        message: error.message || 'Internal Server Error',
+        message: error.message || "Internal Server Error",
       });
     }
   },
@@ -1435,6 +1662,17 @@ module.exports = {
           },
         }
       );
+      console.log(response);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: response?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(response.headers),
+          api_body: response?.config?.data,
+          api_response: JSON.stringify(response.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       console.log(response.data);
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1448,4 +1686,34 @@ module.exports = {
     }
   },
 
+  async getRef(req, res) {
+    try {
+      // const id = req.params.id;
+      const isorg = Number(req.query.isorg || 0);
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+
+      const [count, Ref] = await prisma.$transaction([
+        prisma.referentor.count({
+          where: {
+            isorg,
+          },
+        }),
+        prisma.referentor.findMany({
+          where: {
+            isorg,
+          },
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ubah Data",
+        data: Ref,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
 };

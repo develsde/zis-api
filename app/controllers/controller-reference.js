@@ -9,9 +9,20 @@ module.exports = {
   async checkImkas(req, res) {
     try {
       const check = await checkImkas();
+      console.log(check);
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: check?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(check.headers),
+          api_body: check?.config?.data,
+          api_response: JSON.stringify(check.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       return res.status(200).json({
         message: "Sukses",
-        data: check,
+        data: check.data,
       });
     } catch (error) {
       return res.status(500).json({

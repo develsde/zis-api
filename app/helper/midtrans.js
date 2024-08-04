@@ -60,7 +60,7 @@ const cekstatus = async ({ order }) => {
                     'Authorization': `Basic ${auth}`,
                 }
             });
-        return response.data;
+        return response;
     } catch (error) {
         console.error('Error:', error.response.data);
         throw error;
