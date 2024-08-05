@@ -73,12 +73,23 @@ module.exports = {
       }
       console.log(pn)
       console.log(pn.replace(/[^0-9\.]+/g, ""))
-      const check = await sendImkas({
+      const checks = await sendImkas({
         phone: pn.replace(/[^0-9\.]+/g, ""),
         nom: '50',
         id: `10${userId}`,
         desc: "Pengecekan Nomor",
       });
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: check?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(check.headers),
+          api_body: check?.config?.data,
+          api_response: JSON.stringify(check.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      const check = checks?.data
       console.log(check);
 
       if (check.responseCode != '00') {

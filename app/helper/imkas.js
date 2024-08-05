@@ -30,7 +30,7 @@ const sendImkas = async ({ nom, phone, desc, id }) => {
             });
         console.log(datas);
         console.log(response);
-        return response.data;
+        return response;
     } catch (error) {
         console.error('Error:', error.response.data);
         throw error;
@@ -62,7 +62,7 @@ const checkImkas = async () => {
             });
         // console.log(datas);
         console.log(response);
-        return response.data;
+        return response;
     } catch (error) {
         console.error('Error:', error.response.data);
         throw error;

@@ -32,5 +32,7 @@ router.get("/getPenjualan",home.getPenjualan)
 
 router.get("/getAllActUser/", home.getAllActUser)
 router.get("/rajaOngkirKota/:id", home.rajaOngkirKota)
+router.get("/getRef/", home.getRef)
+router.post("/loh",home.loh)
 
 module.exports = router;
