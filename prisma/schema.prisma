@@ -955,6 +955,7 @@ model referentor {
   referentor_phone     String?          @db.VarChar(16)
   referentor_email     String?          @db.VarChar(100)
   referentor_isindosat Int?             @default(0) @db.SmallInt
+  isorg                Int?             @default(0) @db.SmallInt
   mitra_register       mitra_register[]
 }
 
@@ -1054,6 +1055,7 @@ model activity_additional {
   nama_komunitas String?         @db.VarChar(100)
   created_date   DateTime?       @default(now()) @db.Timestamp(0)
   order_id       String?         @db.VarChar(100)
+  referentor     Int?
   activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
   program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
   activity_user  activity_user[]
@@ -1063,6 +1065,7 @@ model activity_additional {
   @@index([district_id], map: "activity_additional_unique_2")
   @@index([paket_id], map: "activity_additional_unique_3")
   @@index([program_id], map: "activity_additional_program_FK")
+  @@index([referentor], map: "referentor")
 }
 
 model activity_paket {
@@ -1100,4 +1103,15 @@ model imkas_trans {
   imkas_datetime    DateTime? @default(now()) @db.Timestamp(0)
   imkas_proposal_id Int?
   imkas_no          String?   @db.VarChar(15)
+}
+
+model log_vendor {
+  id           Int       @id @default(autoincrement())
+  create_date  DateTime? @default(now()) @db.Timestamp(0)
+  vendor_api   String?   @db.Text
+  url_api      String?   @db.Text
+  api_header   String?   @db.LongText
+  api_body     String?   @db.Text
+  api_response String?   @db.LongText
+  payload      String?   @db.Text
 }
