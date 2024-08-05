@@ -1569,7 +1569,7 @@ module.exports = {
 
       // Filter based on status
       const filteredActAdditional = ActAdditional.filter((item, index) => {
-        return statuses[index].transaction_status === "settlement";
+        return statuses[index].data.transaction_status === "settlement";
       });
 
       // Extract subdistrict IDs from filteredActAdditional
