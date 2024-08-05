@@ -382,11 +382,11 @@ module.exports = {
       });
       const log = await prisma.log_vendor.create({
         data: {
-          vendor_api: check?.config?.url,
+          vendor_api: checks?.config?.url,
           url_api: req.originalUrl,
-          api_header: JSON.stringify(check.headers),
-          api_body: check?.config?.data,
-          api_response: JSON.stringify(check.data),
+          api_header: JSON.stringify(checks.headers),
+          api_body: checks?.config?.data,
+          api_response: JSON.stringify(checks.data),
           payload: JSON.stringify(req.body),
         },
       });
@@ -492,11 +492,11 @@ module.exports = {
       console.log(check);
       const log = await prisma.log_vendor.create({
         data: {
-          vendor_api: check?.config?.url,
+          vendor_api: checks?.config?.url,
           url_api: req.originalUrl,
-          api_header: JSON.stringify(check.headers),
-          api_body: check?.config?.data,
-          api_response: JSON.stringify(check.data),
+          api_header: JSON.stringify(checks.headers),
+          api_body: checks?.config?.data,
+          api_response: JSON.stringify(checks.data),
           payload: JSON.stringify(req.body),
         },
       });
