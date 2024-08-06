@@ -489,7 +489,6 @@ module.exports = {
         id: id,
         desc: "Dana telah dikirimkan",
       });
-      console.log(check);
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: checks?.config?.url,
