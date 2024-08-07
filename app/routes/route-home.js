@@ -18,7 +18,7 @@ router.post("/act-add", home.postAdditionalActivity)
 
 router.post("/addPaket", home.postPaket)
 router.put("/editPaket/:id", home.putPaket)
-router.delete("/delPaket/:id", home.delPaket)
+router.delete("/delPaket/:id",authentication, home.delPaket)
 router.get("/getActAdd", home.getAdditional)
 router.get("/getActUser/:id", home.getActUser)
 
