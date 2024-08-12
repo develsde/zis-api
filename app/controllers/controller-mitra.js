@@ -3,6 +3,7 @@ const fs = require("fs");
 const { connect } = require("http2");
 const moment = require("moment")
 const { sendWhatsapp } = require("../helper/whatsapp");
+const { subMonths, subDays, format, endOfMonth } = require('date-fns');
 
 module.exports = {
 
@@ -865,13 +866,13 @@ module.exports = {
 
   async getAllProcessMitraProposalRecap(req, res) {
     try {
-      const userId = Number(req.user.user_id || 0)
-      const userType = Number(req.user.user_type || 0)
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const status = Number(req.query.status || 0);
       const skip = (page - 1) * perPage;
       const keyword = req.query.nama || "";
+      const bulan = Number(req.query.bulan || 0);
+      const tahun = Number(req.query.tahun || 2024);
       const user_type = req.query.user_type || "";
       const category = req.query.category || "";
       const sortBy = req.query.sortBy || "created_date";
@@ -890,18 +891,136 @@ module.exports = {
       //console.log("LOG TYPESSXX", JSON.stringify(arrId));
 
 
+      // const params = {
+      //   AND: [{
+      //     mitra_nama: { contains: keyword },
+      //     approved: 0,
+      //     status_bayar: 0,
+      //     // id: { in: arrId }
+      //   }]
+      // };
+
       const params = {
-        AND: [{
-          mitra_nama: { contains: keyword },
-          approved: 0,
-          status_bayar: 0,
-          // id: { in: arrId }
-        }]
+        mitra_nama: {
+          contains: keyword,
+        },
+        // status_bayar: 0,
+        // create_date: {
+        //   contains: `-${bulan}-`,
+        // },
+        // approved: 0,
       };
+
+      const params_waitapprove = {
+        mitra_nama: {
+          contains: keyword,
+        },
+        status_bayar: 0,
+        // create_date: {
+        //   contains: `-${bulan}-`,
+        // },
+        approved: 0,
+      };
+
+      const params_waitpayment = {
+        mitra_nama: {
+          contains: keyword,
+        },
+        status_bayar: 0,
+        approved: 1,
+        status_request_penarikan: 0
+      };
+
+      const params_siapbayar = {
+        mitra_nama: {
+          contains: keyword,
+        },
+        status_bayar: 0,
+        approved: 1,
+        status_request_penarikan: 1
+      };
+
+      const params_paid = {
+        mitra_nama: {
+          contains: keyword,
+        },
+        status_bayar: 1,
+        approved: 1,
+        status_request_penarikan: 1
+      };
+
+      const params_tolak = {
+        mitra_nama: {
+          contains: keyword,
+        },
+        status_bayar: 0,
+        approved: 2
+      };
+
+      if (bulan == 0 && tahun !== 0) {
+        params.created_date = {
+          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_waitpayment.created_date = {
+          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_tolak.created_date = {
+          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_siapbayar.created_date = {
+          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_paid.created_date = {
+          gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+      }
+
+      if (bulan !== 0) {
+        params.created_date = {
+          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_waitpayment.created_date = {
+          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_tolak.created_date = {
+          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_siapbayar.created_date = {
+          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+        params_paid.created_date = {
+          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+        };
+      }
+
+      let whereclaus = "";
+      if (status === 0) {
+        whereclaus = params
+      } else if (status === 1) {
+        whereclaus = params_waitapprove
+      } else if (status === 2) {
+        whereclaus = params_waitpayment
+      } else if (status === 3) {
+        whereclaus = params_tolak
+      } else if (status === 4) {
+        whereclaus = params_siapbayar
+      } else if (status === 5) {
+        whereclaus = params_paid
+      }
 
       const [count, proposals] = await prisma.$transaction([
         prisma.mitra.count({
-          where: params,
+          where: whereclaus,
         }),
         prisma.mitra.findMany({
           include: {
@@ -960,7 +1079,7 @@ module.exports = {
           orderBy: {
             [sortBy]: sortType,
           },
-          where: params,
+          where: whereclaus,
           skip,
           take: perPage,
         }),
@@ -1318,6 +1437,126 @@ module.exports = {
       });
     } catch (error) {
       res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getMitraTerbayar(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+      const params = {
+        status_request_penarikan: 1,
+        approved: 1,
+        status_bayar: 1,
+      };
+
+      const [count, detailmitra] = await prisma.$transaction([
+        prisma.mitra.count({
+          where: params,
+        }),
+        prisma.mitra.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          include: {
+            user: true,
+            mitra_register: {
+              include: {
+                program: {
+                  select: {
+                    program_title: true,
+                    program_banner: true,
+                    kategori_penyaluran: true,
+                    program_category: true
+                  },
+                }
+              }
+            },
+            // dana_final_disetujui: true,
+            // mitra_bank: true,
+            // mitra_no_rekening: true,
+            // mitra_nama_rekening: true,
+            // mitra_penarikan_dana: true,
+          },
+          skip,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Detail Waqif",
+
+        data: detailmitra,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async sudahBayar(req, res) {
+    try {
+      const id = req.params.id
+      const status_bayar = req.body.status_bayar;
+      const nama = req.body.nama;
+      const ref = req.body.ref;
+      const tgl_bayar = new Date()
+
+      const proposal = await prisma.mitra.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          status_bayar
+          // tgl_bayar
+        },
+        include: {
+          user: {
+            select: {
+              mustahiq: true
+            }
+          }
+        }
+      });
+
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      if (!proposal) {
+        return res.status(400).json({
+          message: "Proposal tidak ditemukan",
+        });
+      }
+
+      if (status_bayar == 1) {
+
+        let pn = ref
+        if (pn.substring(0, 1) == '0') {
+          pn = "0" + pn.substring(1).trim()
+        } else if (pn.substring(0, 3) == '+62') {
+          pn = "0" + pn.substring(3).trim()
+        }
+
+        const formattedDana = proposal.dana_final_disetujui.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+
+        const msgId = await sendWhatsapp({
+          wa_number: pn.replace(/[^0-9\.]+/g, ""),
+          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke Rekening ${proposal.mitra_no_rekening} a.n ${proposal.mitra_nama_rekening} anda. Terima kasih`,
+        });
+      }
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Ubah Data",
+      });
+    } catch (error) {
+      return res.status(500).json({
         message: error?.message,
       });
     }

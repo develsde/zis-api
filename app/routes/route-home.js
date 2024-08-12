@@ -18,21 +18,21 @@ router.post("/act-add", home.postAdditionalActivity)
 
 router.post("/addPaket", home.postPaket)
 router.put("/editPaket/:id", home.putPaket)
-router.delete("/delPaket/:id",authentication, home.delPaket)
-router.get("/getActAdd", home.getAdditional)
-router.get("/getActUser/:id", home.getActUser)
+router.delete("/delPaket/:id", authentication, home.delPaket)
+router.get("/getActAdd", authentication, home.getAdditional)
+router.get("/getActUser/:id", authentication, home.getActUser)
 
 router.get("/rajaOngkirProv", home.checkProv)
 router.get("/rajaOngkirCities/:id", home.checkCities)
 router.get("/rajaOngkirKec/:id", home.checkKec)
-router.post("/rajaOngkirBayar",home.checkOngkir)
-router.get("/checkStat/:id",home.checkStat)
+router.post("/rajaOngkirBayar", home.checkOngkir)
+router.get("/checkStat/:id", home.checkStat)
 
-router.get("/getPenjualan",home.getPenjualan)
+router.get("/getPenjualan", authentication, home.getPenjualan)
 
-router.get("/getAllActUser/", home.getAllActUser)
+router.get("/getAllActUser/", authentication, home.getAllActUser)
 router.get("/rajaOngkirKota/:id", home.rajaOngkirKota)
 router.get("/getRef/", home.getRef)
-router.post("/loh",home.loh)
+router.post("/loh", home.loh)
 
 module.exports = router;

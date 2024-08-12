@@ -29,13 +29,17 @@ module.exports = {
       const sortType = req.query.order || "asc";
       const iswakaf = Number(req.query.iswakaf || 0);
       const isinternal = Number(req.query.isinternal || 0);
+      const isinter = Number(req.query.isinter || 0)
 
       const params = {
         program_status: status,
         program_title: {
           contains: keyword,
         },
-        isinternal: isinternal,
+        isinternal: {
+          lte: isinternal,
+          gte: isinter
+        },
         iswakaf: iswakaf,
         ...(category ? { program_category_id: Number(category) } : {}),
       };
@@ -281,12 +285,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
