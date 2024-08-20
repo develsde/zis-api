@@ -1623,6 +1623,7 @@ module.exports = {
             activity_additional: {
               include: {
                 activity_paket: true,
+                referentor_activity_additional_referentorToreferentor: true
               },
             },
           },

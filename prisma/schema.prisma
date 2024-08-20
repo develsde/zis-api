@@ -950,13 +950,14 @@ model mitra_register {
 }
 
 model referentor {
-  id                   Int              @id @default(autoincrement())
-  referentor_nama      String?          @db.VarChar(255)
-  referentor_phone     String?          @db.VarChar(16)
-  referentor_email     String?          @db.VarChar(100)
-  referentor_isindosat Int?             @default(0) @db.SmallInt
-  isorg                Int?             @default(0) @db.SmallInt
-  mitra_register       mitra_register[]
+  id                                                             Int                   @id @default(autoincrement())
+  referentor_nama                                                String?               @db.VarChar(255)
+  referentor_phone                                               String?               @db.VarChar(16)
+  referentor_email                                               String?               @db.VarChar(100)
+  referentor_isindosat                                           Int?                  @default(0) @db.SmallInt
+  isorg                                                          Int?                  @default(0) @db.SmallInt
+  activity_additional_activity_additional_referentorToreferentor activity_additional[] @relation("activity_additional_referentorToreferentor")
+  mitra_register                                                 mitra_register[]
 }
 
 model mitra_approval {
@@ -1031,34 +1032,35 @@ model program_transaction_activity {
 }
 
 model activity_additional {
-  id             Int             @id @default(autoincrement())
-  program_id     Int
-  nama           String?         @db.VarChar(100)
-  no_wa          String?         @db.VarChar(15)
-  email          String?         @db.VarChar(150)
-  province_id    Int
-  city_id        Int
-  district_id    Int
-  alamat         String?         @db.Text
-  kodepos        String?         @db.VarChar(10)
-  jumlah_peserta Int?
-  paket_id       Int
-  zakat          Int?
-  wakaf          Int?
-  jasa_kirim     String?         @db.VarChar(100)
-  layanan_kirim  String?         @db.VarChar(100)
-  etd            String?         @db.VarChar(10)
-  ongkir         Int?
-  total_biaya    Int?
-  excel          String?         @db.Text
-  iskomunitas    Int?            @default(0) @db.SmallInt
-  nama_komunitas String?         @db.VarChar(100)
-  created_date   DateTime?       @default(now()) @db.Timestamp(0)
-  order_id       String?         @db.VarChar(100)
-  referentor     Int?
-  activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
-  program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
-  activity_user  activity_user[]
+  id                                                    Int             @id @default(autoincrement())
+  program_id                                            Int
+  nama                                                  String?         @db.VarChar(100)
+  no_wa                                                 String?         @db.VarChar(15)
+  email                                                 String?         @db.VarChar(150)
+  province_id                                           Int
+  city_id                                               Int
+  district_id                                           Int
+  alamat                                                String?         @db.Text
+  kodepos                                               String?         @db.VarChar(10)
+  jumlah_peserta                                        Int?
+  paket_id                                              Int
+  zakat                                                 Int?
+  wakaf                                                 Int?
+  jasa_kirim                                            String?         @db.VarChar(100)
+  layanan_kirim                                         String?         @db.VarChar(100)
+  etd                                                   String?         @db.VarChar(10)
+  ongkir                                                Int?
+  total_biaya                                           Int?
+  excel                                                 String?         @db.Text
+  iskomunitas                                           Int?            @default(0) @db.SmallInt
+  nama_komunitas                                        String?         @db.VarChar(100)
+  created_date                                          DateTime?       @default(now()) @db.Timestamp(0)
+  order_id                                              String?         @db.VarChar(100)
+  referentor                                            Int             @default(1)
+  activity_paket                                        activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
+  program                                               program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
+  referentor_activity_additional_referentorToreferentor referentor      @relation("activity_additional_referentorToreferentor", fields: [referentor], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_referentor_FK")
+  activity_user                                         activity_user[]
 
   @@index([province_id], map: "activity_additional_unique")
   @@index([city_id], map: "activity_additional_unique_1")
