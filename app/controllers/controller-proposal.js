@@ -1,4 +1,4 @@
-const { prisma } = require("../../prisma/client");
+// const { prisma } = require("../../prisma/client");
 const { Prisma } = require("@prisma/client");
 const fs = require("fs");
 const { subMonths, subDays, format, endOfMonth } = require('date-fns');
@@ -562,8 +562,67 @@ module.exports = {
     }
   },
 
+  async sudahBayar(req, res) {
+    try {
+      const id = req.params.id
+      const ispaid = req.body.ispaid;
+      const nama = req.body.nama;
+      const ref = req.body.ref;
+      const tgl_bayar = new Date()
 
-  
+      const proposal = await prisma.proposal.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          ispaid,
+          tgl_bayar
+        },
+        include: {
+          user: {
+            select: {
+              mustahiq: true
+            }
+          }
+        }
+      });
+
+      const currentDate = new Date();
+      const formattedDate = currentDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      if (!proposal) {
+        return res.status(400).json({
+          message: "Proposal tidak ditemukan",
+        });
+      }
+
+      if (ispaid == 1) {
+
+        let pn = ref
+        if (pn.substring(0, 1) == '0') {
+          pn = "0" + pn.substring(1).trim()
+        } else if (pn.substring(0, 3) == '+62') {
+          pn = "0" + pn.substring(3).trim()
+        }
+
+        const formattedDana = proposal.dana_yang_disetujui.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+
+        const msgId = await sendWhatsapp({
+          wa_number: pn.replace(/[^0-9\.]+/g, ""),
+          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas atau Rekening yang sudah terdaftar. Terima kasih`,
+        });
+      }
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Ubah Data",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
   //////////////////
   async updateProposal(req, res) {
     try {

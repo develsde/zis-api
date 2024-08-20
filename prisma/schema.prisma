@@ -1055,7 +1055,7 @@ model activity_additional {
   nama_komunitas String?         @db.VarChar(100)
   created_date   DateTime?       @default(now()) @db.Timestamp(0)
   order_id       String?         @db.VarChar(100)
-  referentor     Int?
+  referentor     Int?            @default(1)
   activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
   program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
   activity_user  activity_user[]
