@@ -950,12 +950,13 @@ model mitra_register {
 }
 
 model referentor {
-  id                   Int              @id @default(autoincrement())
-  referentor_nama      String?          @db.VarChar(255)
-  referentor_phone     String?          @db.VarChar(16)
-  referentor_email     String?          @db.VarChar(100)
-  referentor_isindosat Int?             @default(0) @db.SmallInt
-  isorg                Int?             @default(0) @db.SmallInt
+  id                   Int                   @id @default(autoincrement())
+  referentor_nama      String?               @db.VarChar(255)
+  referentor_phone     String?               @db.VarChar(16)
+  referentor_email     String?               @db.VarChar(100)
+  referentor_isindosat Int?                  @default(0) @db.SmallInt
+  isorg                Int?                  @default(0) @db.SmallInt
+  activity_additional  activity_additional[]
   mitra_register       mitra_register[]
 }
 
@@ -1055,9 +1056,10 @@ model activity_additional {
   nama_komunitas String?         @db.VarChar(100)
   created_date   DateTime?       @default(now()) @db.Timestamp(0)
   order_id       String?         @db.VarChar(100)
-  referentor     Int?            @default(1)
+  referentor_id  Int?
   activity_paket activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_activity_paket_FK")
   program        program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_program_FK")
+  referentor     referentor?     @relation(fields: [referentor_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_additional_referentor_FK")
   activity_user  activity_user[]
 
   @@index([province_id], map: "activity_additional_unique")
@@ -1065,7 +1067,7 @@ model activity_additional {
   @@index([district_id], map: "activity_additional_unique_2")
   @@index([paket_id], map: "activity_additional_unique_3")
   @@index([program_id], map: "activity_additional_program_FK")
-  @@index([referentor], map: "referentor")
+  @@index([referentor_id], map: "activity_additional_referentor_FK")
 }
 
 model activity_paket {
