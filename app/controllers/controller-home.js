@@ -813,7 +813,11 @@ module.exports = {
         total_biaya: Number(total),
         iskomunitas: Number(iskomunitas),
         nama_komunitas,
-        referentor,
+        referentor: {
+          connect: {
+            id: Number(referentor),
+          },
+        },
       };
 
       // if (iskomunitas == 1) {
@@ -1623,7 +1627,7 @@ module.exports = {
             activity_additional: {
               include: {
                 activity_paket: true,
-                referentor_activity_additional_referentorToreferentor: true
+                referentor: true
               },
             },
           },
