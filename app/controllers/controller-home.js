@@ -29,7 +29,7 @@ module.exports = {
       const sortType = req.query.order || "asc";
       const iswakaf = Number(req.query.iswakaf || 0);
       const isinternal = Number(req.query.isinternal || 0);
-      const isinter = Number(req.query.isinter || 0)
+      const isinter = Number(req.query.isinter || 0);
 
       const params = {
         program_status: status,
@@ -38,7 +38,7 @@ module.exports = {
         },
         isinternal: {
           lte: isinternal,
-          gte: isinter
+          gte: isinter,
         },
         iswakaf: iswakaf,
         ...(category ? { program_category_id: Number(category) } : {}),
@@ -285,12 +285,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -1627,7 +1627,7 @@ module.exports = {
             activity_additional: {
               include: {
                 activity_paket: true,
-                referentor: true
+                referentor: true,
               },
             },
           },
@@ -1722,6 +1722,124 @@ module.exports = {
     } catch (error) {
       res.status(500).json({
         message: error?.message,
+      });
+    }
+  },
+
+  async postQurban(req, res) {
+    try {
+      const {
+        nama,
+        nama_mudohi,
+        no_wa,
+        email,
+        province_id,
+        city_id,
+        district_id,
+        alamat,
+        program_id,
+        ukuran,
+        nik,
+        type,
+        alokasi_hak,
+        total
+      } = req.body;
+
+      const postResult = await prisma.activity_qurban.create({
+        data: {
+          program: {
+            connect: {
+              program_id: Number(program_id),
+            },
+          },
+          nama,
+          nama_mudohi,
+          no_wa,
+          email,
+          province_id: Number(province_id),
+          city_id: Number(city_id),
+          district_id: Number(district_id),
+          alamat,
+          ukuran,
+          nik,
+          type: Number(type),
+          alokasi_hak: Number(alokasi_hak),
+          total:Number(total)
+        },
+      });
+      // const timesg = String(+new Date());
+      // const midtrans = await midtransfer({
+      //   order: `${timesg}P${program_id}Q${postResult?.id}`,
+      //   price: Number(total),
+      // });
+
+      // const header = {
+      //   isProduction: true,
+      //   serverKey: serverkeys,
+      //   clientKey: clientkeys,
+      // };
+
+      // const log = await prisma.log_vendor.create({
+      //   data: {
+      //     vendor_api: "Snap MidTrans",
+      //     url_api: req.originalUrl,
+      //     api_header: JSON.stringify(header),
+      //     api_body: JSON.stringify({
+      //       order: `${timesg}P${program_id}A${actResult?.id}`,
+      //       price: Number(total),
+      //     }),
+      //     api_response: JSON.stringify(midtrans),
+      //     payload: JSON.stringify(req.body),
+      //   },
+      // });
+      if(postResult){
+        // let pn = no_wa;
+        // pn = pn.replace(/\D/g, "");
+        // if (pn.substring(0, 1) == "0") {
+        //   pn = "0" + pn.substring(1).trim();
+        // } else if (pn.substring(0, 3) == "62") {
+        //   pn = "0" + pn.substring(3).trim();
+        // }
+        // const dateString = postResult.created_date;
+        // const date = new Date(dateString);
+        // const formattedDate = date.toLocaleDateString("id-ID", {
+        //   day: "numeric",
+        //   month: "long",
+        //   year: "numeric",
+        // });
+        // const formattedDana = total.toLocaleString("id-ID", {
+        //   style: "currency",
+        //   currency: "IDR",
+        // });
+        // const msgId = await sendWhatsapp({
+        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        //   text:
+        //     "Menunggu Pembayaran\n" +
+        //     "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
+        //     "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
+        //     "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
+        //     "\nTanggal/waktu : " +
+        //     formattedDate +
+        //     "\nNama : " +
+        //     nama +
+        //     "\nNo whatsapp : " +
+        //     no_wa +
+        //     "\nJumlah yang harus dibayarkan : " +
+        //     formattedDana +
+        //     "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+        //     "\nSalam zisindosat\n" +
+        //     "\nAdmin\n" +
+        //     "\nPanitia Virtual Run For Palestine\n" +
+        //     "0899-8387-090",
+        // });
+        res.status(200).json({
+          message: "Sukses Kirim Data",
+          data: postResult,
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
       });
     }
   },
