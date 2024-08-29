@@ -570,7 +570,7 @@ module.exports = {
 
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
-            text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas ${proposal.user.mustahiq.imkas_number} atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} anda. Terima kasih`,
+            text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas ${proposal.user.mustahiq.imkas_number} anda. Terima kasih`,
           });
         }
       }
@@ -632,7 +632,7 @@ module.exports = {
 
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas atau Rekening yang sudah terdaftar. Terima kasih`,
+          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
         });
       }
       return res.status(200).json({
