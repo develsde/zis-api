@@ -1079,6 +1079,7 @@ model activity_paket {
   keterangan          String?               @db.Text
   activity_additional activity_additional[]
   program             program               @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_paket_program_FK")
+  detail_qurban       detail_qurban[]
 
   @@index([program_id], map: "activity_paket_unique")
 }
@@ -1120,25 +1121,49 @@ model log_vendor {
 }
 
 model activity_qurban {
-  id          Int     @id @default(autoincrement())
-  nama        String? @db.VarChar(300)
-  nama_mudohi String? @db.VarChar(300)
-  no_wa       String? @db.VarChar(300)
-  email       String? @db.VarChar(300)
-  province_id Int
-  city_id     Int
-  district_id Int
-  alamat      String? @db.Text
-  program_id  Int
-  ukuran      String? @db.VarChar(300)
-  nik         String? @db.VarChar(100)
-  type        Int?    @default(0)
-  alokasi_hak Int?
-  total       Int?
-  program     program @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_qurban_program_FK")
+  id                Int             @id @default(autoincrement())
+  nama              String?         @db.VarChar(300)
+  nama_mudohi       String?         @db.VarChar(300)
+  no_wa             String?         @db.VarChar(300)
+  email             String?         @db.VarChar(300)
+  province_id       Int
+  city_id           Int
+  district_id       Int
+  alamat            String?         @db.Text
+  program_id        Int
+  ukuran            String?         @db.VarChar(300)
+  nik               String?         @db.VarChar(100)
+  type              Int?            @default(0)
+  alokasi_hak       Int?
+  total             Int?
+  created_date      DateTime?       @default(now()) @db.Timestamp(0)
+  catatan           String?         @db.Text
+  lokasi_penyaluran Int?
+  gender            String?         @db.VarChar(100)
+  ongkir            String?         @db.VarChar(100)
+  program           program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_qurban_program_FK")
+  detail_qurban     detail_qurban[]
 
   @@index([city_id], map: "activity_qurban_city_id_IDX")
   @@index([district_id], map: "activity_qurban_district_id_IDX")
   @@index([program_id], map: "activity_qurban_program_FK")
   @@index([province_id], map: "activity_qurban_province_id_IDX")
+}
+
+model detail_qurban {
+  id              Int             @id @default(autoincrement())
+  qurban_id       Int
+  paket_id        Int
+  qty             String?         @db.VarChar(100)
+  total           String?         @db.VarChar(100)
+  activity_paket  activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_paket_FK")
+  activity_qurban activity_qurban @relation(fields: [qurban_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_qurban_FK")
+
+  @@index([paket_id], map: "detail_qurban_activity_paket_FK")
+  @@index([qurban_id], map: "detail_qurban_activity_qurban_FK")
+}
+
+model lokasi_qurban {
+  id                   Int     @id @default(autoincrement())
+  lokasi_penyembelihan String? @db.Text
 }

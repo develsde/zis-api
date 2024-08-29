@@ -1742,8 +1742,14 @@ module.exports = {
         nik,
         type,
         alokasi_hak,
-        total
+        harga,
+        ongkir,
+        gender,
+        lokasi_penyaluran,
+        catatan,
       } = req.body;
+
+      const totals = Number(harga) + Number(ongkir);
 
       const postResult = await prisma.activity_qurban.create({
         data: {
@@ -1764,7 +1770,12 @@ module.exports = {
           nik,
           type: Number(type),
           alokasi_hak: Number(alokasi_hak),
-          total:Number(total)
+          total: Number(totals),
+          harga: Number(harga),
+          ongkir: Number(ongkir),
+          gender,
+          lokasi_penyaluran,
+          catatan,
         },
       });
       // const timesg = String(+new Date());
@@ -1792,7 +1803,23 @@ module.exports = {
       //     payload: JSON.stringify(req.body),
       //   },
       // });
-      if(postResult){
+      if (postResult) {
+        // const detail = await prisma.detail_qurban.create({
+        //   data: {
+        //     activity_paket: {
+        //       connect: {
+        //         id: Number(postResult?.id),
+        //       },
+        //     },
+        //     activity_qurban: {
+        //       connect: {
+        //         id: Number(id)
+        //       }
+        //     },
+        //     qty,
+        //     total: Number(harga)
+        //   },
+        // });
         // let pn = no_wa;
         // pn = pn.replace(/\D/g, "");
         // if (pn.substring(0, 1) == "0") {
