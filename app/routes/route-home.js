@@ -35,4 +35,5 @@ router.get("/rajaOngkirKota/:id", home.rajaOngkirKota)
 router.get("/getRef/", home.getRef)
 router.post("/loh", home.loh)
 
+router.post("/postQurban", home.postQurban)
 module.exports = router;

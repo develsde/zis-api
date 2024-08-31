@@ -6,7 +6,7 @@ const { some } = require("lodash");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const phoneFormatter = require('phone-formatter');
 const parsenik = require("parsenik");
-const { sendImkas } = require("../helper/imkas");
+const { sendImkas, checkImkas } = require("../helper/imkas");
 
 module.exports = {
   async details(req, res) {
@@ -482,7 +482,18 @@ module.exports = {
       } else if (imkas.substring(0, 3) == '+62') {
         imkas = "0" + imkas.substring(3).trim()
       }
-
+      const saldo = await checkImkas();
+      console.log(saldo);
+      const wow = await prisma.log_vendor.create({
+        data: {
+          vendor_api: saldo?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(saldo.headers),
+          api_body: saldo?.config?.data,
+          api_response: JSON.stringify(saldo.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
       const checks = await sendImkas({
         phone: imkas.replace(/[^0-9\.]+/g, ""),
         nom: proposalss.dana_yang_disetujui,
@@ -501,6 +512,18 @@ module.exports = {
       });
       const check = checks?.data
       console.log(check);
+      const saldos = await checkImkas();
+      console.log(saldos);
+      const wows = await prisma.log_vendor.create({
+        data: {
+          vendor_api: saldos?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(saldos.headers),
+          api_body: saldos?.config?.data,
+          api_response: JSON.stringify(saldos.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
 
       if (check.responseCode != '00') {
         return res.status(400).json({ message: check.responseDescription });
@@ -547,7 +570,7 @@ module.exports = {
 
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
-            text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas ${proposal.user.mustahiq.imkas_number} atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} anda. Terima kasih`,
+            text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas ${proposal.user.mustahiq.imkas_number} anda. Terima kasih`,
           });
         }
       }
@@ -609,7 +632,7 @@ module.exports = {
 
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor IMKas atau Rekening yang sudah terdaftar. Terima kasih`,
+          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
         });
       }
       return res.status(200).json({
