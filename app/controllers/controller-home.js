@@ -1730,7 +1730,6 @@ module.exports = {
     try {
       const {
         nama,
-        nama_mudohi,
         no_wa,
         email,
         province_id,
@@ -1746,10 +1745,13 @@ module.exports = {
         ongkir,
         gender,
         lokasi_penyaluran,
-        catatan,
+        detail_qurban
       } = req.body;
 
       const totals = Number(harga) + Number(ongkir);
+      if (detail_qurban.length < 1) {
+        return res.status(400).json({ message: "Masukkan detail qurban wajib diisi" });
+      }
 
       const postResult = await prisma.activity_qurban.create({
         data: {
@@ -1759,7 +1761,6 @@ module.exports = {
             },
           },
           nama,
-          nama_mudohi,
           no_wa,
           email,
           province_id: Number(province_id),
@@ -1775,7 +1776,6 @@ module.exports = {
           ongkir: Number(ongkir),
           gender,
           lokasi_penyaluran,
-          catatan,
         },
       });
       // const timesg = String(+new Date());
@@ -1804,22 +1804,15 @@ module.exports = {
       //   },
       // });
       if (postResult) {
-        // const detail = await prisma.detail_qurban.create({
-        //   data: {
-        //     activity_paket: {
-        //       connect: {
-        //         id: Number(postResult?.id),
-        //       },
-        //     },
-        //     activity_qurban: {
-        //       connect: {
-        //         id: Number(id)
-        //       }
-        //     },
-        //     qty,
-        //     total: Number(harga)
-        //   },
-        // });
+        const transformedDetails = req.body.detail_qurban.map(detail => ({
+          activity_paket: { connect: { id: detail.activity_paket } },
+          activity_qurban: { connect: { id: postResult?.id } },
+          qty: detail.qty,
+          total: detail.total
+        }));
+        const detail = await prisma.detail_qurban.createMany({
+          data: transformedDetails
+        });
         // let pn = no_wa;
         // pn = pn.replace(/\D/g, "");
         // if (pn.substring(0, 1) == "0") {
@@ -1861,7 +1854,7 @@ module.exports = {
         // });
         res.status(200).json({
           message: "Sukses Kirim Data",
-          data: postResult,
+          data: {postResult, detail},
         });
       }
     } catch (error) {

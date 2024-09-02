@@ -1123,7 +1123,6 @@ model log_vendor {
 model activity_qurban {
   id                Int             @id @default(autoincrement())
   nama              String?         @db.VarChar(300)
-  nama_mudohi       String?         @db.VarChar(300)
   no_wa             String?         @db.VarChar(300)
   email             String?         @db.VarChar(300)
   province_id       Int
@@ -1137,10 +1136,10 @@ model activity_qurban {
   alokasi_hak       Int?
   total             Int?
   created_date      DateTime?       @default(now()) @db.Timestamp(0)
-  catatan           String?         @db.Text
   lokasi_penyaluran Int?
   gender            String?         @db.VarChar(100)
   ongkir            String?         @db.VarChar(100)
+  harga             String?         @db.VarChar(100)
   program           program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_qurban_program_FK")
   detail_qurban     detail_qurban[]
 
@@ -1156,6 +1155,8 @@ model detail_qurban {
   paket_id        Int
   qty             String?         @db.VarChar(100)
   total           String?         @db.VarChar(100)
+  nama_mudohi     String?         @db.VarChar(300)
+  catatan         String?         @db.Text
   activity_paket  activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_paket_FK")
   activity_qurban activity_qurban @relation(fields: [qurban_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_qurban_FK")
 
