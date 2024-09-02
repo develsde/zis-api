@@ -1805,10 +1805,11 @@ module.exports = {
       // });
       if (postResult) {
         const transformedDetails = req.body.detail_qurban.map(detail => ({
-          activity_paket: { connect: { id: detail.activity_paket } },
-          activity_qurban: { connect: { id: postResult?.id } },
+          paket_id : Number(detail.activity_paket),
+          qurban_id : Number(postResult?.id),
+          nama_mudohi: detail.nama_mudohi,
           qty: detail.qty,
-          total: detail.total
+          total: String(detail.total)
         }));
         const detail = await prisma.detail_qurban.createMany({
           data: transformedDetails

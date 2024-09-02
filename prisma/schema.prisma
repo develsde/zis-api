@@ -1152,12 +1152,12 @@ model activity_qurban {
 model detail_qurban {
   id              Int             @id @default(autoincrement())
   qurban_id       Int
-  paket_id        Int
+  paket_id        Int?
   qty             String?         @db.VarChar(100)
   total           String?         @db.VarChar(100)
   nama_mudohi     String?         @db.VarChar(300)
   catatan         String?         @db.Text
-  activity_paket  activity_paket  @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_paket_FK")
+  activity_paket  activity_paket? @relation(fields: [paket_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_paket_FK")
   activity_qurban activity_qurban @relation(fields: [qurban_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "detail_qurban_activity_qurban_FK")
 
   @@index([paket_id], map: "detail_qurban_activity_paket_FK")
