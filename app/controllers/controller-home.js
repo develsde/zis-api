@@ -1805,7 +1805,7 @@ module.exports = {
       // });
       if (postResult) {
         const transformedDetails = req.body.detail_qurban.map(detail => ({
-          paket_id : Number(detail.activity_paket),
+          paket_id : Number(detail.paket_id),
           qurban_id : Number(postResult?.id),
           nama_mudohi: detail.nama_mudohi,
           qty: detail.qty,
