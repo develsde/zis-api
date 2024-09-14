@@ -28,7 +28,7 @@ const ReqAJ = async ({ id }) => {
       <TokenID>${token}</TokenID>
     </TransactionID>
     <TransactionInfo>
-      <ProcCode>ProcCode</ProcCode>
+      <ProcCode>40</ProcCode>
       <ChannelType>ChannelType</ChannelType>
       <RefNumber>RefNumber</RefNumber>
       <TerminalID>TerminalID</TerminalID>
@@ -51,8 +51,8 @@ const ReqAJ = async ({ id }) => {
       <CustRefNumber>CustRefNumber</CustRefNumber>
       <Name>Name</Name>
       <RegencyCode>TNA</RegencyCode>
-      <PurposeCode>PurposeCode</PurposeCode>
-      <PurposeDesc>PurposeDescription</PurposeDesc>
+      <PurposeCode>3</PurposeCode>
+      <PurposeDesc>Qurban</PurposeDesc>
     </BeneficiaryData>
     <Signature>
       <Data>Data</Data>
