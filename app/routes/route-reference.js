@@ -35,8 +35,8 @@ router.post("/imkasSaldo", refData.checkImkas)
 router.get("/activity-paket/:id", refData.paket);
 
 //Reporting Financial
-router.get("/gl-account-report", refData.getReportGlaccount);
-router.get("/asnaf-type-report", refData.getReportAsnafType);
-router.get("/program-report", refData.getReportProgram);
+router.get("/gl-account-report", authentication, refData.getReportGlaccount);
+router.get("/asnaf-type-report", authentication, refData.getReportAsnafType);
+router.get("/program-report", authentication, refData.getReportProgram);
 
 module.exports = router;
