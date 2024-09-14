@@ -43,6 +43,7 @@
         "qs": "^6.12.3",
         "read-excel-file": "^5.7.1",
         "swiftmessageparser": "^1.2.1",
+        "xml2js": "^0.6.2",
         "zod": "^3.22.4"
     },
     "devDependencies": {
