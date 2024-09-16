@@ -11,6 +11,9 @@ const programerp = require("./controller-program-erp");
 const waqif = require("./controller-wakif");
 const mitra = require("./controller-mitra");
 
+//middleware new ERP-dashboard
+const dashboard = require("./controller-dashboard");
+
 module.exports = {
   user,
   home,
@@ -23,5 +26,6 @@ module.exports = {
   pettyCash,
   budget,
   waqif,
-  mitra
+  mitra,
+  dashboard
 };

@@ -34,6 +34,9 @@ const erpProgramRoute = require("./app/routes/route-erp-program");
 const waqifRoute = require("./app/routes/route-waqif");
 const mitraRoute = require("./app/routes/route-mitra");
 
+//dashboard
+const dashboardRoute = require("./app/routes/route-dashboard");
+
 console.log(path.join(__dirname, "uploads"));
 
 app.use("/public/uploads", express.static(path.join(__dirname, "uploads/")));
@@ -62,6 +65,9 @@ app.use("/erpprogram", erpProgramRoute);
 //Wakaf
 app.use("/wakaf", waqifRoute);
 app.use("/mitra", mitraRoute);
+
+//Dashboard-New ERP Purposes
+app.use("/dashboard", dashboardRoute);
 
 app.get("/", (req, res) => {
   res.send("Selamat Datang Di Portal ZISWAF Indosat");
