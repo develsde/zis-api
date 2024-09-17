@@ -38,5 +38,6 @@ router.get("/activity-paket/:id", refData.paket);
 router.get("/gl-account-report", authentication, refData.getReportGlaccount);
 router.get("/asnaf-type-report", authentication, refData.getReportAsnafType);
 router.get("/program-report", authentication, refData.getReportProgram);
+router.get("/aktifitas-report", refData.getReportAktifitas);
 
 module.exports = router;

@@ -1184,4 +1184,55 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
       });
     }
   },
+
+  async getReportAktifitas(req, res) {
+    try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const result = await prisma.$queryRawUnsafe(`
+      SELECT 
+    aa.nama, 
+	 aa.created_date, 
+	 aa.iskomunitas, 
+	 r.referentor_nama, 
+	 aa.total_biaya,
+   pt.midtrans_status_log
+FROM 
+activity_additional aa
+INNER JOIN program_transaction_activity pt 
+ON aa.order_id  COLLATE UTF8MB4_GENERAL_CI = pt.order_id  COLLATE UTF8MB4_GENERAL_CI
+AND pt.midtrans_status_log = 'settlement'
+INNER JOIN referentor r ON aa.referentor_id = r.id
+ORDER BY aa.created_date DESC
+      `);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
 }
