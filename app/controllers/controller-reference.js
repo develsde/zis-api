@@ -1235,4 +1235,87 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+
+  async getReportZis(req, res) {
+    try {
+      const sortBy = req.query.sortBy || "create_date";
+      const sortType = req.query.order || "desc";
+
+      const proposal = await prisma.proposal.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        select: {
+          nama: true,
+          nama_pemberi_rekomendasi: true,
+          create_date: true,
+          dana_yang_diajukan: true,
+          tgl_bayar: true,
+          status_bayar: true,
+          approved: true,
+          ispaid: true,
+          program: {
+            select: {
+              program_title: true,
+            },
+          },
+          proposal_approval: true,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: proposal,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportWakaf(req, res) {
+    try {
+      const sortBy = req.query.sortBy || "created_date";
+      const sortType = req.query.order || "desc";
+
+      const mitra = await prisma.mitra.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        select: {
+          mitra_nama: true,
+          created_date: true,
+          mitra_no_kontrak: true,
+          approved: true,
+          status_bayar: true,
+          mitra_register: {
+            select: {
+              mitra_reg_nominal: true,
+              referentor: {
+                select: {
+                  referentor_nama: true
+                },
+              },
+            },
+          },
+          program: {
+            select: {
+              program_title: true,
+            },
+          },
+          mitra_approval: true,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: mitra,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
 }
