@@ -167,7 +167,7 @@ const BalanceAJ = async ({id}) => {
   const minutes = pad(date.getUTCMinutes());
   const seconds = pad(date.getUTCSeconds());
   const formattedDates = `${year}${month}${day}${hours}${minutes}${seconds}`;
-  const institusiID = "nanti dikasih";
+  const institusiID = "000146";
   const xml = `
   <?xml version="1.0" ?>
   <MethodCall>
@@ -175,7 +175,7 @@ const BalanceAJ = async ({id}) => {
       <Name>Transfer.Artajasa.ATMBTransfer</Name>
     </MethodID>
     <TransactionID>
-      <STAN>${id}</STAN>
+      <STAN>STAN</STAN>
       <TransDateTime>${formattedDates}</TransDateTime>
       <InstID>${institusiID}</InstID>
     </TransactionID>
@@ -198,7 +198,7 @@ const BalanceAJ = async ({id}) => {
 
   try {
     const response = await axios.post(
-      'API',
+      'https://certapi2.artajasa.co.id:9443/Disburssecure/ApiGetBalanceDisburse/servlet/DisburseZIS ',
       xml,
       {
         headers: {
