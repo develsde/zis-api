@@ -1033,4 +1033,289 @@ module.exports = {
       });
     }
   },
+
+  async getReportGlaccount(req, res) {
+    try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const result = await prisma.$queryRawUnsafe(`
+      SELECT g.gl_account, g.gl_name, g.gl_type, gt.gla_type, SUM(COALESCE(p.dana_yang_disetujui, 0)) AS nominal,  g.status
+FROM 
+    gl_account g
+LEFT JOIN 
+    program_category pc ON g.id = pc.gl_id
+LEFT JOIN 
+    program pr ON pc.id = pr.program_category_id
+LEFT JOIN 
+    proposal p ON pr.program_id = p.program_id AND p.ispaid = 1
+INNER JOIN 
+    gl_account_type gt ON g.gl_type = gt.id
+GROUP BY g.id
+ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
+      `);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportAsnafType(req, res) {
+    try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const result = await prisma.$queryRawUnsafe(`
+      SELECT a.type, a.deskripsi, SUM(COALESCE(p.dana_yang_disetujui, 0)) AS nominal
+FROM 
+    asnaf_type a
+LEFT JOIN 
+    gl_account g ON a.id = g.asnaf_type_id
+LEFT JOIN 
+    program_category pc ON g.id = pc.gl_id
+LEFT JOIN 
+    program pr ON pc.id = pr.program_category_id
+LEFT JOIN 
+    proposal p ON pr.program_id = p.program_id AND p.ispaid = 1
+GROUP BY a.id
+ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
+      `);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportProgram(req, res) {
+    try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const result = await prisma.$queryRawUnsafe(`
+      SELECT 
+    pr.program_title,
+    pr.program_category_id,
+    pc.name,
+    SUM(COALESCE(p.dana_yang_disetujui, 0)) AS nominal,
+    pr.program_status
+FROM 
+    program pr
+LEFT JOIN 
+    proposal p ON p.program_id = pr.program_id AND p.ispaid = 1
+LEFT JOIN 
+    program_category pc ON pr.program_category_id = pc.id
+GROUP BY pr.program_id
+ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
+      `);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportAktifitas(req, res) {
+    try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const result = await prisma.$queryRawUnsafe(`
+      SELECT 
+    aa.nama, 
+	 aa.created_date, 
+	 aa.iskomunitas, 
+	 r.referentor_nama, 
+	 aa.total_biaya,
+   pt.midtrans_status_log
+FROM 
+activity_additional aa
+INNER JOIN program_transaction_activity pt 
+ON aa.order_id  COLLATE UTF8MB4_GENERAL_CI = pt.order_id  COLLATE UTF8MB4_GENERAL_CI
+AND pt.midtrans_status_log = 'settlement'
+INNER JOIN referentor r ON aa.referentor_id = r.id
+ORDER BY aa.created_date DESC
+      `);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: result
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportZis(req, res) {
+    try {
+      const sortBy = req.query.sortBy || "create_date";
+      const sortType = req.query.order || "desc";
+
+      const proposal = await prisma.proposal.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        select: {
+          nama: true,
+          nama_pemberi_rekomendasi: true,
+          create_date: true,
+          dana_yang_diajukan: true,
+          tgl_bayar: true,
+          status_bayar: true,
+          approved: true,
+          ispaid: true,
+          program: {
+            select: {
+              program_title: true,
+            },
+          },
+          proposal_approval: true,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: proposal,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportWakaf(req, res) {
+    try {
+      const sortBy = req.query.sortBy || "created_date";
+      const sortType = req.query.order || "desc";
+
+      const mitra = await prisma.mitra.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        select: {
+          mitra_nama: true,
+          created_date: true,
+          mitra_no_kontrak: true,
+          approved: true,
+          status_bayar: true,
+          mitra_register: {
+            select: {
+              mitra_reg_nominal: true,
+              referentor: {
+                select: {
+                  referentor_nama: true
+                },
+              },
+            },
+          },
+          program: {
+            select: {
+              program_title: true,
+            },
+          },
+          mitra_approval: true,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: mitra,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
 }

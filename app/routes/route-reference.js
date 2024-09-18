@@ -24,13 +24,22 @@ router.delete("/removebank", authentication, refData.deleteBank);
 
 router.get("/article", refData.getAllArticle)
 router.get("/article/:id", refData.getByIdArticle)
-router.post("/addArticle",authentication, upload.single("banner"), refData.registerArticle)
-router.put("/editArticle/:id",authentication, upload.single("banner"), refData.updateArticle)
-router.delete("/delArticle/:id",authentication, refData.deleteArticle)
+router.post("/addArticle", authentication, upload.single("banner"), refData.registerArticle)
+router.put("/editArticle/:id", authentication, upload.single("banner"), refData.updateArticle)
+router.delete("/delArticle/:id", authentication, refData.deleteArticle)
 
 router.get("/institusi/:id", refData.institusi)
 router.get("/glaccBayar", authentication, refData.glaccountPerBayar);
 router.post("/imkasSaldo", refData.checkImkas)
 
 router.get("/activity-paket/:id", refData.paket);
+
+//Reporting
+router.get("/gl-account-report", authentication, refData.getReportGlaccount);
+router.get("/asnaf-type-report", authentication, refData.getReportAsnafType);
+router.get("/program-report", authentication, refData.getReportProgram);
+router.get("/aktifitas-report", authentication, refData.getReportAktifitas);
+router.get("/zis-report", authentication, refData.getReportZis);
+router.get("/wakaf-report", authentication, refData.getReportWakaf);
+
 module.exports = router;
