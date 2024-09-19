@@ -1323,4 +1323,48 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+
+  async getReportMuzzaki(req, res) {
+    try {
+      const sortBy = req.query.sortBy || "trans_date";
+      const sortType = req.query.order || "desc";
+
+      const muzzaki = await prisma.transactions.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        select: {
+          nama_muzaki: true,
+          email_muzaki: true,
+          phone_muzaki: true,
+          payment_method: true,
+          trans_date: true,
+          is_nologin: true,
+          amount: true,
+          status: true,
+          program: {
+            select: {
+              program_title: true,
+            },
+          },
+          user: {
+            select: {
+              user_nama: true,
+              username: true,
+              user_phone: true,
+            }
+          }
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: muzzaki,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
 }
