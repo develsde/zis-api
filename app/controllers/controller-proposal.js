@@ -1,5 +1,4 @@
 const { prisma } = require("../../prisma/client");
-const { Prisma } = require("@prisma/client");
 const fs = require("fs");
 const { subMonths, subDays, format, endOfMonth } = require('date-fns');
 const { some } = require("lodash");
