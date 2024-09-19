@@ -1121,6 +1121,7 @@ LEFT JOIN
     proposal p ON pr.program_id = p.program_id AND p.ispaid = 1
 GROUP BY a.id
 ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
+LIMIT 7;
       `);
 
       res.status(200).json({
@@ -1138,6 +1139,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
     try {
       const start = new Date(req.query.start);
       const end = new Date(req.query.end);
+      const isinternal = Number(req.query.isinternal || 0)
 
       const validStart = !isNaN(start.getTime()) ? start : new Date();
       const validEnd =
@@ -1155,6 +1157,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
           gte: validStart,
           lte: validEnd,
         },
+        isinternal
       };
 
       const result = await prisma.$queryRawUnsafe(`
@@ -1170,6 +1173,7 @@ LEFT JOIN
     proposal p ON p.program_id = pr.program_id AND p.ispaid = 1
 LEFT JOIN 
     program_category pc ON pr.program_category_id = pc.id
+    WHERE pr.isinternal = ${isinternal}
 GROUP BY pr.program_id
 ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
       `);
