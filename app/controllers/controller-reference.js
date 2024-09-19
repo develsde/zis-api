@@ -1119,9 +1119,10 @@ LEFT JOIN
     program pr ON pc.id = pr.program_category_id
 LEFT JOIN 
     proposal p ON pr.program_id = p.program_id AND p.ispaid = 1
+    WHERE 
+    a.id NOT IN (8, 9)
 GROUP BY a.id
 ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
-LIMIT 7;
       `);
 
       res.status(200).json({
