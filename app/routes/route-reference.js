@@ -41,6 +41,6 @@ router.get("/program-report", authentication, refData.getReportProgram);
 router.get("/aktifitas-report", authentication, refData.getReportAktifitas);
 router.get("/zis-report", authentication, refData.getReportZis);
 router.get("/wakaf-report", authentication, refData.getReportWakaf);
-router.get("/muzzaki-report", refData.getReportMuzzaki);
+router.get("/muzzaki-report", authentication, refData.getReportMuzzaki);
 
 module.exports = router;

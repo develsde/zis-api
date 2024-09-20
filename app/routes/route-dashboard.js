@@ -8,5 +8,6 @@ const { upload } = require("../helper/upload");
 router.get("/total-mustahiq", authentication, dashboard.checkTotalMustahiq);
 router.get("/data-penyaluran", authentication, dashboard.graphPenyaluran);
 router.get("/data-perprogram", authentication, dashboard.graphPerprogram);
+router.get("/data-referentor", authentication, dashboard.dataRekapReferentor);
 
 module.exports = router;

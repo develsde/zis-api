@@ -28,6 +28,8 @@ module.exports = {
       }
       let arrIdProposal = []
       let arrIdProposalPrev = []
+      let arrIdMitra = []
+      let arrIdMitraPrev = []
       let arrId = []
       let arrIdPrev = []
       let arrCurrentId = []      
@@ -102,7 +104,62 @@ module.exports = {
           arrIdPrev.push(item.id)
         })
 
+        //get data muzaki
+        const totalMuzaki = await prisma.user.count({
+          where: {
+            user_type: {
+                equals: 11
+            }
+          },
+        });
+        if (!totalMuzaki) {
+          return res.status(404).json({
+            message: "Ambil Total MUZAKI Gagal Dilakukan",
+          });
+        }
+
+        //ambil data muwakif
+        const totalMuwakif = await prisma.user.count({
+          where: {
+            user_type: {
+                equals: 15
+            }
+          },
+        });
+        if (!totalMuwakif) {
+          return res.status(404).json({
+            message: "Ambil Total Muwakif Gagal Dilakukan",
+          });
+        }
         
+
+        //jumlah proposal mitra
+        const getAllMitraProp  = 
+        await prisma.$queryRaw`select p.id as id, count(p.id) as jumlah
+                                from mitra p 
+                                join user u on u.user_id = p.mitra_user_id 
+                                where u.mustahiq_id is not null and  
+                                YEAR(p.created_date) = ${tahun} and
+                                 MONTH(p.created_date) = ${bulan} GROUP by p.id;`
+      const getAllMitraPrev  = 
+        await prisma.$queryRaw`select p.id as id, count(p.id) as jumlah
+                                from mitra p 
+                                join user u on u.user_id = p.mitra_user_id 
+                                where  u.mustahiq_id is not null and  
+                                YEAR(p.created_date) = ${tahun} and
+                                 MONTH(p.created_date) = ${bulanprev} GROUP by p.id;`   
+
+
+          getAllMitraProp.map(item => {
+            //console.log("QUERY FETCH",item);          
+            arrIdMitra.push(item.id)
+          })
+
+          getAllMitraPrev.map(item => {
+            //console.log("QUERY FETCH",item);          
+            arrIdMitraPrev.push(item.id)
+          })                           
+
 
       const totalProposalPenyaluran = await prisma.proposal.findMany({                  
           where:{
@@ -128,6 +185,32 @@ module.exports = {
         });
       }      
       
+      ////WAKAF - MITRA
+      const totalMitraPenyaluran = await prisma.mitra.findMany({                  
+          where:{
+            id: { in: arrIdMitra }                                    
+          },      
+      });  
+      
+      
+        if (!totalMitraPenyaluran) {
+        return res.status(404).json({
+          message: "Ambil Total Mitra Gagal Dilakukan"          
+        });
+      }      
+
+      const totalMitraPenyaluranPrev = await prisma.mitra.findMany({                  
+        where:{
+          id: { in: arrIdMitraPrev }                                         
+        },      
+      });          
+      if (!totalMitraPenyaluranPrev) {
+        return res.status(404).json({
+          message: "Ambil Total Mitra Prev Gagal Dilakukan"          
+        });
+      }  
+
+      ////END OF WAKAF - MITRA
 
       const totalNominalPenyaluran = await prisma.proposal.aggregate({            
         _sum:{
@@ -178,7 +261,7 @@ module.exports = {
           icon: "bx bxs-user-rectangle",
           title: "MUSTAHIQ TERDAFTAR",
           value: Number(totalMustahiq)+" Orang",
-          badgeValue: "By Portal",
+          badgeValue: "Dari Portal",
           color: "success",
           desc: "Bulan "+namaBulan,
         },
@@ -197,6 +280,28 @@ module.exports = {
           badgeValue: "Tahun 2024 Hingga Bulan "+namaBulan,
           color: "warning",
           desc: "",
+        },
+        {
+          icon: "bx bxs-user-rectangle",
+          title: "MUZAKI TERDAFTAR",
+          value: Number(totalMuzaki)+" Orang",       
+          badgeValue: "Dari Portal",
+          color: "success",
+          desc: "Bulan "+namaBulan,
+        },{
+          icon: "bx bxs-user-rectangle",
+          title: "MUWAKIF TERDAFTAR",
+          value: Number(totalMuwakif)+" Orang",       
+          badgeValue: "Dari Portal",
+          color: "success",
+          desc: "Bulan "+namaBulan,
+        },{
+          icon: "bx bx-purchase-tag-alt",
+          title: "TOTAL MITRA WAKAF",
+          value: numberWithCommas(String(totalMitraPenyaluran.length))+ " Proposal",
+          badgeValue: (Number(totalMitraPenyaluran.length)/Number(totalMitraPenyaluranPrev.length)).toFixed(2) + "%",
+          color: "warning",
+          desc: "Bulan "+namaBulan,
         }],       
         dataPenyaluran: "Rp."+ numberWithCommas(String(totalNominalPenyaluranBulanIni._sum.dana_approval)),
         dataBulanLalu: (Number(totalNominalPenyaluranBulanIni._sum.dana_approval)/Number(totalNominalPenyaluranPrev._sum.dana_approval)).toFixed(2) + "%",
@@ -234,7 +339,7 @@ module.exports = {
       })   
 
       const getAllPenyaluran  = 
-      await prisma.$queryRaw`select (Case when SUM(p.dana_approval) is null then 0 else SUM(p.dana_approval) end) as dana_approval 
+      await prisma.$queryRaw`select (Case when SUM(p.dana_yang_diajukan) is null then 0 else SUM(p.dana_yang_diajukan) end) as dana_approval 
                               from proposal p group by MONTH(p.create_date)`
 
       getAllPenyaluran.map(item => {        
@@ -245,10 +350,10 @@ module.exports = {
       return res.status(200).json({
         message: "Sukses",
         data: [{
-                    name: "Semua Pengajuan",
+                    name: "Total Pengajuan",
                     data: arrAllPenyaluran          
               },{
-                    name: "Telah Disetujui",  
+                    name: "Yang Disetujui",  
                     data: arrIsApproved,
               },{
                     name: "Telah Disalurkan",  
@@ -269,6 +374,7 @@ module.exports = {
 
       const arrValue = [];
       const arrProgramName = [];
+      const arrGabungan = [];
 
       const getPenyaluranIspaid  = 
       await prisma.$queryRaw`select COUNT(id) as jumlah, p.program_title as title
@@ -279,14 +385,51 @@ module.exports = {
       getPenyaluranIspaid.map(item => {        
         arrProgramName.push(item.title)
         arrValue.push(Number(item.jumlah))
+        arrGabungan.push({"namaprogram": item.title, "total": Number(item.jumlah)});
       })   
 
       return res.status(200).json({
         message: "Sukses",
         data: {
                 dataNamaProgram: arrProgramName,
-                dataValue: arrValue
+                dataValue: arrValue,
+                dataGabungan:arrGabungan
               }
+      })
+
+    }catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async dataRekapReferentor(req, res) {
+    try {      
+
+      const arrValue = [];
+      const arrName = [];
+     
+      const getAllRef  = 
+      await prisma.$queryRaw`select count(p.id) as jml, p.nama_pemberi_rekomendasi as name, "Referentor Indosat" as description
+      from proposal p 
+      join user u on u.user_id = p.user_id 
+      where p.nama_pemberi_rekomendasi is not NULL and 
+      u.user_type = 10 and 
+      u.mustahiq_id is not NULL group by p.nama_pemberi_rekomendasi ORDER BY jml DESC LIMIT 5`
+
+      getAllRef.map(item => {                
+        //arrValue.push({"name": item.name, "desc": item.description, "value": Number(item.jml)});
+        arrName.push(item.name);
+        arrValue.push(Number(item.jml));
+      })   
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: {                
+                dataAllReferentor: arrName,
+                dataValue: arrValue
+        }
       })
 
     }catch (error) {
