@@ -1119,6 +1119,8 @@ LEFT JOIN
     program pr ON pc.id = pr.program_category_id
 LEFT JOIN 
     proposal p ON pr.program_id = p.program_id AND p.ispaid = 1
+    WHERE 
+    a.id NOT IN (8, 9)
 GROUP BY a.id
 ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
       `);
@@ -1138,6 +1140,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
     try {
       const start = new Date(req.query.start);
       const end = new Date(req.query.end);
+      const isinternal = Number(req.query.isinternal || 0)
 
       const validStart = !isNaN(start.getTime()) ? start : new Date();
       const validEnd =
@@ -1155,6 +1158,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
           gte: validStart,
           lte: validEnd,
         },
+        isinternal
       };
 
       const result = await prisma.$queryRawUnsafe(`
@@ -1170,6 +1174,7 @@ LEFT JOIN
     proposal p ON p.program_id = pr.program_id AND p.ispaid = 1
 LEFT JOIN 
     program_category pc ON pr.program_category_id = pc.id
+    WHERE pr.isinternal = ${isinternal}
 GROUP BY pr.program_id
 ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
       `);
@@ -1311,6 +1316,50 @@ ORDER BY aa.created_date DESC
       res.status(200).json({
         message: "Sukses Ambil Data",
         data: mitra,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getReportMuzzaki(req, res) {
+    try {
+      const sortBy = req.query.sortBy || "trans_date";
+      const sortType = req.query.order || "desc";
+
+      const muzzaki = await prisma.transactions.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        select: {
+          nama_muzaki: true,
+          email_muzaki: true,
+          phone_muzaki: true,
+          payment_method: true,
+          trans_date: true,
+          is_nologin: true,
+          amount: true,
+          status: true,
+          program: {
+            select: {
+              program_title: true,
+            },
+          },
+          user: {
+            select: {
+              user_nama: true,
+              username: true,
+              user_phone: true,
+            }
+          }
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: muzzaki,
       });
     } catch (error) {
       res.status(500).json({
