@@ -1,7 +1,7 @@
 const axios = require("axios");
 const xml2js = require('xml2js');
 
-const ReqAJ = async ({ id }) => {
+const ReqAJ = async ({ id, channelID, bankID }) => {
   const date = new Date();
   const dates = new Date().toISOString();
   const formattedDate = dates.replace(/[-:.TZ]/g, "").slice(0, 14);
@@ -29,7 +29,7 @@ const ReqAJ = async ({ id }) => {
     </TransactionID>
     <TransactionInfo>
       <ProcCode>40</ProcCode>
-      <ChannelType>ChannelType</ChannelType>
+      <ChannelType>${channelID}</ChannelType>
       <RefNumber>RefNumber</RefNumber>
       <TerminalID>TerminalID</TerminalID>
       <CountryCode>ID</CountryCode>
@@ -38,15 +38,15 @@ const ReqAJ = async ({ id }) => {
     <SenderData>
       <AccountID>AccountID</AccountID>
       <Name>Name</Name>
-      <CurrCode>CurrCode</CurrCode>
+      <CurrCode>360</CurrCode>
       <Amount>Amount</Amount>
       <Rate>Rate</Rate>
       <AreaCode>AreaCode</AreaCode>
     </SenderData>
     <BeneficiaryData>
-      <InstID>InstID</InstID>
+      <InstID>${bankID}</InstID>
       <AccountID>AccountID</AccountID>
-      <CurrCode>CurrCode</CurrCode>
+      <CurrCode>360</CurrCode>
       <Amount>Amount</Amount>
       <CustRefNumber>CustRefNumber</CustRefNumber>
       <Name>Name</Name>
