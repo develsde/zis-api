@@ -37,6 +37,11 @@ const mitraRoute = require("./app/routes/route-mitra");
 //dashboard
 const dashboardRoute = require("./app/routes/route-dashboard");
 
+
+//payment
+const paymentRoute = require("./app/routes/route-payment");
+
+
 console.log(path.join(__dirname, "uploads"));
 
 app.use("/public/uploads", express.static(path.join(__dirname, "uploads/")));
@@ -68,6 +73,9 @@ app.use("/mitra", mitraRoute);
 
 //Dashboard-New ERP Purposes
 app.use("/dashboard", dashboardRoute);
+
+//paymentroute
+app.use("/payment", paymentRoute);
 
 app.get("/", (req, res) => {
   res.send("Selamat Datang Di Portal ZISWAF Indosat");

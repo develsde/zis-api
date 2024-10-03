@@ -10,6 +10,7 @@ const usererp = require("./controller-user-erp");
 const programerp = require("./controller-program-erp");
 const waqif = require("./controller-wakif");
 const mitra = require("./controller-mitra");
+const payment = require("./controller-payment");
 
 //middleware new ERP-dashboard
 const dashboard = require("./controller-dashboard");
@@ -27,5 +28,6 @@ module.exports = {
   budget,
   waqif,
   mitra,
-  dashboard
+  dashboard,
+  payment
 };
