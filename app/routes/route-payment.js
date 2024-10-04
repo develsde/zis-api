@@ -8,6 +8,9 @@ const { upload } = require("../helper/upload");
 router.get("/authaj", payment.getAuthAJ);
 router.get("/digestData", payment.digestBase64Data);
 router.get("/signin", payment.signin);
+router.post("/request", payment.reqPay)
+router.post("/cancel", payment.cancelPay)
+router.post("/info", payment.infoPay)
 
 
 module.exports = router;
