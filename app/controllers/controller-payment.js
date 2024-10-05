@@ -4,6 +4,7 @@ const CryptoJS = require("crypto-js");
 
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
+const axios = require("axios");
 const {
   Auth,
   sofdigest_sign_id,
