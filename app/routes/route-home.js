@@ -36,4 +36,7 @@ router.get("/getRef/", home.getRef)
 router.post("/loh", home.loh)
 
 router.post("/postQurban", home.postQurban)
+
+router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
+router.post("/payment-gateway", home.handlePay)
 module.exports = router;

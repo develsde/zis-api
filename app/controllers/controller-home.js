@@ -5,7 +5,7 @@ const { subMonths, subDays, format, endOfMonth } = require("date-fns");
 const { z } = require("zod");
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
-const { midtransfer, cekstatus } = require("../helper/midtrans");
+const { midtransfer, cekstatus, handlePayment } = require("../helper/midtrans");
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
@@ -1864,4 +1864,90 @@ module.exports = {
       });
     }
   },
+
+  async postPemesananMegaKonser(req, res) {
+    try {
+      // Destructure the request body based on the new schema
+      const {
+        nama,
+        telepon, // Changed from no_wa to telepon
+        alamat,
+        total_harga,
+        metode_pembayaran,
+        detail_pemesanan, // Changed from detail_qurban to detail_pemesanan
+      } = req.body;
+
+      // Validation for detail_pemesanan length
+      if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
+        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+      }
+
+      // Generate kode_pemesanan
+      const currentDate = new Date();
+      const timestamp = currentDate.getTime(); // Get the current timestamp
+      const uniqueId = `${timestamp}-${Math.floor(Math.random() * 1000)}`; // Create a unique identifier
+      const kode_pemesanan = `PM-${uniqueId}`; // Format your kode_pemesanan
+
+      // Create the main order entry
+      const postResult = await prisma.pemesanan_megakonser.create({
+        data: {
+          nama,
+          telepon,
+          alamat,
+          total_harga: Number(total_harga),
+          metode_pembayaran,
+          kode_pemesanan, // Use the generated kode_pemesanan
+        },
+      });
+
+      // Transform the details for detail_pemesanan
+      const transformedDetails = detail_pemesanan.map((detail, index) => {
+        // Generate kode_tiket for each detail
+        const tiketTimestamp = new Date().getTime(); // Get a new timestamp for each ticket
+        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(Math.random() * 1000)}`; // Include the index for uniqueness
+        const kode_tiket = `TK-${tiketUniqueId}`; // Format your kode_tiket
+
+        return {
+          id_pemesanan: postResult.id,
+          tiket: detail.tiket,
+          harga_tiket: Number(detail.harga_tiket),
+          kode_tiket,// Reference to the newly created pemesanan
+        };
+      });
+
+      // Create multiple detail entries in the database
+      const detail = await prisma.detail_pemesanan_megakonser.createMany({
+        data: transformedDetails,
+      });
+
+      // Send a successful response
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: { postResult, detail },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async handlePay(req, res) {
+    const paymentType = req.body.payment_type;
+
+    try {
+
+      const response = await handlePayment({ paymentType: paymentType })
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error.message || "An error occurred",
+      });
+    }
+  }
 };

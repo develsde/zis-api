@@ -1168,3 +1168,25 @@ model lokasi_qurban {
   id                   Int     @id @default(autoincrement())
   lokasi_penyembelihan String? @db.Text
 }
+
+model detail_pemesanan_megakonser {
+  id                   Int                  @id @default(autoincrement())
+  id_pemesanan         Int
+  tiket                String?              @db.VarChar(250)
+  harga_tiket          Int?
+  kode_tiket           String?              @db.VarChar(50)
+  pemesanan_megakonser pemesanan_megakonser @relation(fields: [id_pemesanan], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pemesanan_megakonser")
+
+  @@index([id_pemesanan], map: "Index 2")
+}
+
+model pemesanan_megakonser {
+  id                          Int                           @id @default(autoincrement())
+  nama                        String?                       @db.VarChar(250)
+  telepon                     String?                       @db.VarChar(250)
+  alamat                      String?                       @db.LongText
+  total_harga                 Int?
+  metode_pembayaran           String?                       @db.VarChar(250)
+  kode_pemesanan              String?                       @db.VarChar(50)
+  detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+}
