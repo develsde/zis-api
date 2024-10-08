@@ -5,7 +5,8 @@ const { subMonths, subDays, format, endOfMonth } = require("date-fns");
 const { z } = require("zod");
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
-const { midtransfer, cekstatus, handlePayment } = require("../helper/midtrans");
+const { midtransfer, cekStatus, handlePayment, cancelPayment } = require("../helper/midtrans");
+const { scheduleCekStatus } = require("../helper/background-jobs")
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
@@ -556,7 +557,7 @@ module.exports = {
           },
         }),
       ]);
-      const stats = await cekstatus({
+      const stats = await cekStatus({
         order: id,
       });
       const log = await prisma.log_vendor.create({
@@ -1092,7 +1093,7 @@ module.exports = {
       const statuses = [];
 
       for (const orderId of orderIds) {
-        const statuss = await cekstatus({ order: orderId });
+        const statuss = await cekStatus({ order: orderId });
         const log = await prisma.log_vendor.create({
           data: {
             vendor_api: statuss?.config?.url,
@@ -1379,7 +1380,7 @@ module.exports = {
     const id = req.params.id;
     const order_id = req.body.order_id;
     try {
-      const stats = await cekstatus({
+      const stats = await cekStatus({
         order: id,
       });
       const log = await prisma.log_vendor.create({
@@ -1447,7 +1448,7 @@ module.exports = {
 
       const statuses = [];
       for (const orderId of orderIds) {
-        const statuss = await cekstatus({ order: orderId });
+        const statuss = await cekStatus({ order: orderId });
         const log = await prisma.log_vendor.create({
           data: {
             vendor_api: statuss?.config?.url,
@@ -1571,7 +1572,7 @@ module.exports = {
 
       // Fetch status asynchronously
       const statusPromises = orderIds.map((orderId) =>
-        cekstatus({ order: orderId })
+        cekStatus({ order: orderId })
       );
       const statuses = await Promise.all(statusPromises);
 
@@ -1920,6 +1921,7 @@ module.exports = {
         data: transformedDetails,
       });
 
+      scheduleCekStatus(kode_pemesanan)
       // Send a successful response
       res.status(200).json({
         message: "Sukses Kirim Data",
@@ -1949,5 +1951,61 @@ module.exports = {
         message: error.message || "An error occurred",
       });
     }
-  }
+  },
+
+  async checkPay(req, res){
+    const order = req.body.order_id;
+    try {
+      const stats = await cekStatus({
+        order: order,
+      });
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: stats?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(stats.headers),
+          api_body: stats?.config?.data,
+          api_response: JSON.stringify(stats.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: stats,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error.message || "An error occurred",
+      });
+    }
+  },
+
+  async cancelPay(req, res){
+    const order = req.body.order_id;
+    try {
+      const stats = await cancelPayment({
+        order: order,
+      });
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: stats?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(stats.headers),
+          api_body: stats?.config?.data,
+          api_response: JSON.stringify(stats.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: stats,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error.message || "An error occurred",
+      });
+    }
+  },
 };

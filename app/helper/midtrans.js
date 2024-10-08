@@ -2,7 +2,7 @@ const midtransClient = require('midtrans-client');
 const fs = require('fs');
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
-const ax = require('axios');
+const axios = require('axios');
 
 const midtransfer = async ({ order, price }) => {
     let snap = new midtransClient.Snap({
@@ -48,11 +48,11 @@ const midtransfer = async ({ order, price }) => {
         };
     }
 };
-const cekstatus = async ({ order }) => {
+const cekStatus = async ({ order }) => {
     let serverKey = serverkeys + ":";
     let auth = Buffer.from(serverKey).toString('base64');
     try {
-        const response = await ax.get(`https://api.midtrans.com/v2/${order}/status`,
+        const response = await axios.get(`https://api.midtrans.com/v2/${order}/status`,
             {
                 headers: {
                     'Content-Type': 'application/json',
@@ -67,7 +67,43 @@ const cekstatus = async ({ order }) => {
     }
 }
 
-const axios = require('axios');
+const cancelPayment = async ({ order }) => {
+    let serverKey = serverkeys + ":";
+    let auth = Buffer.from(serverKey).toString('base64');
+    try {
+        const response = await axios.post(`https://api.midtrans.com/v2/${order}/cancel`,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Basic ${auth}`,
+                }
+            });
+        return response;
+    } catch (error) {
+        console.error('Error:', error.response.data);
+        throw error;
+    }
+}
+
+const expirePayment = async ({ order }) => {
+    let serverKey = serverkeys + ":";
+    let auth = Buffer.from(serverKey).toString('base64');
+    try {
+        const response = await axios.post(`https://api.midtrans.com/v2/${order}/expire`,
+            {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'Authorization': `Basic ${auth}`,
+                }
+            });
+        return response;
+    } catch (error) {
+        console.error('Error:', error.response.data);
+        throw error;
+    }
+}
 
 function generateOrderId(paymentType) {
     const now = new Date();
@@ -218,6 +254,8 @@ const handlePayment = async ({ paymentType }) => {
 
 module.exports = {
     midtransfer,
-    cekstatus,
+    cekStatus,
+    cancelPayment,
+    expirePayment,
     handlePayment
 };

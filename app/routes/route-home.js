@@ -39,4 +39,6 @@ router.post("/postQurban", home.postQurban)
 
 router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
 router.post("/payment-gateway", home.handlePay)
+router.post("/check-payment", home.checkPay)
+router.post("/cancel-payment", home.cancelPay)
 module.exports = router;
