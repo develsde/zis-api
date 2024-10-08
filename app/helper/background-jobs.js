@@ -19,7 +19,7 @@ const scheduleCekStatus = (order) => {
   });
 };
 
-const scheduleCekStatusbuExpire = (order, scheduledTime) => {
+const scheduleCekStatusExpire = (order, scheduledTime) => {
   const dateTime = new Date(scheduledTime);
   const minute = dateTime.getMinutes();
   const hour = dateTime.getHours();
