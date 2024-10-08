@@ -10,7 +10,7 @@ const scheduleCekStatus = (order) => {
       if (stats.data.status_code != 200) {
         await expirePayment({ order });
       }
-      await cekStatus({ order });
+      //   await cekStatus({ order });
       console.log(`Status checked for order: ${order}`);
     } catch (error) {
       console.error("Error checking order status:", error);
@@ -31,7 +31,13 @@ const scheduleCekStatusExpire = (order, scheduledTime) => {
   console.log(`Scheduled for: ${cronExpression}`);
   const task = cron.schedule(cronExpression, async () => {
     try {
-      await cekStatus({ order });
+      //   await cekStatus({ order });
+      const stats = await cekStatus({
+        order: order,
+      });
+      if (stats.data.status_code != 200) {
+        await expirePayment({ order });
+      }
       console.log(`Status checked for order: ${order}`);
     } catch (error) {
       console.error("Error checking order status:", error);
