@@ -97,7 +97,7 @@ module.exports = {
     });
     const auth = await Auth();
     try {
-      const response = await axios.post("API", data, {
+      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/sof_payment_only", data, {
         headers: {
           "Content-Type": "application/json",
           Date: rfc7231Date,
@@ -135,7 +135,7 @@ module.exports = {
     });
     const auth = await Auth();
     try {
-      const response = await axios.post("API", data, {
+      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/sof_void", data, {
         headers: {
           "Content-Type": "application/json",
           Date: rfc7231Date,
@@ -173,7 +173,7 @@ module.exports = {
     });
     const auth = await Auth();
     try {
-      const response = await axios.post("API", data, {
+      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx", data, {
         headers: {
           "Content-Type": "application/json",
           Date: rfc7231Date,
