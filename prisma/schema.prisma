@@ -1186,7 +1186,12 @@ model pemesanan_megakonser {
   telepon                     String?                       @db.VarChar(250)
   alamat                      String?                       @db.LongText
   total_harga                 Int?
+  kode_pemesanan              String?                       @unique(map: "Index 2") @db.VarChar(50)
   metode_pembayaran           String?                       @db.VarChar(250)
-  kode_pemesanan              String?                       @db.VarChar(50)
+  bank                        String?                       @db.VarChar(250)
+  va_number                   String?                       @db.VarChar(250)
+  status                      String?                       @db.VarChar(50)
+  transaction_time            DateTime?                     @db.DateTime(0)
+  expiry_time                 DateTime?                     @db.DateTime(0)
   detail_pemesanan_megakonser detail_pemesanan_megakonser[]
 }

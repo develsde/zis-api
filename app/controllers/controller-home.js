@@ -286,12 +286,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -1806,8 +1806,8 @@ module.exports = {
       // });
       if (postResult) {
         const transformedDetails = req.body.detail_qurban.map(detail => ({
-          paket_id : Number(detail.paket_id),
-          qurban_id : Number(postResult?.id),
+          paket_id: Number(detail.paket_id),
+          qurban_id: Number(postResult?.id),
           nama_mudohi: detail.nama_mudohi,
           qty: detail.qty,
           total: String(detail.total)
@@ -1856,7 +1856,7 @@ module.exports = {
         // });
         res.status(200).json({
           message: "Sukses Kirim Data",
-          data: {postResult, detail},
+          data: { postResult, detail },
         });
       }
     } catch (error) {
@@ -1874,7 +1874,7 @@ module.exports = {
         telepon, // Changed from no_wa to telepon
         alamat,
         total_harga,
-        metode_pembayaran,
+        bank,
         detail_pemesanan, // Changed from detail_qurban to detail_pemesanan
       } = req.body;
 
@@ -1883,11 +1883,14 @@ module.exports = {
         return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
       }
 
-      // Generate kode_pemesanan
-      const currentDate = new Date();
-      const timestamp = currentDate.getTime(); // Get the current timestamp
-      const uniqueId = `${timestamp}-${Math.floor(Math.random() * 1000)}`; // Create a unique identifier
-      const kode_pemesanan = `PM-${uniqueId}`; // Format your kode_pemesanan
+      const response = await handlePayment({ paymentType: bank });
+
+      const kode_pemesanan = response.data?.order_id || '';
+      const va_number = bank === 'bca' || bank === 'bri' || bank === 'bni' ? response.data?.va_numbers[0]?.va_number : bank === 'mandiri' ? response.data?.bill_key : bank === 'gopay' ? response.data?.actions[0]?.url : '';
+
+      const transaction_time = new Date();
+      const expiry_time = new Date();
+      expiry_time.setMinutes(expiry_time.getMinutes() + 15);
 
       // Create the main order entry
       const postResult = await prisma.pemesanan_megakonser.create({
@@ -1896,8 +1899,13 @@ module.exports = {
           telepon,
           alamat,
           total_harga: Number(total_harga),
-          metode_pembayaran,
-          kode_pemesanan, // Use the generated kode_pemesanan
+          kode_pemesanan: kode_pemesanan,
+          metode_pembayaran: response.data?.payment_type || '',
+          bank,
+          va_number: va_number,
+          status: response.data?.transaction_status || '',
+          transaction_time: transaction_time, // transaction_time formatted to WIB
+          expiry_time: expiry_time, // expiry_time formatted to WIB
         },
       });
 
@@ -1912,7 +1920,7 @@ module.exports = {
           id_pemesanan: postResult.id,
           tiket: detail.tiket,
           harga_tiket: Number(detail.harga_tiket),
-          kode_tiket,// Reference to the newly created pemesanan
+          kode_tiket, // Reference to the newly created pemesanan
         };
       });
 
@@ -1921,7 +1929,8 @@ module.exports = {
         data: transformedDetails,
       });
 
-      scheduleCekStatus(kode_pemesanan)
+      scheduleCekStatus(kode_pemesanan);
+
       // Send a successful response
       res.status(200).json({
         message: "Sukses Kirim Data",
@@ -1953,7 +1962,7 @@ module.exports = {
     }
   },
 
-  async checkPay(req, res){
+  async checkPay(req, res) {
     const order = req.body.order_id;
     try {
       const stats = await cekStatus({
@@ -1969,9 +1978,21 @@ module.exports = {
           payload: JSON.stringify(req.body),
         },
       });
+
+      if (stats.data.status_code === 200) {
+        await prisma.pemesanan_megakonser.update({
+          where: {
+            kode_pemesanan: order
+          },
+          data: {
+            status: stats.data?.transaction_status || '',
+          }
+        })
+      }
+      console.log(stats)
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: stats,
+        // data: stats,
       });
     } catch (error) {
       console.error(error.message);
@@ -1981,7 +2002,7 @@ module.exports = {
     }
   },
 
-  async cancelPay(req, res){
+  async cancelPay(req, res) {
     const order = req.body.order_id;
     try {
       const stats = await cancelPayment({
@@ -1997,9 +2018,21 @@ module.exports = {
           payload: JSON.stringify(req.body),
         },
       });
+
+      if (stats.data.status_code === 200) {
+        await prisma.pemesanan_megakonser.update({
+          where: {
+            kode_pemesanan: order
+          },
+          data: {
+            status: stats.data?.transaction_status || '',
+          }
+        })
+      }
+      console.log(stats)
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: stats,
+        // data: stats,
       });
     } catch (error) {
       console.error(error.message);

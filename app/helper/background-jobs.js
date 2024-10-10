@@ -1,5 +1,6 @@
 const cron = require("node-cron");
 const { cekStatus, expirePayment } = require("../helper/midtrans");
+const { prisma } = require("../../prisma/client");
 
 const scheduleCekStatus = (order) => {
   const task = cron.schedule("*/15 * * * *", async () => {
@@ -8,7 +9,22 @@ const scheduleCekStatus = (order) => {
         order: order,
       });
       if (stats.data.status_code != 200) {
-        await expirePayment({ order });
+        const stat = await expirePayment({ order });
+        try {
+          const updateResult = await prisma.pemesanan_megakonser.update({
+            where: {
+              kode_pemesanan: order, // Pastikan tipe data `order` adalah string atau sesuai dengan tipe di database
+            },
+            data: {
+              status: 'expire', // Pastikan `transaction_status` sesuai dengan tipe di database
+            },
+          });
+
+          console.log('Update sukses:', updateResult);
+        } catch (error) {
+          console.error('Error during update:', error.message);
+          // Handle error response jika diperlukan
+        }
       }
       //   await cekStatus({ order });
       console.log(`Status checked for order: ${order}`);
@@ -50,4 +66,5 @@ const scheduleCekStatusExpire = (order, scheduledTime) => {
 
 module.exports = {
   scheduleCekStatus,
+  scheduleCekStatusExpire
 };
