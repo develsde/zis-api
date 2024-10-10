@@ -14,6 +14,7 @@ const Auth = async () => {
     var authfirst = CryptoJS.HmacSHA256(username, secret);
     var signHex = CryptoJS.enc.Base64.stringify(authfirst);
     
+    signHex = signHex.replace(/\+/gi, '-').replace(/\//gi, '_').replace(/\=/gi, '');
     console.log("base64String :"+ signHex);
 
     //console.log('JSON result:', JSON.stringify(signHex, null, 2));
@@ -127,7 +128,9 @@ const poPost = async ({ digest, date, url }) => {
 
     const dataSign = CryptoJS.HmacSHA256(Strings, secret);
 
-    const dataEncB64 = CryptoJS.enc.Base64.stringify(dataSign);
+    var dataEncB64 = CryptoJS.enc.Base64.stringify(dataSign);
+
+    dataEncB64 = dataEncB64.replace(/\+/gi, '-').replace(/\//gi, '_').replace(/\=/gi, '');
 
     console.log("ALLDATA", JSON.stringify(dataEncB64));
 

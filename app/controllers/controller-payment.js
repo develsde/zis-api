@@ -1,6 +1,7 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
 const CryptoJS = require("crypto-js");
+const moment = require('moment');
 
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
@@ -62,45 +63,63 @@ module.exports = {
   },
 
   async reqPay(req, res) {
-    const now = new Date();
-    const rfc7231Date = now.toUTCString();
-    const timesg = String(+now);
+    // const now = new Date();
+    // const rfc7231Date = now.toUTCString();
+    // const timesg = String(+now);
+
+    const date = (new Date()).toString();
+    const timesg = moment().format("DDMMYYHHmmss") 
     const username = "zisindosat";
     const { phone_number, id_SOF, price } = req.body;
 
-    const data = {
+    const datas = {
       PaymentRequest: {
         version: "8.0",
         timestamp: timesg,
         merchantID: "321000000000014",
         uniqueTransactionCode:
-          phone_number + Math.floor(new Date().getTime() / 1000),
+          phone_number,
         currencyCode: "360",
         msisdn: phone_number,
         idSOF: id_SOF,
-        trxType: "payment",
-        // "shippingcostAmount": "000000022000",
+        trxType: "paymentonly",
+        "shippingcostAmount": "000000022000",
         totalAmount: price.toString().padStart(12, "0"),
-        // "discountRule": "0100",
-        // "discountAmount": "000000004000",
-        // "origingoodsPrice ": "000000020000",
+        "discountRule": "0100",
+        "discountAmount": "000000004000",
+        "origingoodsPrice ": "000000020000",
         userDefinedl: "Nacha NGUJI COBAAA",
       },
     };
-    const hashedData = CryptoJS.SHA256(data);
-    const digested = CryptoJS.enc.Base64.stringify(hashedData);
+    const str_data = JSON.stringify(datas)
+    console.log(str_data);
+    const hashedData = CryptoJS.SHA256(str_data);
+    const digested = CryptoJS.enc.Hex.stringify(hashedData);
 
+    const digestUTF = CryptoJS.enc.Utf8.parse(digested)
+
+    var base64 = CryptoJS.enc.Base64.stringify(digestUTF)
+
+    base64 = base64.replace(/\+/gi, '-').replace(/\//gi, '_').replace(/\=/gi, '');
+    console.log("Base " + base64);
+    
     const check = await poPost({
-      date: rfc7231Date,
-      digest: digested,
+      date: date,
+      digest: base64,
       url:"/rest/api/sof_payment_only"
     });
     const auth = await Auth();
+
+    const data = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str_data))
+    // console.log(data);
+    
     try {
-      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/sof_payment_only", data, {
+      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/sof_payment_only", 
+        data, 
+      {
         headers: {
           "Content-Type": "application/json",
-          Date: rfc7231Date,
+          Date: date,
           Authorization: `${auth}:${check}`,
           Username: username,
         },
@@ -108,10 +127,10 @@ module.exports = {
 
       return response;
     } catch (error) {
-      console.error(
-        "Error:",
-        error.response ? error.response.data : error.message
-      );
+      // console.error(
+      //   "Error:",
+      //   error.response ? error.response.data : error.message
+      // );
       throw error;
     }
   },
