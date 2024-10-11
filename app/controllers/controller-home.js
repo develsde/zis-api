@@ -1933,36 +1933,32 @@ module.exports = {
           bank,
           va_number: va_number,
           status: response.data?.transaction_status || "",
-          transaction_time: transaction_time, // transaction_time formatted to WIB
-          expiry_time: expiry_time, // expiry_time formatted to WIB
+          transaction_time: transaction_time, 
+          expiry_time: expiry_time, 
         },
       });
 
-      // Transform the details for detail_pemesanan
       const transformedDetails = detail_pemesanan.map((detail, index) => {
-        // Generate kode_tiket for each detail
-        const tiketTimestamp = new Date().getTime(); // Get a new timestamp for each ticket
+        const tiketTimestamp = new Date().getTime();
         const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
           Math.random() * 1000
-        )}`; // Include the index for uniqueness
-        const kode_tiket = `TK-${tiketUniqueId}`; // Format your kode_tiket
+        )}`; 
+        const kode_tiket = `TK-${tiketUniqueId}`;
 
         return {
           id_pemesanan: postResult.id,
           tiket: detail.tiket,
           harga_tiket: Number(detail.harga_tiket),
-          kode_tiket, // Reference to the newly created pemesanan
+          kode_tiket, 
         };
       });
 
-      // Create multiple detail entries in the database
       const detail = await prisma.detail_pemesanan_megakonser.createMany({
         data: transformedDetails,
       });
 
       scheduleCekStatus(kode_pemesanan, telepon);
 
-      // Send a successful response
       res.status(200).json({
         message: "Sukses Kirim Data",
         data: { postResult, detail },
