@@ -5,8 +5,13 @@ const { subMonths, subDays, format, endOfMonth } = require("date-fns");
 const { z } = require("zod");
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
-const { midtransfer, cekStatus, handlePayment, cancelPayment } = require("../helper/midtrans");
-const { scheduleCekStatus } = require("../helper/background-jobs")
+const {
+  midtransfer,
+  cekStatus,
+  handlePayment,
+  cancelPayment,
+} = require("../helper/midtrans");
+const { scheduleCekStatus } = require("../helper/background-jobs");
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
@@ -286,12 +291,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -1746,12 +1751,14 @@ module.exports = {
         ongkir,
         gender,
         lokasi_penyaluran,
-        detail_qurban
+        detail_qurban,
       } = req.body;
 
       const totals = Number(harga) + Number(ongkir);
       if (detail_qurban.length < 1) {
-        return res.status(400).json({ message: "Masukkan detail qurban wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Masukkan detail qurban wajib diisi" });
       }
 
       const postResult = await prisma.activity_qurban.create({
@@ -1805,15 +1812,15 @@ module.exports = {
       //   },
       // });
       if (postResult) {
-        const transformedDetails = req.body.detail_qurban.map(detail => ({
+        const transformedDetails = req.body.detail_qurban.map((detail) => ({
           paket_id: Number(detail.paket_id),
           qurban_id: Number(postResult?.id),
           nama_mudohi: detail.nama_mudohi,
           qty: detail.qty,
-          total: String(detail.total)
+          total: String(detail.total),
         }));
         const detail = await prisma.detail_qurban.createMany({
-          data: transformedDetails
+          data: transformedDetails,
         });
         // let pn = no_wa;
         // pn = pn.replace(/\D/g, "");
@@ -1880,17 +1887,39 @@ module.exports = {
 
       // Validation for detail_pemesanan length
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
-        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Detail pemesanan wajib diisi" });
       }
 
       const response = await handlePayment({ paymentType: bank });
 
-      const kode_pemesanan = response.data?.order_id || '';
-      const va_number = bank === 'bca' || bank === 'bri' || bank === 'bni' ? response.data?.va_numbers[0]?.va_number : bank === 'mandiri' ? response.data?.bill_key : bank === 'gopay' ? response.data?.actions[0]?.url : '';
+      const kode_pemesanan = response.data?.order_id || "";
+      const va_number =
+        bank === "bca" || bank === "bri" || bank === "bni"
+          ? response.data?.va_numbers[0]?.va_number
+          : bank === "mandiri"
+          ? response.data?.bill_key
+          : bank === "gopay"
+          ? response.data?.actions[0]?.url
+          : "";
 
       const transaction_time = new Date();
       const expiry_time = new Date();
       expiry_time.setMinutes(expiry_time.getMinutes() + 15);
+
+      let pn = telepon;
+      pn = pn.replace(/\D/g, "");
+      if (pn.substring(0, 1) == "0") {
+        pn = "0" + pn.substring(1).trim();
+      } else if (pn.substring(0, 3) == "62") {
+        pn = "0" + pn.substring(3).trim();
+      }
+
+      const msgId = await sendWhatsapp({
+        wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        text: "Mohon selesaikan pembayaran anda sebelum 15 menit. Terima kasih.",
+      });
 
       // Create the main order entry
       const postResult = await prisma.pemesanan_megakonser.create({
@@ -1900,10 +1929,10 @@ module.exports = {
           alamat,
           total_harga: Number(total_harga),
           kode_pemesanan: kode_pemesanan,
-          metode_pembayaran: response.data?.payment_type || '',
+          metode_pembayaran: response.data?.payment_type || "",
           bank,
           va_number: va_number,
-          status: response.data?.transaction_status || '',
+          status: response.data?.transaction_status || "",
           transaction_time: transaction_time, // transaction_time formatted to WIB
           expiry_time: expiry_time, // expiry_time formatted to WIB
         },
@@ -1913,7 +1942,9 @@ module.exports = {
       const transformedDetails = detail_pemesanan.map((detail, index) => {
         // Generate kode_tiket for each detail
         const tiketTimestamp = new Date().getTime(); // Get a new timestamp for each ticket
-        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(Math.random() * 1000)}`; // Include the index for uniqueness
+        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
+          Math.random() * 1000
+        )}`; // Include the index for uniqueness
         const kode_tiket = `TK-${tiketUniqueId}`; // Format your kode_tiket
 
         return {
@@ -1929,7 +1960,7 @@ module.exports = {
         data: transformedDetails,
       });
 
-      scheduleCekStatus(kode_pemesanan);
+      scheduleCekStatus(kode_pemesanan, telepon);
 
       // Send a successful response
       res.status(200).json({
@@ -1947,8 +1978,7 @@ module.exports = {
     const paymentType = req.body.payment_type;
 
     try {
-
-      const response = await handlePayment({ paymentType: paymentType })
+      const response = await handlePayment({ paymentType: paymentType });
 
       res.status(200).json({
         message: "Sukses Ambil Data",
@@ -1964,9 +1994,22 @@ module.exports = {
 
   async checkPay(req, res) {
     const order = req.body.order_id;
+    const telepon = req.body.telepon;
     try {
       const stats = await cekStatus({
         order: order,
+      });
+      let pn = telepon;
+      pn = pn.replace(/\D/g, "");
+      if (pn.substring(0, 1) == "0") {
+        pn = "0" + pn.substring(1).trim();
+      } else if (pn.substring(0, 3) == "62") {
+        pn = "0" + pn.substring(3).trim();
+      }
+
+      const msgId = await sendWhatsapp({
+        wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        text: `Status pembayaran anda telah berhasil. Terima kasih.`,
       });
       const log = await prisma.log_vendor.create({
         data: {
@@ -1982,14 +2025,14 @@ module.exports = {
       if (stats.data.status_code === 200) {
         await prisma.pemesanan_megakonser.update({
           where: {
-            kode_pemesanan: order
+            kode_pemesanan: order,
           },
           data: {
-            status: stats.data?.transaction_status || '',
-          }
-        })
+            status: stats.data?.transaction_status || "",
+          },
+        });
       }
-      console.log(stats)
+      console.log(stats);
       res.status(200).json({
         message: "Sukses Ambil Data",
         // data: stats,
@@ -2004,9 +2047,22 @@ module.exports = {
 
   async cancelPay(req, res) {
     const order = req.body.order_id;
+    const telepon = req.body.telepon;
     try {
       const stats = await cancelPayment({
         order: order,
+      });
+      let pn = telepon;
+      pn = pn.replace(/\D/g, "");
+      if (pn.substring(0, 1) == "0") {
+        pn = "0" + pn.substring(1).trim();
+      } else if (pn.substring(0, 3) == "62") {
+        pn = "0" + pn.substring(3).trim();
+      }
+
+      const msgId = await sendWhatsapp({
+        wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        text: "Pembatalan pembayaran anda telah berhasil. Terima kasih.",
       });
       const log = await prisma.log_vendor.create({
         data: {
@@ -2022,14 +2078,14 @@ module.exports = {
       if (stats.data.status_code === 200) {
         await prisma.pemesanan_megakonser.update({
           where: {
-            kode_pemesanan: order
+            kode_pemesanan: order,
           },
           data: {
-            status: stats.data?.transaction_status || '',
-          }
-        })
+            status: stats.data?.transaction_status || "",
+          },
+        });
       }
-      console.log(stats)
+      console.log(stats);
       res.status(200).json({
         message: "Sukses Ambil Data",
         // data: stats,

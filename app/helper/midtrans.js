@@ -51,14 +51,20 @@ const midtransfer = async ({ order, price }) => {
 const cekStatus = async ({ order }) => {
     let serverKey = serverkeys + ":";
     let auth = Buffer.from(serverKey).toString('base64');
+    // https://api.midtrans.com/v2/${order}/status
     try {
-        const response = await axios.get(`https://api.midtrans.com/v2/${order}/status`,
+        const response = await axios.get(`https://api.sandbox.midtrans.com/v2/${order}/status`,
             {
+                // headers: {
+                //     'Content-Type': 'application/json',
+                //     'Accept': 'application/json',
+                //     'Authorization': `Basic ${auth}`,
+                // }
                 headers: {
+                    Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Basic ${auth}`,
-                }
+                    Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                },
             });
         return response;
     } catch (error) {
@@ -71,13 +77,18 @@ const cancelPayment = async ({ order }) => {
     let serverKey = serverkeys + ":";
     let auth = Buffer.from(serverKey).toString('base64');
     try {
-        const response = await axios.post(`https://api.midtrans.com/v2/${order}/cancel`,
+        const response = await axios.post(`https://api.sandbox.midtrans.com/v2/${order}/cancel`,
             {
+                // headers: {
+                //     'Content-Type': 'application/json',
+                //     'Accept': 'application/json',
+                //     'Authorization': `Basic ${auth}`,
+                // }
                 headers: {
+                    Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Basic ${auth}`,
-                }
+                    Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                },
             });
         return response;
     } catch (error) {
@@ -90,13 +101,18 @@ const expirePayment = async ({ order }) => {
     let serverKey = serverkeys + ":";
     let auth = Buffer.from(serverKey).toString('base64');
     try {
-        const response = await axios.post(`https://api.midtrans.com/v2/${order}/expire`,
+        const response = await axios.post(`https://api.sandbox.midtrans.com/v2/${order}/expire`,
             {
+                // headers: {
+                //     'Content-Type': 'application/json',
+                //     'Accept': 'application/json',
+                //     'Authorization': `Basic ${auth}`,
+                // }
                 headers: {
+                    Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'Authorization': `Basic ${auth}`,
-                }
+                    Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                },
             });
         return response;
     } catch (error) {
