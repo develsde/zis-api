@@ -32,7 +32,6 @@ async function getIdPembelian(req, res) {
 };
 
 
-
     async function qrcode(req, res) {
         try {
             const pemesanan_id = req.query.pemesanan_id || 'default_id'; // Contoh penggantian jika pemesanan_id tidak tersedia

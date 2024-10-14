@@ -82,5 +82,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(3034, () => {
-  console.log("Server Berjalan di Port : 3000");
+  console.log("Server Berjalan di Port : 3034");
 });

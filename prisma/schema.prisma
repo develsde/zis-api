@@ -1172,19 +1172,21 @@ model lokasi_qurban {
 model detail_pemesanan_megakonser {
   id                   Int                  @id @default(autoincrement())
   id_pemesanan         Int
-  tiket                String?              @db.VarChar(250)
-  harga_tiket          Int?
+  id_tiket             Int?
   kode_tiket           String?              @db.VarChar(50)
   pemesanan_megakonser pemesanan_megakonser @relation(fields: [id_pemesanan], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pemesanan_megakonser")
+  tiket_konser         tiket_konser?        @relation(fields: [id_tiket], references: [tiket_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_detail_pemesanan_megakonser_tiket_konser")
 
   @@index([id_pemesanan], map: "Index 2")
+  @@index([id_tiket], map: "Index 3")
 }
 
 model pemesanan_megakonser {
   id                          Int                           @id @default(autoincrement())
   nama                        String?                       @db.VarChar(250)
+  email                       String?                       @db.VarChar(250)
   telepon                     String?                       @db.VarChar(250)
-  alamat                      String?                       @db.LongText
+  gender                      String?                       @db.VarChar(50)
   total_harga                 Int?
   kode_pemesanan              String?                       @unique(map: "Index 2") @db.VarChar(50)
   metode_pembayaran           String?                       @db.VarChar(250)
@@ -1193,5 +1195,16 @@ model pemesanan_megakonser {
   status                      String?                       @db.VarChar(50)
   transaction_time            DateTime?                     @db.DateTime(0)
   expiry_time                 DateTime?                     @db.DateTime(0)
+  detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+}
+
+model tiket_konser {
+  tiket_id                    Int                           @id @default(autoincrement())
+  tiket_nama                  String?                       @db.VarChar(255)
+  tiket_startdate             DateTime?                     @db.Date
+  tiket_enddate               DateTime?                     @db.Date
+  tiket_harga                 Int?                          @default(0)
+  tiket_jumlah                Int?                          @default(0)
+  tiket_deskripsi             String?                       @db.Text
   detail_pemesanan_megakonser detail_pemesanan_megakonser[]
 }

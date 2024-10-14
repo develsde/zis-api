@@ -16,6 +16,7 @@ const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
 );
+const { generateTemplate, sendEmail, generateTemplateForgotEmail, generateTemplateMegaKonser, sendEmailWithQRCode, generateEmailPembelian } = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
 const ExcelJS = require("exceljs");
@@ -291,12 +292,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -1879,7 +1880,8 @@ module.exports = {
       const {
         nama,
         telepon, // Changed from no_wa to telepon
-        alamat,
+        email,
+        gender,
         total_harga,
         bank,
         detail_pemesanan, // Changed from detail_qurban to detail_pemesanan
@@ -1899,10 +1901,10 @@ module.exports = {
         bank === "bca" || bank === "bri" || bank === "bni"
           ? response.data?.va_numbers[0]?.va_number
           : bank === "mandiri"
-          ? response.data?.bill_key
-          : bank === "gopay"
-          ? response.data?.actions[0]?.url
-          : "";
+            ? response.data?.bill_key
+            : bank === "gopay"
+              ? response.data?.actions[0]?.url
+              : "";
 
       const transaction_time = new Date();
       const expiry_time = new Date();
@@ -1916,25 +1918,26 @@ module.exports = {
         pn = "0" + pn.substring(3).trim();
       }
 
-      const msgId = await sendWhatsapp({
-        wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        text: `Mohon selesaikan pembayaran anda di ${bank} dengan VA ${va_number} sebelum 15 menit. Terima kasih.`,
-      });
+      // const msgId = await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text: "Mohon selesaikan pembayaran anda sebelum 15 menit. Terima kasih.",
+      // });
 
       // Create the main order entry
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
           nama,
           telepon,
-          alamat,
+          email,
+          gender,
           total_harga: Number(total_harga),
           kode_pemesanan: kode_pemesanan,
           metode_pembayaran: response.data?.payment_type || "",
           bank,
           va_number: va_number,
           status: response.data?.transaction_status || "",
-          transaction_time: transaction_time, 
-          expiry_time: expiry_time, 
+          transaction_time: transaction_time,
+          expiry_time: expiry_time,
         },
       });
 
@@ -1942,14 +1945,14 @@ module.exports = {
         const tiketTimestamp = new Date().getTime();
         const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
           Math.random() * 1000
-        )}`; 
+        )}`;
         const kode_tiket = `TK-${tiketUniqueId}`;
 
         return {
           id_pemesanan: postResult.id,
-          tiket: detail.tiket,
-          harga_tiket: Number(detail.harga_tiket),
-          kode_tiket, 
+          id_tiket: detail.id_tiket,
+          // harga_tiket: Number(detail.harga_tiket),
+          kode_tiket,
         };
       });
 
@@ -1990,23 +1993,33 @@ module.exports = {
 
   async checkPay(req, res) {
     const order = req.body.order_id;
-    const telepon = req.body.telepon;
+    const email = req.body.email;
     try {
       const stats = await cekStatus({
         order: order,
       });
-      let pn = telepon;
-      pn = pn.replace(/\D/g, "");
-      if (pn.substring(0, 1) == "0") {
-        pn = "0" + pn.substring(1).trim();
-      } else if (pn.substring(0, 3) == "62") {
-        pn = "0" + pn.substring(3).trim();
-      }
+      // let pn = telepon;
+      // pn = pn.replace(/\D/g, "");
+      // if (pn.substring(0, 1) == "0") {
+      //   pn = "0" + pn.substring(1).trim();
+      // } else if (pn.substring(0, 3) == "62") {
+      //   pn = "0" + pn.substring(3).trim();
+      // }
 
-      const msgId = await sendWhatsapp({
-        wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        text: `Status pembayaran anda telah berhasil. Terima kasih.`,
+      // const msgId = await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text: `Status pembayaran anda telah berhasil. Terima kasih.`,
+      // });
+
+      const templateEmail = generateTemplateMegaKonser({ email: email, password: email });
+      const msgId = await sendEmail({
+        email: email,
+        html: templateEmail,
+        subject: "Pembelian Tiket Mega Konser Indosat",
       });
+
+      // const msgId = await generateEmailPembelian()
+
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: stats?.config?.url,
@@ -2043,23 +2056,23 @@ module.exports = {
 
   async cancelPay(req, res) {
     const order = req.body.order_id;
-    const telepon = req.body.telepon;
+    // const telepon = req.body.telepon;
     try {
       const stats = await cancelPayment({
         order: order,
       });
-      let pn = telepon;
-      pn = pn.replace(/\D/g, "");
-      if (pn.substring(0, 1) == "0") {
-        pn = "0" + pn.substring(1).trim();
-      } else if (pn.substring(0, 3) == "62") {
-        pn = "0" + pn.substring(3).trim();
-      }
+      // let pn = telepon;
+      // pn = pn.replace(/\D/g, "");
+      // if (pn.substring(0, 1) == "0") {
+      //   pn = "0" + pn.substring(1).trim();
+      // } else if (pn.substring(0, 3) == "62") {
+      //   pn = "0" + pn.substring(3).trim();
+      // }
 
-      const msgId = await sendWhatsapp({
-        wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        text: "Pembatalan pembayaran anda telah berhasil. Terima kasih.",
-      });
+      // const msgId = await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text: "Pembatalan pembayaran anda telah berhasil. Terima kasih.",
+      // });
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: stats?.config?.url,
