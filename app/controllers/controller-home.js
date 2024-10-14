@@ -1918,7 +1918,7 @@ module.exports = {
 
       const msgId = await sendWhatsapp({
         wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        text: "Mohon selesaikan pembayaran anda sebelum 15 menit. Terima kasih.",
+        text: `Mohon selesaikan pembayaran anda di ${bank} dengan VA ${va_number} sebelum 15 menit. Terima kasih.`,
       });
 
       // Create the main order entry
