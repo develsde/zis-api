@@ -123,5 +123,6 @@ module.exports = {
   sendEmail,
   generateTemplate,
   generateTemplateForgotEmail,
-  generateEmailPembelian
+  generateEmailPembelian,
+  sendEmailWithQRCode
 };
