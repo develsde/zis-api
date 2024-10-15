@@ -1973,6 +1973,25 @@ module.exports = {
     }
   },
 
+async getAllTiket(req, res){
+try {
+  const tiket = await prisma.tiket_konser.findMany(); 
+
+    return res.status(200).json({
+      success:true,
+      message:"Data tiket berhasil diambil",
+      data:tiket
+    });
+} catch (error) {
+  console.error("Error retrieving tickets:", error.message)
+  return res.status(500).json({
+    success:false,
+    message:"Gagal mengambil data tiket",
+    error:error.message
+  });
+}
+},
+
   async handlePay(req, res) {
     const paymentType = req.body.payment_type;
 
@@ -1994,32 +2013,24 @@ module.exports = {
   async checkPay(req, res) {
     const order = req.body.order_id;
     const email = req.body.email;
+  
     try {
       const stats = await cekStatus({
         order: order,
       });
-      // let pn = telepon;
-      // pn = pn.replace(/\D/g, "");
-      // if (pn.substring(0, 1) == "0") {
-      //   pn = "0" + pn.substring(1).trim();
-      // } else if (pn.substring(0, 3) == "62") {
-      //   pn = "0" + pn.substring(3).trim();
-      // }
-
-      // const msgId = await sendWhatsapp({
-      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-      //   text: `Status pembayaran anda telah berhasil. Terima kasih.`,
-      // });
-
-      const templateEmail = generateTemplateMegaKonser({ email: email, password: email });
+  
+      // Menghasilkan konten email secara asynchronous
+      const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
+  
       const msgId = await sendEmail({
         email: email,
-        html: templateEmail,
+        html: templateEmail, // Pastikan templateEmail adalah string yang dihasilkan
         subject: "Pembelian Tiket Mega Konser Indosat",
       });
-
-      // const msgId = await generateEmailPembelian()
-
+  
+      // Logging atau operasi lain jika diperlukan
+      console.log('Email sent successfully with message ID:', msgId);
+  
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: stats?.config?.url,
@@ -2030,7 +2041,7 @@ module.exports = {
           payload: JSON.stringify(req.body),
         },
       });
-
+  
       if (stats.data.status_code === 200) {
         await prisma.pemesanan_megakonser.update({
           where: {
@@ -2041,10 +2052,10 @@ module.exports = {
           },
         });
       }
+  
       console.log(stats);
       res.status(200).json({
         message: "Sukses Ambil Data",
-        // data: stats,
       });
     } catch (error) {
       console.error(error.message);
@@ -2053,6 +2064,7 @@ module.exports = {
       });
     }
   },
+  
 
   async cancelPay(req, res) {
     const order = req.body.order_id;

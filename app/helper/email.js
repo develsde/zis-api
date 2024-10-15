@@ -1,6 +1,7 @@
 const nodemailer = require("nodemailer");
 const { getIdPembelian } = require("./qrcode")
 const QRCode = require('qrcode');
+const { text } = require("body-parser");
 
 const sendEmail = async ({ email, html, subject }) => {
   const transporter = nodemailer.createTransport({
@@ -63,7 +64,7 @@ const generateTemplateForgotEmail = ({ email, token }) => {
   return content;
 };
 
-const generateTemplateMegaKonser = ({ email, password }) => {
+const generateTemplateMegaKonser = async ({ email, password }) => {
   const encodedEmail = Buffer.from(email).toString("base64");
   const url = `https://portal.zisindosat.id/verifikasi?akun=${encodedEmail}`;
 
@@ -71,7 +72,10 @@ const generateTemplateMegaKonser = ({ email, password }) => {
   const kodePemesanan = "ABC123";
   const metodePembayaran = "Transfer Bank";
   const vaNumber = "1234567890";
-  const qrCodeImage = QRCode.toDataURL(url);
+  
+  // Membuat QR code dari URL
+  const qrCodeImage = await QRCode.toDataURL(url); // Tunggu hasil promise
+  
 
   // Data dummy untuk tiket yang dipesan
   const tiketDipesan = [
@@ -124,8 +128,8 @@ const generateTemplateMegaKonser = ({ email, password }) => {
               <b>Tunjukkan Kode QR dibawah ini sebelum masuk avenue di loket penukaran tiket yang tersedia di lokasi konser.</b>
           </p>
           <br />
-          <p>${qrCodeImage}
-          <img src="${qrCodeImage}" alt="QR Code"/>
+        
+          <img src="${qrCodeImage}" alt="QR Code" style="max-width: 50%; height: auto;"/>
           <br /><br />
           <p style="font-size: 16px;">Terima kasih atas partisipasi anda.</p>
           <p style="font-size: 16px;">Wassalamu'alaikum Wr, Wb</p>
@@ -134,6 +138,13 @@ const generateTemplateMegaKonser = ({ email, password }) => {
 
   return content;
 };
+ 
+// Contoh penggunaan
+(async () => {
+  const email = "example@example.com"; // Ganti dengan email yang diinginkan
+  const template = await generateTemplateMegaKonser({ email, password: "dummyPassword" });
+  console.log(template);
+})();
 
 const generateEmailPembelian = ({ qrcode, kode_pemesanan, total_harga }) => {
   const content = `
@@ -167,7 +178,7 @@ const sendEmailWithQRCode = async (req, res) => {
 
     const { kode_pemesanan, total_harga } = response; // Dapatkan kode pemesanan dan total harga
     const url = `https://example.com/pemesanan/${pemesanan_id}`;
-    const qrCodeImage = await QRCode.toDataURL(url); // Membuat QR code dari URL
+    const qrCodeImage = await QRCode.toString(text); // Membuat QR code dari URL
 
     const emailContent = generateEmailPembelian({
       qrcode: qrCodeImage,
