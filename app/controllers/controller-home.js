@@ -2018,10 +2018,20 @@ try {
       const stats = await cekStatus({
         order: order,
       });
-  
-      // Menghasilkan konten email secara asynchronous
-      const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
-  
+      // let pn = telepon;
+      // pn = pn.replace(/\D/g, "");
+      // if (pn.substring(0, 1) == "0") {
+      //   pn = "0" + pn.substring(1).trim();
+      // } else if (pn.substring(0, 3) == "62") {
+      //   pn = "0" + pn.substring(3).trim();
+      // }
+
+      // const msgId = await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text: `Status pembayaran anda telah berhasil. Terima kasih.`,
+      // });
+
+      const templateEmail = generateTemplateMegaKonser({ email: email, password: email });
       const msgId = await sendEmail({
         email: email,
         html: templateEmail, // Pastikan templateEmail adalah string yang dihasilkan

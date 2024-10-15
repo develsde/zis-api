@@ -10,6 +10,7 @@ const sendEmail = async ({ email, html, subject }) => {
       user: "admin@zisindosat.id",
       pass: "ziswaf2019",
     },
+    disableUrlAccess: false
   });
 
   const info = await transporter.sendMail({
@@ -66,16 +67,13 @@ const generateTemplateForgotEmail = ({ email, token }) => {
 
 const generateTemplateMegaKonser = async ({ email, password }) => {
   const encodedEmail = Buffer.from(email).toString("base64");
-  const url = `https://portal.zisindosat.id/verifikasi?akun=${encodedEmail}`;
+  const url = `https://portal.zisindosat.id`;
 
   // Data dummy untuk kode pemesanan, metode pembayaran, dan nomor virtual account
   const kodePemesanan = "ABC123";
   const metodePembayaran = "Transfer Bank";
   const vaNumber = "1234567890";
-  
-  // Membuat QR code dari URL
-  const qrCodeImage = await QRCode.toDataURL(url); // Tunggu hasil promise
-  
+  const qrCodeImage = QRCode.toDataURL(url);
 
   // Data dummy untuk tiket yang dipesan
   const tiketDipesan = [
@@ -128,8 +126,8 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
               <b>Tunjukkan Kode QR dibawah ini sebelum masuk avenue di loket penukaran tiket yang tersedia di lokasi konser.</b>
           </p>
           <br />
-        
-          <img src="${qrCodeImage}" alt="QR Code" style="max-width: 50%; height: auto;"/>
+          <p>${qrCodeImage}
+          <img src="${qrCodeImage}" alt="QR Code"/>
           <br /><br />
           <p style="font-size: 16px;">Terima kasih atas partisipasi anda.</p>
           <p style="font-size: 16px;">Wassalamu'alaikum Wr, Wb</p>
