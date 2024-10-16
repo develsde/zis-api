@@ -2,6 +2,7 @@ const nodemailer = require("nodemailer");
 const { getIdPembelian } = require("./qrcode")
 const QRCode = require('qrcode');
 const { text } = require("body-parser");
+const { password } = require("../../config/config.db");
 
 const sendEmail = async ({ email, html, subject }) => {
   const transporter = nodemailer.createTransport({
@@ -65,6 +66,10 @@ const generateTemplateForgotEmail = ({ email, token }) => {
   return content;
 };
 
+
+
+// import QRCode from 'qrcode'; // Make sure you import this if using ES6 modules
+
 const generateTemplateMegaKonser = async ({ email, password }) => {
   const encodedEmail = Buffer.from(email).toString("base64");
   const url = `https://portal.zisindosat.id`;
@@ -73,7 +78,9 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
   const kodePemesanan = "ABC123";
   const metodePembayaran = "Transfer Bank";
   const vaNumber = "1234567890";
-  const qrCodeImage = QRCode.toDataURL(url);
+  
+  // Correctly await the QRCode.toDataURL call to avoid returning a promise
+  const qrCodeImage = await QRCode.toDataURL(url);
 
   // Data dummy untuk tiket yang dipesan
   const tiketDipesan = [
@@ -85,6 +92,7 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
   // Hitung total pembayaran
   const totalPembayaran = tiketDipesan.reduce((total, tiket) => total + tiket.hargaTiket, 0);
 
+  // Properly awaited qrCodeImage is inserted here
   const content = `
       <div style="font-family: 'Arial, sans-serif'; padding: 20px; background-color: #f4f4f4;">
           <p style="font-size: 16px;">Assalamu'alaikum, Wr Wb.</p>
@@ -92,9 +100,7 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
           <p style="font-size: 16px;">Berikut ini adalah detail transaksi anda :</p>
 
           <!-- Card untuk detail transaksi -->
-          <div style="
-              border: 1px solid #ddd; padding: 20px; border-radius: 10px; 
-              background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <div style="border: 1px solid #ddd; padding: 20px; border-radius: 10px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
               <h3 style="margin-bottom: 15px;">Detail Transaksi</h3>
               <p><strong>Nama:</strong> ${email}</p>
               <p><strong>Kode Pemesanan:</strong> ${kodePemesanan}</p>
@@ -105,9 +111,7 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
           <p style="font-size: 16px;">Berikut ini adalah tiket yang anda pesan :</p>
 
           <!-- Card untuk detail tiket -->
-          <div style="
-              border: 1px solid #ddd; padding: 20px; border-radius: 10px; 
-              background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <div style="border: 1px solid #ddd; padding: 20px; border-radius: 10px; background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
               <h3 style="margin-bottom: 15px;">Detail Tiket</h3>
               ${tiketDipesan.map((tiket, index) => `
                   <div style="margin-bottom: 10px;">
@@ -126,7 +130,6 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
               <b>Tunjukkan Kode QR dibawah ini sebelum masuk avenue di loket penukaran tiket yang tersedia di lokasi konser.</b>
           </p>
           <br />
-          <p>${qrCodeImage}
           <img src="${qrCodeImage}" alt="QR Code"/>
           <br /><br />
           <p style="font-size: 16px;">Terima kasih atas partisipasi anda.</p>
@@ -136,13 +139,15 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
 
   return content;
 };
- 
+
+
 // Contoh penggunaan
 (async () => {
   const email = "example@example.com"; // Ganti dengan email yang diinginkan
   const template = await generateTemplateMegaKonser({ email, password: "dummyPassword" });
   console.log(template);
 })();
+
 
 const generateEmailPembelian = ({ qrcode, kode_pemesanan, total_harga }) => {
   const content = `

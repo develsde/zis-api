@@ -38,7 +38,7 @@ router.post("/loh", home.loh)
 router.post("/postQurban", home.postQurban)
 
 router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
-router.get("/tiketMegaKonser", home.getAllTiket)
+// router.get("/tiketMegaKonser", home.getAllTiket)
 router.post("/payment-gateway", home.handlePay)
 router.post("/check-payment", home.checkPay)
 router.post("/cancel-payment", home.cancelPay)

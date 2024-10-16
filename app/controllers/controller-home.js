@@ -2031,7 +2031,7 @@ try {
       //   text: `Status pembayaran anda telah berhasil. Terima kasih.`,
       // });
 
-      const templateEmail = generateTemplateMegaKonser({ email: email, password: email });
+      const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
       const msgId = await sendEmail({
         email: email,
         html: templateEmail, // Pastikan templateEmail adalah string yang dihasilkan
