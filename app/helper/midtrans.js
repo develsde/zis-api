@@ -74,50 +74,90 @@ const cekStatus = async ({ order }) => {
 }
 
 const cancelPayment = async ({ order }) => {
-    let serverKey = serverkeys + ":";
+    let serverKey = `${serverkeys}:`; 
     let auth = Buffer.from(serverKey).toString('base64');
+    
+    const url = `https://api.sandbox.midtrans.com/v2/${order}/cancel`;
+  
     try {
-        const response = await axios.post(`https://api.sandbox.midtrans.com/v2/${order}/cancel`,
-            {
-                // headers: {
-                //     'Content-Type': 'application/json',
-                //     'Accept': 'application/json',
-                //     'Authorization': `Basic ${auth}`,
-                // }
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
-                },
-            });
-        return response;
+      const options = {
+        method: 'POST',
+        url: url,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`, 
+        },
+        data: {}, 
+      };
+  
+      const response = await axios(options); 
+      console.log('Success:', response.data);
+      return response.data;
     } catch (error) {
-        console.error('Error:', error.response.data);
-        throw error;
+      console.error('Error:', error.response?.data || error.message);
+      throw error;
     }
-}
+  };
+  
+// const cancelPayment = async ({ order }) => {
+//     const serverKey = `${serverkeys}:`; 
+//     const auth = Buffer.from(serverKey).toString("base64");
+  
+//     const url = `https://api.sandbox.midtrans.com/v2/${order}/cancel`;
+//     const options = {
+//       method: "POST",
+//       headers: {
+//         Accept: "application/json",
+//         "Content-Type": "application/json",
+//         Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`, 
+//       },
+//     };
+  
+//     try {
+//       const response = await fetch(url, options);
+//       if (!response.ok) {
+//         const errorData = await response.json();
+//         throw new Error(
+//           `Error ${response.status}: ${errorData.message || "Request failed"}`
+//         );
+//       }
+//       console.log(response.Success);
+      
+//       const result = await response.json();
+//       console.log("Success:", result);
+//       return result;
+//     } catch (error) {
+//       console.error("Error:", error.message);
+//       throw error;
+//     }
+//   };
+  
 
 const expirePayment = async ({ order }) => {
-    let serverKey = serverkeys + ":";
+    let serverKey = `${serverkeys}:`; 
     let auth = Buffer.from(serverKey).toString('base64');
+    
+    const url = `https://api.sandbox.midtrans.com/v2/${order}/expire`;
+  
     try {
-        const response = await axios.post(`https://api.sandbox.midtrans.com/v2/${order}/expire`,
-            {
-                // headers: {
-                //     'Content-Type': 'application/json',
-                //     'Accept': 'application/json',
-                //     'Authorization': `Basic ${auth}`,
-                // }
-                headers: {
-                    Accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
-                },
-            });
-        return response;
+      const options = {
+        method: 'POST',
+        url: url,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`, 
+        },
+        data: {}, 
+      };
+  
+      const response = await axios(options); 
+      console.log('Success:', response.data);
+      return response.data;
     } catch (error) {
-        console.error('Error:', error.response.data);
-        throw error;
+      console.error('Error:', error.response?.data || error.message);
+      throw error;
     }
 }
 
