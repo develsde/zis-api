@@ -1,8 +1,9 @@
 const cron = require("node-cron");
 const { cekStatus, expirePayment } = require("../helper/midtrans");
 const { prisma } = require("../../prisma/client");
+const { sendEmail, generateTemplateMegaKonser, generateTemplateExpiredMegaKonser } = require("../helper/email");
 
-const scheduleCekStatus = async (order, telepon) => {
+const scheduleCekStatus = async (order, email) => {
   const currentStatus = await prisma.pemesanan_megakonser.findFirst({
     where: { kode_pemesanan: order },
   });
@@ -18,16 +19,18 @@ const scheduleCekStatus = async (order, telepon) => {
 
       if (stats.data.status_code !== 200) {
         stats = await expirePayment({ order });
-        const formattedPhone = formatPhoneNumber(telepon);
-        await sendWhatsapp({
-          wa_number: formattedPhone,
-          text: "VA anda telah expired dikarenakan Anda belum melakukan pembayaran dalam waktu 15 menit. Terima kasih.",
+        const templateEmail = await generateTemplateExpiredMegaKonser({ email: email, password: email });
+        const msgId = await sendEmail({
+          email: email,
+          html: templateEmail,
+          subject: "Pembelian Tiket Mega Konser Indosat",
         });
       } else {
-        const formattedPhone = formatPhoneNumber(telepon);
-        await sendWhatsapp({
-          wa_number: formattedPhone,
-          text: "Status pembayaran anda telah berhasil. Terima kasih.",
+        const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
+        const msgId = await sendEmail({
+          email: email,
+          html: templateEmail,
+          subject: "Pembelian Tiket Sound of Freedom",
         });
       }
 
