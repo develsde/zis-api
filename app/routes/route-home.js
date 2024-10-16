@@ -37,10 +37,16 @@ router.post("/loh", home.loh)
 
 router.post("/postQurban", home.postQurban)
 
+//Megakonser Portal
 router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
 router.get("/tiketMegaKonser", home.getAllTiket)
 router.post("/payment-gateway", home.handlePay)
 router.post("/check-payment", home.checkPay)
 router.post("/cancel-payment", home.cancelPay)
+router.get("/tiket-sold", home.getTiketSold)
+
+//Megakonser ERP
+router.get("/pemesanan-megakonser", home.getPemesananMegakonser)
+router.get("/detail-pemesanan-megakonser/:id", home.getDetailPemesananMegakonser)
 
 module.exports = router;

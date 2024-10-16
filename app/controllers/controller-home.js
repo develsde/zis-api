@@ -16,7 +16,7 @@ const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
 );
-const { generateTemplate, sendEmail, generateTemplateForgotEmail, generateTemplateMegaKonser, sendEmailWithQRCode, generateEmailPembelian } = require("../helper/email");
+const { sendEmail, generateTemplateMegaKonser, generateTemplateCancelMegaKonser } = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
 const ExcelJS = require("exceljs");
@@ -1894,7 +1894,7 @@ module.exports = {
           .json({ message: "Detail pemesanan wajib diisi" });
       }
 
-      const response = await handlePayment({ paymentType: bank });
+      const response = await handlePayment({ paymentType: bank, amount: total_harga });
 
       const kode_pemesanan = response.data?.order_id || "";
       const va_number =
@@ -1960,7 +1960,7 @@ module.exports = {
         data: transformedDetails,
       });
 
-      scheduleCekStatus(kode_pemesanan, telepon);
+      scheduleCekStatus(kode_pemesanan, email);
 
       res.status(200).json({
         message: "Sukses Kirim Data",
@@ -1973,24 +1973,24 @@ module.exports = {
     }
   },
 
-async getAllTiket(req, res){
-try {
-  const tiket = await prisma.tiket_konser.findMany(); 
+  async getAllTiket(req, res) {
+    try {
+      const tiket = await prisma.tiket_konser.findMany();
 
-    return res.status(200).json({
-      success:true,
-      message:"Data tiket berhasil diambil",
-      data:tiket
-    });
-} catch (error) {
-  console.error("Error retrieving tickets:", error.message)
-  return res.status(500).json({
-    success:false,
-    message:"Gagal mengambil data tiket",
-    error:error.message
-  });
-}
-},
+      return res.status(200).json({
+        success: true,
+        message: "Data tiket berhasil diambil",
+        data: tiket
+      });
+    } catch (error) {
+      console.error("Error retrieving tickets:", error.message)
+      return res.status(500).json({
+        success: false,
+        message: "Gagal mengambil data tiket",
+        error: error.message
+      });
+    }
+  },
 
   async handlePay(req, res) {
     const paymentType = req.body.payment_type;
@@ -2013,7 +2013,7 @@ try {
   async checkPay(req, res) {
     const order = req.body.order_id;
     const email = req.body.email;
-  
+
     try {
       const stats = await cekStatus({
         order: order,
@@ -2031,16 +2031,15 @@ try {
       //   text: `Status pembayaran anda telah berhasil. Terima kasih.`,
       // });
 
-      const templateEmail = generateTemplateMegaKonser({ email: email, password: email });
+      // if (stats.data.status_code === 200 && (stats.data.transaction_status === 'settlement' || stats.data.transaction_status === 'capture')) {
+      const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
       const msgId = await sendEmail({
         email: email,
-        html: templateEmail, // Pastikan templateEmail adalah string yang dihasilkan
+        html: templateEmail,
         subject: "Pembelian Tiket Mega Konser Indosat",
       });
-  
-      // Logging atau operasi lain jika diperlukan
-      console.log('Email sent successfully with message ID:', msgId);
-  
+      // }
+
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: stats?.config?.url,
@@ -2051,7 +2050,7 @@ try {
           payload: JSON.stringify(req.body),
         },
       });
-  
+
       if (stats.data.status_code === 200) {
         await prisma.pemesanan_megakonser.update({
           where: {
@@ -2062,8 +2061,6 @@ try {
           },
         });
       }
-  
-      console.log(stats);
       res.status(200).json({
         message: "Sukses Ambil Data",
       });
@@ -2074,7 +2071,7 @@ try {
       });
     }
   },
-  
+
 
   async cancelPay(req, res) {
     const order = req.body.order_id;
@@ -2095,6 +2092,14 @@ try {
       //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
       //   text: "Pembatalan pembayaran anda telah berhasil. Terima kasih.",
       // });
+
+      const templateEmail = await generateTemplateCancelMegaKonser({ email: email, password: email });
+      const msgId = await sendEmail({
+        email: email,
+        html: templateEmail,
+        subject: "Pembelian Tiket Mega Konser Indosat",
+      });
+
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: stats?.config?.url,
@@ -2125,6 +2130,137 @@ try {
       console.error(error.message);
       res.status(500).json({
         message: error.message || "An error occurred",
+      });
+    }
+  },
+
+  async getTiketSold(req, res) {
+    try {
+      // Mengambil tiket dan menghitung total dibeli berdasarkan kondisi status 'settlement' atau 'capture'
+      const tiket_sold = await prisma.tiket_konser.findMany({
+        select: {
+          tiket_id: true,
+          tiket_nama: true,
+          detail_pemesanan_megakonser: {
+            // where: {
+            //   pemesanan_megakonser: {
+            //     OR: [
+            //       { status: 'settlement' },
+            //       { status: 'capture' }
+            //     ]
+            //   }
+            // },
+            select: {
+              id_tiket: true // Field yang dibutuhkan untuk menghitung total pemesanan
+            }
+          }
+        }
+      });
+
+      // Mapping hasil untuk menyesuaikan output dengan struktur yang diinginkan
+      const data = tiket_sold.map(tiket => ({
+        tiket_id: tiket.tiket_id,
+        tiket_nama: tiket.tiket_nama,
+        total_dibeli: tiket.detail_pemesanan_megakonser.length // Menghitung jumlah total tiket yang dibeli
+      }));
+
+      return res.status(200).json({
+        success: true,
+        message: "Data tiket berhasil diambil",
+        data: data
+      });
+    } catch (error) {
+      console.error("Error retrieving tickets:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: "Gagal mengambil data tiket",
+        error: error.message
+      });
+    }
+  },
+
+  async getPemesananMegakonser(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const kodePemesanan = req.query.kode_pemesanan || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "transaction_time";
+      const sortType = req.query.order || "desc";
+
+      const params = {
+        nama: {
+          contains: keyword,
+        },
+        kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
+      };
+
+      const [count, pemesanan] = await prisma.$transaction([
+        prisma.pemesanan_megakonser.count({
+          where: params,
+        }),
+        prisma.pemesanan_megakonser.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          // include: {
+          //   detail_pemesanan_megakonser: {
+          //     include: {
+          //       tiket_konser: true
+          //     }
+          //   },
+          // },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: pemesanan,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getDetailPemesananMegakonser(req, res) {
+    try {
+      const id = req.params.id;
+
+      const [count, ActUser] = await prisma.$transaction([
+        prisma.detail_pemesanan_megakonser.count({
+          where: {
+            id_pemesanan: Number(id),
+          },
+        }),
+        prisma.detail_pemesanan_megakonser.findMany({
+          where: {
+            id_pemesanan: Number(id),
+          },
+          include: {
+            tiket_konser: true
+          }
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: ActUser,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
       });
     }
   },
