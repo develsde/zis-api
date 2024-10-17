@@ -13,37 +13,51 @@ const scheduleCekStatus = async (order, email) => {
     return;
   }
 
-  const task = cron.schedule("*/15 * * * *", async () => {
+  let elapsedMinutes = 0;
+
+  const task = cron.schedule("*/2 * * * *", async () => {
     try {
       let stats = await cekStatus({ order });
 
-      if (stats.data.status_code !== 200) {
-        stats = await expirePayment({ order });
-        const templateEmail = await generateTemplateExpiredMegaKonser({ email: email, password: email });
+      if (stats.data.status_code === 200) {
+        const templateEmail = await generateTemplateMegaKonser({ email, password: email });
         const msgId = await sendEmail({
-          email: email,
-          html: templateEmail,
-          subject: "Pembelian Tiket Mega Konser Indosat",
-        });
-      } else {
-        const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
-        const msgId = await sendEmail({
-          email: email,
+          email,
           html: templateEmail,
           subject: "Pembelian Tiket Sound of Freedom",
         });
+
+        await prisma.pemesanan_megakonser.update({
+          where: { kode_pemesanan: order },
+          data: { status: stats.data.transaction_status || "" },
+        });
+
+        console.log(`Order ${order} settled successfully. Email sent: ${msgId}`);
+        task.stop();
+      } else {
+        elapsedMinutes += 2;
+
+        if (elapsedMinutes >= 15) {
+          stats = await expirePayment({ order });
+
+          const templateEmailExpired = await generateTemplateExpiredMegaKonser({ email, password: email });
+          const msgId = await sendEmail({
+            email,
+            html: templateEmailExpired,
+            subject: "Pembelian Tiket Mega Konser Indosat",
+          });
+
+          await prisma.pemesanan_megakonser.update({
+            where: { kode_pemesanan: order },
+            data: { status: "expired" },
+          });
+
+          console.log(`Order ${order} expired. Notification sent: ${msgId}`);
+          task.stop();
+        }
       }
-
-      const updateResult = await prisma.pemesanan_megakonser.update({
-        where: { kode_pemesanan: order },
-        data: { status: stats.data?.transaction_status || "" },
-      });
-
-      console.log("Update sukses:", updateResult);
     } catch (error) {
       console.error("Error checking order status:", error.message);
-    } finally {
-      task.stop();
     }
   });
 };

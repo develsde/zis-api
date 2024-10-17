@@ -126,6 +126,8 @@ const poPost = async ({ digest, date, url }) => {
       "\n" +
       digest;
 
+      console.log(Strings);
+
     const dataSign = CryptoJS.HmacSHA256(Strings, secret);
 
     var dataEncB64 = CryptoJS.enc.Base64.stringify(dataSign);
