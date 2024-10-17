@@ -3,6 +3,18 @@ const { getIdPembelian } = require("./qrcode")
 const QRCode = require('qrcode');
 const { text } = require("body-parser");
 const { password } = require("../../config/config.db");
+const midtransClient = require('midtrans-client');
+const {generatePdf} = require ("../helper/pdf");
+const fs = require ('fs');
+const path = require('path')
+// const snap = require('midtrans-client');
+
+var serverkeys = process.env.SERVER_KEY;
+
+let snap = new midtransClient.Snap({
+  isProduction: false,
+  serverKey:serverkeys
+})
 
 const sendEmail = async ({ email, html, subject }) => {
   const transporter = nodemailer.createTransport({
@@ -67,12 +79,48 @@ const generateTemplateForgotEmail = ({ email, token }) => {
 };
 
 
+const generateTemplatePembayaran = async ({ email, postResult, detail }) => {
+    // Hitung total pembayaran dari postResult
+    const totalPembayaran = postResult.total_harga;
+
+    // Data dari detail pemesanan tiket
+    const tiketDetails = detail.map(tiket => {
+        return `<li>${tiket.kode_tiket}: Rp ${tiket.harga_tiket.toLocaleString('id-ID')}</li>`;
+    }).join('');
+
+    // Template email
+    const mailOptions = {
+        from: 'admin@zisindosat.id',
+        to: email,
+        subject: 'Detail Pembayaran Tiket Anda',
+        html: `
+            <h3>Detail Pembayaran Anda</h3>
+            <p>Terima kasih telah memesan tiket. Berikut adalah detail pembayaran Anda:</p>
+            <ul>
+                <li><strong>Kode Pemesanan:</strong> ${postResult.kode_pemesanan}</li>
+                <li><strong>Bank:</strong> ${postResult.bank}</li>
+                <li><strong>Nomor Virtual Account:</strong> ${postResult.va_number}</li>
+                <li><strong>Total Pembayaran:</strong> Rp ${totalPembayaran.toLocaleString('id-ID')}</li>
+                <li><strong>Detail Tiket:</strong></li>
+                <ul>${tiketDetails}</ul>
+            </ul>
+            <p>Silakan lakukan pembayaran sebelum batas waktu yang ditentukan.</p>
+        `,
+    };
+
+    return mailOptions.html; // Kembalikan template email yang akan digunakan
+};
+
+
+
+
 
 // import QRCode from 'qrcode'; // Make sure you import this if using ES6 modules
 
-const generateTemplateMegaKonser = async ({ email, password }) => {
+const generateTemplateMegaKonser = async ({ email, password, order }) => {
   const encodedEmail = Buffer.from(email).toString("base64");
   const url = `https://portal.zisindosat.id`;
+  const pdfFileName = `document.pdf`; // Nama file yang lebih deskriptif
 
   // Data dummy untuk kode pemesanan, metode pembayaran, dan nomor virtual account
   const kodePemesanan = "ABC123";
@@ -82,9 +130,9 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
 
   // Data dummy untuk tiket yang dipesan
   const tiketDipesan = [
-    { kodeTiket: "TK001", hargaTiket: 250000, jenisTiket: "VIP" },
-    { kodeTiket: "TK002", hargaTiket: 150000, jenisTiket: "Reguler" },
-    { kodeTiket: "TK003", hargaTiket: 100000, jenisTiket: "Diskon" },
+      { kodeTiket: "TK001", hargaTiket: 250000, jenisTiket: "VIP" },
+      { kodeTiket: "TK002", hargaTiket: 150000, jenisTiket: "Reguler" },
+      { kodeTiket: "TK003", hargaTiket: 100000, jenisTiket: "Diskon" },
   ];
 
   // Hitung total pembayaran
@@ -133,15 +181,22 @@ const generateTemplateMegaKonser = async ({ email, password }) => {
           <br />
           <img src="${qrCodeImage}" alt="QR Code"/>
           <br /><br />
-          <img src="${qrCodeImage}" alt="QR Code" width="500" height="500"/>
           <br />
           <p style="font-size: 16px;">Terima kasih atas partisipasi anda.</p>
           <p style="font-size: 16px;">Wassalamu'alaikum Wr, Wb</p>
+
+          <!-- Menyertakan informasi tentang file PDF -->
+          <p style="font-size: 16px;">
+              <strong>Dokumen PDF lampiran:</strong> <a href="${pdfFileName}">${pdfFileName}</a>
+          </p>
       </div>
   `;
 
   return content;
 };
+
+
+
 
 const generateTemplateExpiredMegaKonser = async ({ email, password }) => {
   const encodedEmail = Buffer.from(email).toString("base64");
@@ -274,5 +329,6 @@ module.exports = {
   generateTemplateForgotEmail,
   generateTemplateMegaKonser,
   generateTemplateExpiredMegaKonser,
-  generateTemplateCancelMegaKonser
+  generateTemplateCancelMegaKonser,
+  generateTemplatePembayaran,
 };

@@ -1,30 +1,68 @@
-// import {nextApiRequest, nextApiResponse} from 'next';
-// import PDFDocument from 'pdfkit';
-// import QRCode from 'qrcode';
+const PDFKit = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
-// export default async function handler(req,res){
-//     const{order_number, ticket_details} = req.body;
+function generatePdf(orderDetails) {
+  return new Promise((resolve, reject) => {
+      const dir = path.join(__dirname, '../../uploads');
 
-//     //membuat dokumen pdf
-//     const doc = new PDFDocument();
-//     let buffers = [];
+      // Pastikan folder uploads ada
+      if (!fs.existsSync(dir)) {
+          console.log('Folder uploads tidak ada, membuat folder...');
+          fs.mkdirSync(dir, { recursive: true });
+          console.log('Folder uploads berhasil dibuat.');
+      } else {
+          console.log('Folder uploads sudah ada.');
+      }
 
-//     doc.on('data', buffer.push.bind(buffers));
-//     doc.on('end', () => {
-// let pdfData = Buffer.concat(buffers);
-// res.setHeader('Content-Type', 'application/pdf');
-// res.setHeader('Content-Disposition', 'attachment: filename-ticket.pdf');
-// res.send(pdfData);
-//     });
+      const filePath = path.join(dir, 'document.pdf'); // Memperbaiki penempatan file
+      const doc = new PDFKit();
+      const writeStream = fs.createWriteStream(filePath);
 
-//     doc.text(`Order Number: ${order_number}`);
-//     doc.text(`Ticket Detail: ${ticket_details}`);
+      doc.pipe(writeStream);
 
-//     //generate qrcode
-//     const QRCode = await QRCode.toDataURL(order_number);
-//     doc.image(qrcode,{
-//         fit: [100,100],
-//         align: 'center',
-//         valign: 'center'
-//     })
-// }
+      // Validasi struktur orderDetails
+      if (!orderDetails || !orderDetails.total_harga || !Array.isArray(orderDetails.tiket)) {
+          return reject(new Error('Data order details tidak lengkap atau tidak valid'));
+      }
+
+      // Tambahkan konten ke PDF
+      doc.fontSize(25).text('Order Details', { align: 'center' });
+      doc.moveDown();
+      doc.fontSize(16).text(`Order Number: ${orderDetails.kode_pemesanan}`);
+
+      // Validasi dan cetak total_harga
+      const totalHarga = orderDetails.total_harga !== undefined ? orderDetails.total_harga : 0;
+      doc.text(`Total Price: Rp ${totalHarga.toLocaleString('id-ID')}`);
+
+      // Menambahkan detail tiket
+      doc.moveDown();
+      doc.fontSize(18).text('Ticket Details:', { underline: true });
+      orderDetails.tiket.forEach(ticket => {
+          doc.moveDown();
+          doc.fontSize(16).text(`Kode Tiket: ${ticket.kodeTiket}`);
+
+          // Validasi harga tiket
+          const hargaTiket = ticket.hargaTiket !== undefined ? ticket.hargaTiket : 0;
+          doc.text(`Harga Tiket: Rp ${hargaTiket.toLocaleString('id-ID')}`);
+
+          doc.text(`Jenis Tiket: ${ticket.jenisTiket}`);
+      });
+
+      doc.end();
+
+      writeStream.on('finish', () => {
+          console.log('PDF created successfully at:', filePath);
+          resolve(filePath);
+      });
+
+      writeStream.on('error', (error) => {
+          console.error('Error writing PDF:', error);
+          reject(error);
+      });
+  });
+}
+
+module.exports = {
+  generatePdf
+};

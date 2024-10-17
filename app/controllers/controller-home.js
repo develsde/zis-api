@@ -1,5 +1,5 @@
 const { prisma } = require("../../prisma/client");
-const fs = require("fs/promises");
+const fs = require("fs");
 const { customAlphabet } = require("nanoid");
 const { subMonths, subDays, format, endOfMonth } = require("date-fns");
 const { z } = require("zod");
@@ -16,12 +16,16 @@ const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
 );
-const { sendEmail, generateTemplateMegaKonser, generateTemplateCancelMegaKonser } = require("../helper/email");
+const { sendEmail, generateTemplateMegaKonser, generateTemplateCancelMegaKonser, generateTemplatePembayaran } = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
 const ExcelJS = require("exceljs");
 const axios = require("axios");
 const qs = require("qs");
+const { password } = require("../../config/config.db");
+const { generatePdf } = require("../helper/pdf");
+const path = require('path');
+
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -1896,7 +1900,20 @@ module.exports = {
 
       const response = await handlePayment({ paymentType: bank, amount: total_harga });
 
-      const kode_pemesanan = response.data?.order_id || "";
+
+      // Step 1: Get the last order to determine the next kode_pemesanan
+      const lastOrder = await prisma.pemesanan_megakonser.findFirst({
+        orderBy: {
+          id: 'desc', // Get the last created order
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      // Step 2: Generate the new kode_pemesanan based on the last order's ID
+      const nextId = lastOrder ? lastOrder.id + 1 : 1; // Start with 1 if no previous orders exist
+      const kode_pemesanan = `A${String(nextId).padStart(5, '0')}`;
       const va_number =
         bank === "bca" || bank === "bri" || bank === "bni"
           ? response.data?.va_numbers[0]?.va_number
@@ -1941,6 +1958,13 @@ module.exports = {
         },
       });
 
+      const tiketDetails = detail_pemesanan.map(detail => {
+        return {
+          id_tiket: detail.id_tiket,
+          harga_tiket: detail.harga_tiket, // You can add other fields if needed
+        };
+      });
+
       const transformedDetails = detail_pemesanan.map((detail, index) => {
         const tiketTimestamp = new Date().getTime();
         const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
@@ -1953,18 +1977,29 @@ module.exports = {
           id_tiket: detail.id_tiket,
           // harga_tiket: Number(detail.harga_tiket),
           kode_tiket,
+          harga_tiket: detail.harga_tiket,
         };
       });
 
-      const detail = await prisma.detail_pemesanan_megakonser.createMany({
-        data: transformedDetails,
-      });
+      // const detail = await prisma.detail_pemesanan_megakonser.createMany({
+      //   data: transformedDetails,
+      // });
 
       scheduleCekStatus(kode_pemesanan, email);
+      const templateEmail = await generateTemplatePembayaran({
+        email,
+        postResult,
+        detail: transformedDetails,
+      });
+      const msgId = await sendEmail({
+        email: email,
+        html: templateEmail,
+        subject: "Lakukan Pembayaran Tiket Megakonser",
+      });
 
       res.status(200).json({
         message: "Sukses Kirim Data",
-        data: { postResult, detail },
+        data: { postResult, tiketDetails },
       });
     } catch (error) {
       res.status(500).json({
@@ -2010,36 +2045,56 @@ module.exports = {
     }
   },
 
+  // Implementasi pada checkPay
   async checkPay(req, res) {
-    const order = req.body.order_id;
+    const order = req.body.id;
     const email = req.body.email;
 
+    console.log("Order ID:", order);
+    console.log("email", email);
+
+  
     try {
-      const stats = await cekStatus({
-        order: order,
-      });
-      // let pn = telepon;
-      // pn = pn.replace(/\D/g, "");
-      // if (pn.substring(0, 1) == "0") {
-      //   pn = "0" + pn.substring(1).trim();
-      // } else if (pn.substring(0, 3) == "62") {
-      //   pn = "0" + pn.substring(3).trim();
-      // }
-
-      // const msgId = await sendWhatsapp({
-      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-      //   text: `Status pembayaran anda telah berhasil. Terima kasih.`,
-      // });
-
-      // if (stats.data.status_code === 200 && (stats.data.transaction_status === 'settlement' || stats.data.transaction_status === 'capture')) {
-      const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
-      const msgId = await sendEmail({
-        email: email,
-        html: templateEmail,
-        subject: "Pembelian Tiket Mega Konser Indosat",
-      });
-      // }
-
+      // Cek status transaksi
+      const stats = await cekStatus({ order: order });
+      console.log("Status Response:", stats); // Log respons status
+  
+      // Tangani status transaksi tidak ditemukan
+      if (stats.data.status_code === '404') {
+        return res.status(404).json({
+          message: "Transaksi tidak ditemukan. Pastikan order ID benar.",
+        });
+      }
+  
+      // Pastikan status_code adalah 200 sebelum melanjutkan
+      if (stats.data.status_code !== '200') {
+        return res.status(400).json({
+          message: `Status transaksi tidak valid: ${stats.data.status_message}`,
+        });
+      }
+  
+      // Data tiket (sesuaikan dengan data yang sebenarnya)
+      const orderDetails = {
+        kode_pemesanan: order,
+        total_harga: 1200000, // Pastikan ini diisi dengan harga yang sesuai
+        tiket: [
+          { kodeTiket: 'TKT001', hargaTiket: 600000, jenisTiket: 'VIP' },
+          { kodeTiket: 'TKT002', hargaTiket: 600000, jenisTiket: 'Reguler' },
+        ],
+      };
+  
+      const tempDir = path.join(__dirname, '../../uploads');
+      const filePath = path.join(tempDir, 'document.pdf');
+  
+      // Pastikan direktori temp dibuat dengan recursive option
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+  
+      // Generate PDF dengan orderDetails
+      await generatePdf(orderDetails);
+  
+      // Logging vendor response dan payload ke database
       const log = await prisma.log_vendor.create({
         data: {
           vendor_api: stats?.config?.url,
@@ -2050,29 +2105,73 @@ module.exports = {
           payload: JSON.stringify(req.body),
         },
       });
-
-      if (stats.data.status_code === 200) {
-        await prisma.pemesanan_megakonser.update({
-          where: {
-            kode_pemesanan: order,
-          },
-          data: {
-            status: stats.data?.transaction_status || "",
-          },
+  
+      // Update status pemesanan di database
+      await prisma.pemesanan_megakonser.update({
+        where: {
+          kode_pemesanan: order,
+        },
+        data: {
+          status: stats.data?.transaction_status || '',
+        },
+      });
+  
+      // Jika status transaksi berhasil, kirim email dengan lampiran PDF
+      if (
+        stats.data.transaction_status === 'settlement' || 
+        stats.data.transaction_status === 'capture'
+      ) {
+        try {
+          // Generate email template
+          const templateEmail = await generateTemplateMegaKonser({
+            email: email,
+            password: email,
+          });
+  
+          // Kirim email dengan lampiran PDF
+          const msgId = await sendEmail({
+            email: email,
+            html: templateEmail,
+            subject: 'Pembelian Tiket Mega Konser Indosat',
+            attachments: [
+              {
+                filename: 'document.pdf',
+                path: filePath,
+              },
+            ],
+          });
+  
+          // Hapus file PDF setelah email terkirim
+          fs.unlink(filePath, (err) => {
+            if (err) {
+              console.error('Error saat menghapus file PDF:', err);
+            }
+          });
+  
+          // Respon sukses kirim email, kemudian return untuk menghentikan eksekusi
+          return res.status(200).json({
+            message: 'Email berhasil dikirim dengan lampiran PDF!',
+          });
+        } catch (error) {
+          console.error('Error saat mengirim email:', error.message);
+          return res.status(500).json({
+            message: error.message || 'Terjadi kesalahan saat mengirim email',
+          });
+        }
+      } else {
+        // Status pembayaran tidak valid, kirim respons dan return
+        return res.status(400).json({
+          message: `Transaksi gagal atau status tidak valid: ${stats.data.status_message}`,
         });
       }
-      res.status(200).json({
-        message: "Sukses Ambil Data",
-      });
     } catch (error) {
       console.error(error.message);
-      res.status(500).json({
-        message: error.message || "An error occurred",
+      return res.status(500).json({
+        message: error.message || 'An error occurred',
       });
     }
   },
-
-
+  
   async cancelPay(req, res) {
     const order = req.body.order_id;
     // const telepon = req.body.telepon;
