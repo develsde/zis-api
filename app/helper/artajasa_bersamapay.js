@@ -129,10 +129,14 @@ const poPost = async ({ digest, date, url }) => {
       console.log(Strings);
 
     const dataSign = CryptoJS.HmacSHA256(Strings, secret);
-
+    console.log("HMAC: ",dataSign);
+    
     var dataEncB64 = CryptoJS.enc.Base64.stringify(dataSign);
+    console.log("Base64: ",dataEncB64);
 
     dataEncB64 = dataEncB64.replace(/\+/gi, '-').replace(/\//gi, '_').replace(/\=/gi, '');
+    console.log("RepBase64: ",dataEncB64);
+
 
     console.log("ALLDATA", JSON.stringify(dataEncB64));
 

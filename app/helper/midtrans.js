@@ -53,18 +53,18 @@ const cekStatus = async ({ order }) => {
     let auth = Buffer.from(serverKey).toString('base64');
     // https://api.midtrans.com/v2/${order}/status
     try {
-        const response = await axios.get(`https://api.sandbox.midtrans.com/v2/${order}/status`,
+        const response = await axios.get(`https://api.midtrans.com/v2/${order}/status`,
             {
-                // headers: {
-                //     'Content-Type': 'application/json',
-                //     'Accept': 'application/json',
-                //     'Authorization': `Basic ${auth}`,
-                // }
                 headers: {
-                    Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
-                },
+                    'Accept': 'application/json',
+                    'Authorization': `Basic ${auth}`,
+                }
+                // headers: {
+                //     Accept: 'application/json',
+                //     'Content-Type': 'application/json',
+                //     Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                // },
             });
         return response;
     } catch (error) {
@@ -77,16 +77,16 @@ const cancelPayment = async ({ order }) => {
     let serverKey = `${serverkeys}:`; 
     let auth = Buffer.from(serverKey).toString('base64');
     
-    const url = `https://api.sandbox.midtrans.com/v2/${order}/cancel`;
+    const url = `https://api.midtrans.com/v2/${order}/cancel`;
   
     try {
       const options = {
         method: 'POST',
         url: url,
         headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`, 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Basic ${auth}`,
         },
         data: {}, 
       };
@@ -104,7 +104,7 @@ const cancelPayment = async ({ order }) => {
 //     const serverKey = `${serverkeys}:`; 
 //     const auth = Buffer.from(serverKey).toString("base64");
   
-//     const url = `https://api.sandbox.midtrans.com/v2/${order}/cancel`;
+//     const url = `https://api.midtrans.com/v2/${order}/cancel`;
 //     const options = {
 //       method: "POST",
 //       headers: {
@@ -138,16 +138,16 @@ const expirePayment = async ({ order }) => {
     let serverKey = `${serverkeys}:`; 
     let auth = Buffer.from(serverKey).toString('base64');
     
-    const url = `https://api.sandbox.midtrans.com/v2/${order}/expire`;
+    const url = `https://api.midtrans.com/v2/${order}/expire`;
   
     try {
       const options = {
         method: 'POST',
         url: url,
         headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`, 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Basic ${auth}`,
         },
         data: {}, 
       };
@@ -187,6 +187,8 @@ function generateOrderId(paymentType) {
 }
 
 const handlePayment = async ({ paymentType }) => {
+    let serverKey = `${serverkeys}:`; 
+    let auth = Buffer.from(serverKey).toString('base64');
     try {
         const orderId = generateOrderId(paymentType); // Ganti dengan fungsi untuk menghasilkan order_id
         let options;
@@ -196,11 +198,11 @@ const handlePayment = async ({ paymentType }) => {
             case 'bca':
                 options = {
                     method: 'POST',
-                    url: 'https://api.sandbox.midtrans.com/v2/charge',
+                    url: 'https://api.midtrans.com/v2/charge',
                     headers: {
-                        accept: 'application/json',
-                        'content-type': 'application/json',
-                        authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Basic ${auth}`,
                     },
                     data: {
                         "payment_type": "bank_transfer",
@@ -215,11 +217,11 @@ const handlePayment = async ({ paymentType }) => {
             case 'mandiri':
                 options = {
                     method: 'POST',
-                    url: 'https://api.sandbox.midtrans.com/v2/charge',
+                    url: 'https://api.midtrans.com/v2/charge',
                     headers: {
-                        accept: 'application/json',
-                        'content-type': 'application/json',
-                        authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Basic ${auth}`,
                     },
                     data: {
                         "payment_type": "echannel",
@@ -237,11 +239,11 @@ const handlePayment = async ({ paymentType }) => {
             case 'bni':
                 options = {
                     method: 'POST',
-                    url: 'https://api.sandbox.midtrans.com/v2/charge',
+                    url: 'https://api.midtrans.com/v2/charge',
                     headers: {
-                        accept: 'application/json',
-                        'content-type': 'application/json',
-                        authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Basic ${auth}`,
                     },
                     data: {
                         "payment_type": "bank_transfer",
@@ -256,11 +258,11 @@ const handlePayment = async ({ paymentType }) => {
             case 'bri':
                 options = {
                     method: 'POST',
-                    url: 'https://api.sandbox.midtrans.com/v2/charge',
+                    url: 'https://api.midtrans.com/v2/charge',
                     headers: {
-                        accept: 'application/json',
-                        'content-type': 'application/json',
-                        authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Basic ${auth}`,
                     },
                     data: {
                         "payment_type": "bank_transfer",
@@ -275,11 +277,11 @@ const handlePayment = async ({ paymentType }) => {
             case 'gopay':
                 options = {
                     method: 'POST',
-                    url: 'https://api.sandbox.midtrans.com/v2/charge',
+                    url: 'https://api.midtrans.com/v2/charge',
                     headers: {
-                        accept: 'application/json',
-                        'content-type': 'application/json',
-                        authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Basic ${auth}`,
                     },
                     data: {
                         "payment_type": "qris",
