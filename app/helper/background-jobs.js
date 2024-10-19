@@ -1,9 +1,13 @@
 const cron = require("node-cron");
 const { cekStatus, expirePayment } = require("../helper/midtrans");
 const { prisma } = require("../../prisma/client");
-const { sendEmail, generateTemplateMegaKonser, generateTemplateExpiredMegaKonser } = require("../helper/email");
+const {
+  sendEmail,
+  generateTemplateMegaKonser,
+  generateTemplateExpiredMegaKonser,
+} = require("../helper/email");
 
-const scheduleCekStatus = async (order, email) => {
+const scheduleCekStatus = async (order, email, pemesanan) => {
   const currentStatus = await prisma.pemesanan_megakonser.findFirst({
     where: { kode_pemesanan: order },
   });
@@ -13,37 +17,59 @@ const scheduleCekStatus = async (order, email) => {
     return;
   }
 
-  const task = cron.schedule("*/15 * * * *", async () => {
+  let elapsedMinutes = 0;
+
+  const task = cron.schedule("*/2 * * * * *", async () => {
     try {
       let stats = await cekStatus({ order });
 
-      if (stats.data.status_code !== 200) {
-        stats = await expirePayment({ order });
-        const templateEmail = await generateTemplateExpiredMegaKonser({ email: email, password: email });
-        const msgId = await sendEmail({
-          email: email,
-          html: templateEmail,
-          subject: "Pembelian Tiket Mega Konser Indosat",
+      if (stats.data?.status_code == 200) {
+        const templateEmail = await generateTemplateMegaKonser({
+          email,
+          password: email,
+          tiket: pemesanan,
         });
-      } else {
-        const templateEmail = await generateTemplateMegaKonser({ email: email, password: email });
         const msgId = await sendEmail({
-          email: email,
+          email,
           html: templateEmail,
           subject: "Pembelian Tiket Sound of Freedom",
         });
+
+        await prisma.pemesanan_megakonser.update({
+          where: { kode_pemesanan: order },
+          data: { status: stats.data.transaction_status || "" },
+        });
+
+        console.log(
+          `Order ${order} settled successfully. Email sent: ${msgId}`
+        );
+        task.stop();
+      } else {
+        elapsedMinutes += 2;
+        if (elapsedMinutes >= 900) {
+          stats = await expirePayment({ order });
+
+          const templateEmailExpired = await generateTemplateExpiredMegaKonser({
+            email,
+            password: email,
+          });
+          const msgId = await sendEmail({
+            email,
+            html: templateEmailExpired,
+            subject: "Pembelian Tiket Mega Konser Indosat",
+          });
+
+          await prisma.pemesanan_megakonser.update({
+            where: { kode_pemesanan: order },
+            data: { status: "expired" },
+          });
+
+          console.log(`Order ${order} expired. Notification sent: ${msgId}`);
+          task.stop();
+        }
       }
-
-      const updateResult = await prisma.pemesanan_megakonser.update({
-        where: { kode_pemesanan: order },
-        data: { status: stats.data?.transaction_status || "" },
-      });
-
-      console.log("Update sukses:", updateResult);
     } catch (error) {
       console.error("Error checking order status:", error.message);
-    } finally {
-      task.stop();
     }
   });
 };
@@ -57,7 +83,6 @@ const formatPhoneNumber = (phone) => {
   }
   return pn.trim();
 };
-
 
 const scheduleCekStatusExpire = (order, scheduledTime) => {
   const dateTime = new Date(scheduledTime);

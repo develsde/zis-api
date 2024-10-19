@@ -131,7 +131,16 @@ module.exports = {
       //   "Error:",
       //   error.response ? error.response.data : error.message
       // );
-      throw error;
+      const errorDetails = {
+        headers: error.config?.headers, 
+        method: error.config?.method, 
+        url: error.config?.url, 
+        data: error.config?.data, 
+        error: error.response?.data,
+        message: error.message 
+    };
+      // throw new Error(JSON.stringify(errorDetails));
+      console.log("Error Details:", errorDetails);
     }
   },
 

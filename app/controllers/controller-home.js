@@ -17,7 +17,12 @@ const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
 );
-const { sendEmail, generateTemplateMegaKonser, generateTemplateCancelMegaKonser, generateTemplatePembayaran } = require("../helper/email");
+const {
+  sendEmail,
+  generateTemplateMegaKonser,
+  generateTemplateCancelMegaKonser,
+  generateTemplatePembayaran,
+} = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
 const ExcelJS = require("exceljs");
@@ -25,8 +30,7 @@ const axios = require("axios");
 const qs = require("qs");
 const { password } = require("../../config/config.db");
 const { generatePdf } = require("../helper/pdf");
-const path = require('path');
-
+const path = require("path");
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -297,12 +301,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -1899,62 +1903,41 @@ module.exports = {
           .json({ message: "Detail pemesanan wajib diisi" });
       }
 
-
-
       // await checkPay(idOrder);
 
       //generate code pemesanan A00001 dst
       // Step 1: Get the last order to determine the next kode_pemesanan
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: {
-          id: 'desc', // Get the last created order
+          id: "desc", // Get the last created order
         },
         select: {
           id: true,
         },
       });
 
-      // Step 2: Generate the new kode_pemesanan based on the last order's ID
-      const nextId = lastOrder ? lastOrder.id + 1 : 1; // Start with 1 if no previous orders exist
-      const kode_pemesanan = `A${String(nextId).padStart(5, '0')}`;
+      const nextId = lastOrder ? lastOrder.id + 1 : 1;
+      const kode_pemesanan = `A${String(nextId).padStart(5, "0")}`;
 
       const response = await handlePayment({
         paymentType: bank,
-        gross_amount: 100000,
-        kode_pemesanan: kode_pemesanan
+        amount: total_harga,
+        kode_pemesanan: kode_pemesanan,
       });
-      console.log("response:", response)
-
+      console.log("response:", response);
 
       const va_number =
         bank === "bca" || bank === "bri" || bank === "bni"
           ? response.data?.va_numbers[0]?.va_number
           : bank === "mandiri"
-            ? response.data?.bill_key
-            : bank === "gopay"
-              ? response.data?.actions[0]?.url
-              : "";
+          ? response.data?.bill_key
+          : bank === "gopay"
+          ? response.data?.actions[0]?.url
+          : "";
 
       const transaction_time = new Date();
       const expiry_time = new Date();
       expiry_time.setMinutes(expiry_time.getMinutes() + 15);
-
-      let pn = telepon;
-      pn = pn.replace(/\D/g, "");
-      if (pn.substring(0, 1) == "0") {
-        pn = "0" + pn.substring(1).trim();
-      } else if (pn.substring(0, 3) == "62") {
-        pn = "0" + pn.substring(3).trim();
-      }
-
-      // const msgId = await sendWhatsapp({
-      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-      //   text: "Mohon selesaikan pembayaran anda sebelum 15 menit. Terima kasih.",
-      // });
-
-      // Create the main order entry
-      const orderId = response.data?.order_id;
-      // console.log('order id :', orderId)
 
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
@@ -1974,23 +1957,14 @@ module.exports = {
         },
       });
 
-      console.log('cek kode pemesanan:', postResult)
+      console.log("cek kode pemesanan:", postResult);
 
-      //   const responseDenganOrderId = {
-      //     ...postResult, // Sebarkan postResult untuk menyimpan propertinya
-      //     orderId: orderId, // Tambahkan orderId ke dalam respons
-      // };
-      // console.log("result:", responseDenganOrderId)
-
-      const tiketDetails = detail_pemesanan.map(detail => {
+      const tiketDetails = detail_pemesanan.map((detail) => {
         return {
           id_tiket: detail.id_tiket,
           harga_tiket: detail.harga_tiket, // You can add other fields if needed
-
         };
       });
-
-
 
       const transformedDetails = detail_pemesanan.map((detail, index) => {
         const tiketTimestamp = new Date().getTime();
@@ -2002,9 +1976,7 @@ module.exports = {
         return {
           id_pemesanan: postResult.id,
           id_tiket: detail.id_tiket,
-          // harga_tiket: Number(detail.harga_tiket),
           kode_tiket,
-          // harga_tiket: detail.harga_tiket,
         };
       });
 
@@ -2012,7 +1984,20 @@ module.exports = {
         data: transformedDetails,
       });
 
-      scheduleCekStatus(kode_pemesanan, email);
+      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+        where: {
+          kode_pemesanan: kode_pemesanan,
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+            },
+          },
+        },
+      });
+
+      scheduleCekStatus(kode_pemesanan, email, pemesanan);
       const templateEmail = await generateTemplatePembayaran({
         email,
         postResult,
@@ -2042,14 +2027,14 @@ module.exports = {
       return res.status(200).json({
         success: true,
         message: "Data tiket berhasil diambil",
-        data: tiket
+        data: tiket,
       });
     } catch (error) {
-      console.error("Error retrieving tickets:", error.message)
+      console.error("Error retrieving tickets:", error.message);
       return res.status(500).json({
         success: false,
         message: "Gagal mengambil data tiket",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -2074,50 +2059,51 @@ module.exports = {
 
   // Implementasi pada checkPay
 
-
   async checkPay(req, res, idOrder) {
-    const order_id = req.body.order_id
-    const email = req.body.email
+    const order_id = req.body.order_id;
+    const email = req.body.email;
 
-    console.log("order id:", order_id)
-    console.log('email:', email)
+    console.log("order id:", order_id);
+    console.log("email:", email);
 
     try {
       // Cek status transaksi dari Midtrans
       const stats = await cekStatus({ order: order_id }); // Pastikan orderId yang dikirimkan valid
 
       // Log informasi dari Midtrans
-      console.log("Response dari Midtrans:", JSON.stringify(stats.data, null, 2));
+      console.log(
+        "Response dari Midtrans:",
+        JSON.stringify(stats.data, null, 2)
+      );
 
       // Periksa status code dan transaction status
-      if (stats.data.status_code === '201') {
-
+      if (stats.data.status_code === "201") {
         // Data tiket (sesuaikan dengan data yang sebenarnya)
         const orderDetails = {
           kode_pemesanan: order_id,
           total_harga: stats.data.total_harga, // Pastikan ini diisi dengan harga yang sesuai
           tiket: [
-            { kodeTiket: 'TK001', hargaTiket: 250000, jenisTiket: 'VIP' },
-            { kodeTiket: 'TK002', hargaTiket: 150000, jenisTiket: 'Reguler' },
+            { kodeTiket: "TK001", hargaTiket: 250000, jenisTiket: "VIP" },
+            { kodeTiket: "TK002", hargaTiket: 150000, jenisTiket: "Reguler" },
           ],
         };
 
         const pemesanan = await prisma.pemesanan_megakonser.findUnique({
           where: {
-            kode_pemesanan: order_id
+            kode_pemesanan: order_id,
           },
           include: {
             detail_pemesanan_megakonser: {
               include: {
-                tiket_konser: true
-              }
-            }
-          }
+                tiket_konser: true,
+              },
+            },
+          },
         });
 
         // Path untuk menyimpan PDF
-        const tempDir = path.join(__dirname, '../../uploads');
-        const filePath = path.join(tempDir, 'document.pdf');
+        const tempDir = path.join(__dirname, "../../uploads");
+        const filePath = path.join(tempDir, "document1.pdf");
 
         // Pastikan direktori untuk menyimpan PDF ada
         if (!fs.existsSync(tempDir)) {
@@ -2125,28 +2111,35 @@ module.exports = {
         }
 
         // Generate PDF dengan orderDetails
-        await generatePdf(orderDetails);
+        try {
+          const emai = await generatePdf(orderDetails, serverUrl);
+          console.log('PDF link:', emai);
+        } catch (error) {
+          console.error('Failed to generate PDF:', error);
+        }
+        
 
         // Generate email template
         const templateEmail = await generateTemplateMegaKonser({
           email: email,
           password: email,
-          tiket: pemesanan
+          tiket: pemesanan,
         });
 
         // Kirim email dengan lampiran PDF
 
         // Hapus file PDF setelah email terkirim
-        fs.unlink(filePath, (err) => {
-          if (err) {
-            console.error('Error saat menghapus file PDF:', err);
-          }
-        });
+        // fs.unlink(filePath, (err) => {
+        //   if (err) {
+        //     console.error("Error saat menghapus file PDF:", err);
+        //   }
+        // });
         try {
           await sendEmail({
             email: email,
             html: templateEmail,
-            subject: 'Pembelian Tiket Mega Konser Indosat',
+            subject: "Pembelian Tiket Mega Konser Indosat",
+            pdfPath: filePath
           });
 
           console.log("Email sent successfully!");
@@ -2180,7 +2173,7 @@ module.exports = {
 
         // Respon sukses
         return res.status(200).json({ message: "Sukses Ambil Data" });
-      } else if (stats.data.status_code === '404') {
+      } else if (stats.data.status_code === "404") {
         return res.status(400).json({
           message: "Transaksi tidak ditemukan. Pastikan ID transaksi benar.",
         });
@@ -2197,9 +2190,6 @@ module.exports = {
       });
     }
   },
-
-
-
 
   async cancelPay(req, res) {
     const order = req.body.order_id;
@@ -2221,7 +2211,10 @@ module.exports = {
       //   text: "Pembatalan pembayaran anda telah berhasil. Terima kasih.",
       // });
 
-      const templateEmail = await generateTemplateCancelMegaKonser({ email: email, password: email });
+      const templateEmail = await generateTemplateCancelMegaKonser({
+        email: email,
+        password: email,
+      });
       const msgId = await sendEmail({
         email: email,
         html: templateEmail,
@@ -2279,30 +2272,30 @@ module.exports = {
             //   }
             // },
             select: {
-              id_tiket: true // Field yang dibutuhkan untuk menghitung total pemesanan
-            }
-          }
-        }
+              id_tiket: true, // Field yang dibutuhkan untuk menghitung total pemesanan
+            },
+          },
+        },
       });
 
       // Mapping hasil untuk menyesuaikan output dengan struktur yang diinginkan
-      const data = tiket_sold.map(tiket => ({
+      const data = tiket_sold.map((tiket) => ({
         tiket_id: tiket.tiket_id,
         tiket_nama: tiket.tiket_nama,
-        total_dibeli: tiket.detail_pemesanan_megakonser.length // Menghitung jumlah total tiket yang dibeli
+        total_dibeli: tiket.detail_pemesanan_megakonser.length, // Menghitung jumlah total tiket yang dibeli
       }));
 
       return res.status(200).json({
         success: true,
         message: "Data tiket berhasil diambil",
-        data: data
+        data: data,
       });
     } catch (error) {
       console.error("Error retrieving tickets:", error.message);
       return res.status(500).json({
         success: false,
         message: "Gagal mengambil data tiket",
-        error: error.message
+        error: error.message,
       });
     }
   },
@@ -2377,8 +2370,8 @@ module.exports = {
             id_pemesanan: Number(id),
           },
           include: {
-            tiket_konser: true
-          }
+            tiket_konser: true,
+          },
         }),
       ]);
 

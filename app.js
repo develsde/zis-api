@@ -31,7 +31,7 @@ const erpAuthRoute = require("./app/routes/route-erp-auth");
 const erpProgramRoute = require("./app/routes/route-erp-program");
 
 //wakaf
-const waqifRoute = require("./app/routes/route-waqif");
+const waqifRoute = require("./app/routes/route-waqif"); 
 const mitraRoute = require("./app/routes/route-mitra");
 
 //dashboard
