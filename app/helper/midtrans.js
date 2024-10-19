@@ -186,9 +186,9 @@ function generateOrderId(paymentType) {
     return `${prefix}${timestamp}`; // Mengembalikan order_id dengan prefix
 }
 
-const handlePayment = async ({ paymentType }) => {
+const handlePayment = async ({ paymentType, kode_pemesanan }) => {
     try {
-        const orderId = generateOrderId(paymentType); // Ganti dengan fungsi untuk menghasilkan order_id
+        const orderId = kode_pemesanan; // Ganti dengan fungsi untuk menghasilkan order_id
         let options;
 
         // Menentukan options berdasarkan payment_type
