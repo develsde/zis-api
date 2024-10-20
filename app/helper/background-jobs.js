@@ -5,9 +5,11 @@ const {
   sendEmail,
   generateTemplateMegaKonser,
   generateTemplateExpiredMegaKonser,
+  sendEmailWithPdf,
 } = require("../helper/email");
+const fs = require('fs');
 
-const scheduleCekStatus = async (order, email, pemesanan) => {
+const scheduleCekStatus = async ({ order, email, pemesanan, filePath }) => {
   const currentStatus = await prisma.pemesanan_megakonser.findFirst({
     where: { kode_pemesanan: order },
   });
@@ -19,7 +21,7 @@ const scheduleCekStatus = async (order, email, pemesanan) => {
 
   let elapsedMinutes = 0;
 
-  const task = cron.schedule("*/2 * * * * *", async () => {
+  const task = cron.schedule("*/2 * * * *", async () => {
     try {
       let stats = await cekStatus({ order });
 
@@ -29,10 +31,17 @@ const scheduleCekStatus = async (order, email, pemesanan) => {
           password: email,
           tiket: pemesanan,
         });
-        const msgId = await sendEmail({
+        const msgId = await sendEmailWithPdf({
           email,
           html: templateEmail,
           subject: "Pembelian Tiket Sound of Freedom",
+          pdfPath: filePath
+        });
+
+        fs.unlink(filePath, (err) => {
+          if (err) {
+            console.error("Error saat menghapus file PDF:", err);
+          }
         });
 
         await prisma.pemesanan_megakonser.update({
@@ -46,7 +55,7 @@ const scheduleCekStatus = async (order, email, pemesanan) => {
         task.stop();
       } else {
         elapsedMinutes += 2;
-        if (elapsedMinutes >= 900) {
+        if (elapsedMinutes >= 15) {
           stats = await expirePayment({ order });
 
           const templateEmailExpired = await generateTemplateExpiredMegaKonser({

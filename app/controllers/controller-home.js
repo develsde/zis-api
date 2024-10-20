@@ -29,7 +29,7 @@ const ExcelJS = require("exceljs");
 const axios = require("axios");
 const qs = require("qs");
 const { password } = require("../../config/config.db");
-const { generatePdf } = require("../helper/pdf");
+const generatePdf = require("../helper/pdf")
 const path = require("path");
 
 module.exports = {
@@ -301,12 +301,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -1930,10 +1930,10 @@ module.exports = {
         bank === "bca" || bank === "bri" || bank === "bni"
           ? response.data?.va_numbers[0]?.va_number
           : bank === "mandiri"
-          ? response.data?.bill_key
-          : bank === "gopay"
-          ? response.data?.actions[0]?.url
-          : "";
+            ? response.data?.bill_key
+            : bank === "gopay"
+              ? response.data?.actions[0]?.url
+              : "";
 
       const transaction_time = new Date();
       const expiry_time = new Date();
@@ -1997,12 +1997,27 @@ module.exports = {
         },
       });
 
-      scheduleCekStatus(kode_pemesanan, email, pemesanan);
+      const tempDir = path.join(__dirname, '../../uploads');
+
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      try {
+        const pdfLink = await generatePdf({ orderDetails: pemesanan });
+        console.log('PDF link:', pdfLink);
+        scheduleCekStatus({ order: kode_pemesanan, email, pemesanan, filePath: pdfLink });
+      } catch (error) {
+        console.error('Failed to generate PDF:', error);
+      }
+
       const templateEmail = await generateTemplatePembayaran({
         email,
         postResult,
         detail: transformedDetails,
+        tiket: pemesanan
       });
+
       const msgId = await sendEmail({
         email: email,
         html: templateEmail,
@@ -2117,7 +2132,7 @@ module.exports = {
         } catch (error) {
           console.error('Failed to generate PDF:', error);
         }
-        
+
 
         // Generate email template
         const templateEmail = await generateTemplateMegaKonser({

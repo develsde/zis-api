@@ -1,72 +1,135 @@
-const fs = require("fs");
-const path = require("path");
-const PDFKit = require("pdfkit");
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+const QRCode = require("qrcode");
 
-const generatePdf = (orderDetails) => {
-  return new Promise((resolve, reject) => {
-    const dir = path.join(__dirname, "../../uploads");
+const generatePdf = async ({ orderDetails }) => {
+  // Memastikan bahwa orderDetails berisi data yang diperlukan
+  const requiredFields = ['nama', 'kode_pemesanan', 'metode_pembayaran', 'va_number', 'total_harga', 'detail_pemesanan_megakonser'];
 
-    if (!fs.existsSync(dir)) {
-      console.log("Folder uploads tidak ada, membuat folder...");
-      fs.mkdirSync(dir, { recursive: true });
-      console.log("Folder uploads berhasil dibuat.");
-    } else {
-      console.log("Folder uploads sudah ada.");
+  for (const field of requiredFields) {
+    if (!orderDetails[field]) {
+      throw new Error(`Missing required field: ${field}`);
     }
+  }
 
-    const filePath = path.join(dir, "document.pdf"); // Memperbaiki penempatan file
-    const doc = new PDFKit();
+  // Generate the QR code
+  const url = `https://portal.zisindosat.id`;
+  let qrCodePath;
+  try {
+    qrCodePath = await QRCode.toDataURL(url);
+  } catch (error) {
+    console.error("Error generating QR code:", error);
+    throw new Error('Could not generate QR code');
+  }
+
+  return new Promise((resolve, reject) => {
+    // Mengatur ukuran dokumen menjadi A4
+    const doc = new PDFDocument({ size: 'A4' });
+    const filePath = path.join(__dirname, '../../uploads/output.pdf');
     const writeStream = fs.createWriteStream(filePath);
+
+    // Error handling for the write stream
+    writeStream.on('error', (error) => {
+      console.error('Error writing PDF:', error);
+      reject(new Error('Error writing PDF file'));
+    });
 
     doc.pipe(writeStream);
 
-    // Validasi struktur orderDetails
-    if (
-      !orderDetails ||
-      !orderDetails.total_harga ||
-      !Array.isArray(orderDetails.tiket)
-    ) {
-      return reject(
-        new Error("Data order details tidak lengkap atau tidak valid")
-      );
-    }
+    // Bagian Header dengan Logo (Opsional)
+    // doc.image('logo.png', 50, 45, { width: 50 });
+    doc.fontSize(20).text('Bukti Pembayaran Tiket', 110, 57, { align: 'center' });
+    doc.moveDown(2);
 
-    // Tambahkan konten ke PDF
-    doc.fontSize(25).text("Order Details", { align: "center" });
-    doc.moveDown();
-    doc.fontSize(16).text(`Order Number: ${orderDetails.kode_pemesanan}`);
+    // Memberi Garis Pembatas
+    doc.rect(50, doc.y, 500, 2).fillColor('#000').fill();
+    doc.moveDown(1.5);
 
-    // Validasi dan cetak total_harga
-    const totalHarga =
-      orderDetails.total_harga !== undefined ? orderDetails.total_harga : 0;
-    doc.text(`Total Price: Rp ${totalHarga.toLocaleString("id-ID")}`);
+    // Bagian Salam
+    doc.fontSize(16).font('Helvetica-Bold').text("Assalamu'alaikum, Wr Wb.", { align: 'left' });
+    doc.moveDown(0.5);
+    doc.fontSize(14).text('Terima kasih telah melakukan pembelian tiket.', { align: 'left' });
+    doc.moveDown(0.5);
+    doc.text('Berikut ini adalah detail transaksi anda:', { align: 'left' });
+    doc.moveDown(1);
 
-    // Menambahkan detail tiket
-    doc.moveDown();
-    doc.fontSize(18).text("Ticket Details:", { underline: true });
-    orderDetails.tiket.forEach((ticket) => {
-      doc.moveDown();
-      doc.fontSize(16).text(`Kode Tiket: ${ticket.kodeTiket}`);
+    // Kotak Detail Transaksi
+    doc.roundedRect(50, doc.y, 500, 130, 10).stroke();
+    doc.moveDown(1);
+    doc.fontSize(16).fillColor('#007BFF').text('Detail Transaksi', { align: 'center' });
+    doc.fillColor('black').moveDown(0.5);
+    doc.fontSize(12).text(`Nama: ${orderDetails.nama}`);
+    doc.text(`Kode Pemesanan: ${orderDetails.kode_pemesanan}`);
+    doc.text(`Metode Pembayaran: ${orderDetails.metode_pembayaran}`);
+    doc.text(`Nomor Virtual Account: ${orderDetails.va_number}`);
+    doc.moveDown(4);
 
-      // Validasi harga tiket
-      const hargaTiket =
-        ticket.hargaTiket !== undefined ? ticket.hargaTiket : 0;
-      doc.text(`Harga Tiket: Rp ${hargaTiket.toLocaleString("id-ID")}`);
+    // Kotak Detail Tiket
+    const ticketBoxWidth = 500; // Lebar tetap untuk kotak tiket
+    doc.roundedRect(50, doc.y, ticketBoxWidth, 180, 10).stroke();
+    doc.moveDown(1);
+    doc.fontSize(16).fillColor('#007BFF').text('Detail Tiket', { align: 'center' });
+    doc.fillColor('black').moveDown(0.5);
 
-      doc.text(`Jenis Tiket: ${ticket.jenisTiket}`);
+    orderDetails.detail_pemesanan_megakonser.forEach((tiket, index) => {
+      const tiketDetails = [
+        `Kode Tiket: ${tiket.kode_tiket}`,
+        `Harga Tiket: Rp ${tiket.tiket_konser.tiket_harga.toLocaleString("id-ID")}`,
+        `Jenis Tiket: ${tiket.tiket_konser.tiket_nama}`
+      ];
+
+      // Menghitung tinggi kotak berdasarkan jumlah baris
+      const maxLineWidth = Math.max(...tiketDetails.map(line => doc.widthOfString(line)));
+      const tiketBoxHeight = 3 * 15 + 10; // Estimasi tinggi untuk 3 baris + jarak tambahan
+
+      // Gambarkan kotak dengan tinggi yang disesuaikan
+      doc.roundedRect(50, doc.y, maxLineWidth + 20, tiketBoxHeight, 10).stroke(); // Menambahkan padding di kiri dan kanan
+      doc.moveDown(1);
+      
+      tiketDetails.forEach(line => {
+        doc.fontSize(12).text(line);
+      });
+
+      // Tambahkan pemisah untuk tiket lebih dari 1
+      if (index < orderDetails.detail_pemesanan_megakonser.length - 1) {
+        doc.moveDown(1); // Jarak lebih untuk pemisah
+        doc.rect(60, doc.y, 480, 1).fillOpacity(0.5).fillColor('gray').fill();
+        doc.moveDown(1); // Jarak lebih setelah pemisah
+      }
     });
 
+    // Total Pembayaran dengan Warna Menonjol
+    doc.moveDown(2); // Tambahkan jarak lebih sebelum total pembayaran
+    doc.fontSize(16).fillColor('#FF5733').text(`Total Pembayaran: Rp ${orderDetails.total_harga.toLocaleString("id-ID")}`);
+    doc.fillColor('black').moveDown(2); // Jarak setelah total pembayaran
+
+    // QR Code
+    doc.text('Tunjukkan Kode QR di bawah ini sebelum masuk venue di loket penukaran tiket:', { align: 'left' });
+    doc.moveDown(1);
+    // Insert the QR code image
+    const qrImage = Buffer.from(qrCodePath.split(",")[1], 'base64');
+    try {
+      doc.image(qrImage, {
+        fit: [150, 150],
+        align: 'center',
+      });
+    } catch (error) {
+      console.error('Error inserting QR code into PDF:', error);
+      reject(new Error('Error inserting QR code into PDF'));
+    }
+    doc.moveDown(2);
+
+    // Footer
+    doc.fontSize(14).text('Terima kasih atas partisipasi anda.', { align: 'left' });
+    doc.moveDown();
+    doc.text('Wassalamu\'alaikum Wr, Wb', { align: 'left' });
+
+    // Mengakhiri dan menghasilkan PDF
     doc.end();
 
-    writeStream.on("finish", () => {
-      console.log("PDF created successfully at:", filePath);
-      console.log(`https://api.zisindosat.id/public/uploads/${fileName}`)
+    writeStream.on('finish', () => {
       resolve(filePath);
-    });
-
-    writeStream.on("error", (error) => {
-      console.error("Error writing PDF:", error);
-      reject(error);
     });
   });
 };
