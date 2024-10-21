@@ -1572,7 +1572,7 @@ ORDER BY aa.created_date DESC
             va_number: stats.data?.bill_key || stats.data?.va_numbers?.[0]?.va_number,
             biller_code: stats.data?.biller_code || null,
             settlement_time: new Date(stats.data.settlement_time).toISOString(),
-            expiry_time: new Date(stats.data.settlement_time).toISOString(),
+            expiry_time: new Date(stats.data.expiry_time).toISOString(),
           },
         });
 
