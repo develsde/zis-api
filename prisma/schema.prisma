@@ -1204,6 +1204,7 @@ model pemesanan_megakonser {
 model tiket_konser {
   tiket_id                    Int                           @id @default(autoincrement())
   tiket_nama                  String?                       @db.VarChar(255)
+  tiket_program               String?                       @db.VarChar(255)
   tiket_startdate             DateTime?                     @db.Date
   tiket_enddate               DateTime?                     @db.Date
   tiket_harga                 Int?                          @default(0)
@@ -1258,9 +1259,18 @@ model register_donasi {
   biller_code        String?   @db.VarChar(50)
   transaction_status String?   @db.VarChar(50)
   transaction_time   DateTime? @db.DateTime(0)
+  settlement_time    DateTime? @db.DateTime(0)
   expiry_time        DateTime? @db.DateTime(0)
   transaction_code   String?   @unique(map: "Index 3") @db.VarChar(50)
   outlet             outlet?   @relation(fields: [id_outlet], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_register_donasi_outlet")
 
   @@index([id_outlet], map: "Index 2")
+}
+
+model tiket_konser_detail {
+  id                         Int     @id @default(autoincrement())
+  tiket_konser_detail_nama   String? @db.VarChar(100)
+  tiket_konser_id            Int?
+  tiket_konser_detail_desc   String? @db.VarChar(255)
+  tiket_konser_detail_status Int?    @default(0) @db.SmallInt
 }

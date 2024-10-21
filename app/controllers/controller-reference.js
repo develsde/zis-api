@@ -4,10 +4,13 @@ const fs = require("fs/promises");
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
 const { checkImkas } = require("../helper/imkas");
+var serverkeys = process.env.SERVER_KEY;
+var clientkeys = process.env.CLIENT_KEY;
 
 const {
   handlePayment,
   cekStatus,
+  midtransfer,
 } = require("../helper/midtrans");
 
 module.exports = {
@@ -1404,6 +1407,27 @@ ORDER BY aa.created_date DESC
   },
 
   async registerDonasi(req, res) {
+
+    function generateOrderId(paymentType) {
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:.]/g, '').slice(0, 15); // Format YYYYMMDDHHMMSS
+      let prefix;
+
+      // Memberikan prefix berdasarkan paymentType
+      switch (paymentType) {
+        case 'transfer':
+          prefix = 'TF'; // Prefix untuk QRIS
+          break;
+        case 'cash':
+          prefix = 'CS'; // Prefix untuk QRIS
+          break;
+        default:
+          throw new Error('Tipe pembayaran tidak dikenali'); // Buat error jika tipe tidak valid
+      }
+
+      return `${prefix}${timestamp}`; // Mengembalikan order_id dengan prefix
+    }
+
     try {
       const {
         jenis_donasi,
@@ -1414,30 +1438,30 @@ ORDER BY aa.created_date DESC
         metode_pembayaran,
       } = req.body;
 
-      const response = await handlePayment({
-        paymentType: metode_pembayaran,
-        amount: nominal,
-      });
-      console.log("response:", response);
+      // const response = await handlePayment({
+      //   paymentType: metode_pembayaran,
+      //   amount: nominal,
+      // });
+      // console.log("response:", response);
 
       const isCashPayment = metode_pembayaran === 'cash';
-      const isMandiriPayment = metode_pembayaran === 'mandiri';
+      // const isMandiriPayment = metode_pembayaran === 'mandiri';
 
-      const biller_code = isMandiriPayment ? response?.data?.biller_code : null
+      // const biller_code = isMandiriPayment ? response?.data?.biller_code : null
 
-      const va_number = isCashPayment
-        ? null
-        : metode_pembayaran === "bca" || metode_pembayaran === "bri" || metode_pembayaran === "bni"
-          ? response?.data?.va_numbers[0]?.va_number || ''
-          : metode_pembayaran === "mandiri"
-            ? response?.data?.bill_key || ''
-            : metode_pembayaran === "gopay"
-              ? response?.data?.actions[0]?.url || ''
-              : "";
+      // const va_number = isCashPayment
+      //   ? null
+      //   : metode_pembayaran === "bca" || metode_pembayaran === "bri" || metode_pembayaran === "bni"
+      //     ? response?.data?.va_numbers[0]?.va_number || ''
+      //     : metode_pembayaran === "mandiri"
+      //       ? response?.data?.bill_key || ''
+      //       : metode_pembayaran === "gopay"
+      //         ? response?.data?.actions[0]?.url || ''
+      //         : "";
 
-      const transaction_status = isCashPayment ? 'settlement' : response?.data?.transaction_status || '';
+      // const transaction_status = isCashPayment ? 'settlement' : response?.data?.transaction_status || '';
 
-      const transaction_code = isCashPayment ? response : response?.data?.order_id || ''; // Kosong jika metode pembayaran adalah cash
+      const transaction_code = generateOrderId(metode_pembayaran) // Kosong jika metode pembayaran adalah cash
 
       const transaction_time = new Date();
       const expiry_time = new Date();
@@ -1450,20 +1474,45 @@ ORDER BY aa.created_date DESC
           nohp_donatur,
           nominal,
           id_outlet,
-          metode_pembayaran: isCashPayment ? "cash" : response.data?.payment_type || "",
-          bank: isCashPayment ? null : metode_pembayaran,
-          va_number: va_number,
-          biller_code,
-          transaction_status: transaction_status,
+          metode_pembayaran: isCashPayment ? "cash" : "transfer",
+          // bank: isCashPayment ? null : metode_pembayaran,
+          // va_number: va_number,
+          // biller_code,
+          // transaction_status: transaction_status,
           transaction_time: transaction_time,
-          expiry_time: expiry_time,
+          // expiry_time: expiry_time,
           transaction_code: transaction_code,
+        },
+      });
+
+      const midtrans = await midtransfer({
+        order: transaction_code,
+        price: Number(nominal),
+      });
+
+      const header = {
+        isProduction: true,
+        serverKey: serverkeys,
+        clientKey: clientkeys,
+      };
+
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: "Snap MidTrans",
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(header),
+          api_body: JSON.stringify({
+            order: transaction_code,
+            price: Number(nominal),
+          }),
+          api_response: JSON.stringify(midtrans),
+          payload: JSON.stringify(req.body),
         },
       });
 
       res.status(200).json({
         message: "Sukses Kirim Data",
-        data: postResult,
+        data: { postResult, midtrans }
       });
     } catch (error) {
       res.status(500).json({
@@ -1497,12 +1546,33 @@ ORDER BY aa.created_date DESC
           },
         });
 
+        // const isCashPayment = 'cash';
+        const isMandiriPayment = 'mandiri';
+
+        // const biller_code = isMandiriPayment ? stats.data?.biller_code : null
+
+        // const va_number = isCashPayment
+        //   ? null
+        //   : metode_pembayaran === "bca" || metode_pembayaran === "bri" || metode_pembayaran === "bni"
+        //     ? response?.data?.va_numbers[0]?.va_number || ''
+        //     : metode_pembayaran === "mandiri"
+        //       ? response?.data?.bill_key || ''
+        //       : metode_pembayaran === "gopay"
+        //         ? response?.data?.actions[0]?.url || ''
+        //         : "";
+
         await prisma.register_donasi.update({
           where: {
             transaction_code: order_id,
           },
           data: {
             transaction_status: stats.data?.transaction_status || "",
+            metode_pembayaran: stats.data?.payment_type,
+            bank: stats.data.bank || stats.data?.va_numbers?.[0]?.bank || stats.data?.issuer || isMandiriPayment,
+            va_number: stats.data?.bill_key || stats.data?.va_numbers?.[0]?.va_number,
+            biller_code: stats.data?.biller_code || null,
+            settlement_time: new Date(stats.data.settlement_time).toISOString(),
+            expiry_time: new Date(stats.data.settlement_time).toISOString(),
           },
         });
 

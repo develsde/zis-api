@@ -1408,11 +1408,10 @@ module.exports = {
           payload: JSON.stringify(req.body),
         },
       });
-      const stat = stats.data;
-      console.log(stat);
+      
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: stat,
+        // data: stat,
       });
     } catch (error) {
       console.error(error.message);

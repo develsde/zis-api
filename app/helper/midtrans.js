@@ -52,21 +52,21 @@ const midtransfer = async ({ order, price }) => {
 const cekStatus = async ({ order }) => {
   let serverKey = serverkeys + ":";
   let auth = Buffer.from(serverKey).toString("base64");
-  // https://api.midtrans.com/v2/${order}/status
   try {
     const response = await axios.get(
-      `https://api.sandbox.midtrans.com/v2/${order}/status`,
+      // `https://api.sandbox.midtrans.com/v2/${order}/status`,
+      `https://api.midtrans.com/v2/${order}/status`,
       {
-        // headers: { 
-        //   "Content-Type": "application/json",
-        //   Accept: "application/json",
-        //   Authorization: `Basic ${auth}`,
-        // },
         headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Basic ${auth}`,
         },
+        // headers: {
+        //   Accept: 'application/json',
+        //   'Content-Type': 'application/json',
+        //   Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+        // },
       }
     );
     console.log(response);
