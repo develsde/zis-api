@@ -63,9 +63,9 @@ const cekStatus = async ({ order }) => {
         //   Authorization: `Basic ${auth}`,
         // },
         headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
         },
       }
     );
@@ -164,38 +164,40 @@ const expirePayment = async ({ order }) => {
   }
 };
 
-// function generateOrderId(paymentType) {
-//     const now = new Date();
-//     const timestamp = now.toISOString().replace(/[-:.]/g, '').slice(0, 15); // Format YYYYMMDDHHMMSS
-//     let prefix;
+function generateOrderId(paymentType) {
+  const now = new Date();
+  const timestamp = now.toISOString().replace(/[-:.]/g, '').slice(0, 15); // Format YYYYMMDDHHMMSS
+  let prefix;
 
-//     // Memberikan prefix berdasarkan paymentType
-//     switch (paymentType) {
-//         case 'bca':
-//         case 'bni':
-//         case 'bri':
-//             prefix = 'BT'; // Prefix untuk bank transfer
-//             break;
-//         case 'mandiri':
-//             prefix = 'EC'; // Prefix untuk Mandiri
-//             break;
-//         case 'gopay':
-//             prefix = 'QR'; // Prefix untuk QRIS
-//             break;
-//         default:
-//             throw new Error('Tipe pembayaran tidak dikenali'); // Buat error jika tipe tidak valid
-//     }
+  // Memberikan prefix berdasarkan paymentType
+  switch (paymentType) {
+    case 'bca':
+    case 'bni':
+    case 'bri':
+      prefix = 'BT'; // Prefix untuk bank transfer
+      break;
+    case 'mandiri':
+      prefix = 'EC'; // Prefix untuk Mandiri
+      break;
+    case 'gopay':
+      prefix = 'QR'; // Prefix untuk QRIS
+      break;
+    case 'cash':
+      prefix = 'CS'; // Prefix untuk QRIS
+      break;
+    default:
+      throw new Error('Tipe pembayaran tidak dikenali'); // Buat error jika tipe tidak valid
+  }
 
-//     return `${prefix}${timestamp}`; // Mengembalikan order_id dengan prefix
-// }
+  return `${prefix}${timestamp}`; // Mengembalikan order_id dengan prefix
+}
 
 const handlePayment = async ({ paymentType, kode_pemesanan, amount }) => {
   let serverKey = `${serverkeys}:`;
   let auth = Buffer.from(serverKey).toString("base64");
   try {
-    const orderId = kode_pemesanan; // Ganti dengan fungsi untuk menghasilkan order_id
+    const orderId = generateOrderId(paymentType); // Ganti dengan fungsi untuk menghasilkan order_id
     let options;
-
     // Menentukan options berdasarkan payment_type
     switch (paymentType) {
       case "bca":
@@ -222,11 +224,13 @@ const handlePayment = async ({ paymentType, kode_pemesanan, amount }) => {
       case "mandiri":
         options = {
           method: "POST",
-          url: "https://api.midtrans.com/v2/charge",
+          //   url: "https://api.midtrans.com/v2/charge",
+          url: "https://api.sandbox.midtrans.com/v2/charge",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Basic ${auth}`,
+            // Authorization: `Basic ${auth}`,
+            Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`,
           },
           data: {
             payment_type: "echannel",
@@ -244,11 +248,13 @@ const handlePayment = async ({ paymentType, kode_pemesanan, amount }) => {
       case "bni":
         options = {
           method: "POST",
-          url: "https://api.midtrans.com/v2/charge",
+          //   url: "https://api.midtrans.com/v2/charge",
+          url: "https://api.sandbox.midtrans.com/v2/charge",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Basic ${auth}`,
+            // Authorization: `Basic ${auth}`,
+            Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`,
           },
           data: {
             payment_type: "bank_transfer",
@@ -263,11 +269,13 @@ const handlePayment = async ({ paymentType, kode_pemesanan, amount }) => {
       case "bri":
         options = {
           method: "POST",
-          url: "https://api.midtrans.com/v2/charge",
+          //   url: "https://api.midtrans.com/v2/charge",
+          url: "https://api.sandbox.midtrans.com/v2/charge",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Basic ${auth}`,
+            // Authorization: `Basic ${auth}`,
+            Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`,
           },
           data: {
             payment_type: "bank_transfer",
@@ -282,11 +290,13 @@ const handlePayment = async ({ paymentType, kode_pemesanan, amount }) => {
       case "gopay":
         options = {
           method: "POST",
-          url: "https://api.midtrans.com/v2/charge",
+          //   url: "https://api.midtrans.com/v2/charge",
+          url: "https://api.sandbox.midtrans.com/v2/charge",
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            Authorization: `Basic ${auth}`,
+            // Authorization: `Basic ${auth}`,
+            Authorization: `Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6`,
           },
           data: {
             payment_type: "qris",
@@ -298,6 +308,8 @@ const handlePayment = async ({ paymentType, kode_pemesanan, amount }) => {
           },
         };
         break;
+      case "cash":
+        return orderId;
       default:
         throw new Error("Tipe pembayaran tidak dikenali"); // Buat error jika tipe tidak valid
     }
