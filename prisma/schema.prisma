@@ -409,6 +409,7 @@ model provinces {
   status          Int?     @default(1)
   province_by_dpt Int?     @default(0)
   cities          cities[]
+  cso             cso[]
   mitra           mitra[]
   waqif           waqif[]
 }
@@ -418,6 +419,7 @@ model cities {
   city_name String?     @db.VarChar(255)
   prov_id   Int?
   provinces provinces?  @relation(fields: [prov_id], references: [prov_id], onDelete: NoAction, onUpdate: NoAction, map: "cities_FK")
+  cso       cso[]
   districts districts[]
   mitra     mitra[]
   waqif     waqif[]
@@ -430,6 +432,7 @@ model districts {
   dis_name String? @db.VarChar(255)
   city_id  Int?
   ket      String? @db.VarChar(100)
+  cso      cso[]
   cities   cities? @relation(fields: [city_id], references: [city_id], onDelete: NoAction, onUpdate: NoAction, map: "districts_FK")
 
   @@index([city_id], map: "districts_FK")
@@ -1167,4 +1170,97 @@ model detail_qurban {
 model lokasi_qurban {
   id                   Int     @id @default(autoincrement())
   lokasi_penyembelihan String? @db.Text
+}
+
+model detail_pemesanan_megakonser {
+  id                   Int                  @id @default(autoincrement())
+  id_pemesanan         Int
+  id_tiket             Int?
+  kode_tiket           String?              @db.VarChar(50)
+  pemesanan_megakonser pemesanan_megakonser @relation(fields: [id_pemesanan], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pemesanan_megakonser")
+  tiket_konser         tiket_konser?        @relation(fields: [id_tiket], references: [tiket_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_detail_pemesanan_megakonser_tiket_konser")
+
+  @@index([id_pemesanan], map: "Index 2")
+  @@index([id_tiket], map: "Index 3")
+}
+
+model pemesanan_megakonser {
+  id                          Int                           @id @default(autoincrement())
+  nama                        String?                       @db.VarChar(250)
+  email                       String?                       @db.VarChar(250)
+  telepon                     String?                       @db.VarChar(250)
+  gender                      String?                       @db.VarChar(50)
+  total_harga                 Int?
+  kode_pemesanan              String?                       @unique(map: "Index 2") @db.VarChar(50)
+  metode_pembayaran           String?                       @db.VarChar(250)
+  bank                        String?                       @db.VarChar(250)
+  va_number                   String?                       @db.VarChar(250)
+  status                      String?                       @db.VarChar(50)
+  transaction_time            DateTime?                     @db.DateTime(0)
+  expiry_time                 DateTime?                     @db.DateTime(0)
+  detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+}
+
+model tiket_konser {
+  tiket_id                    Int                           @id @default(autoincrement())
+  tiket_nama                  String?                       @db.VarChar(255)
+  tiket_startdate             DateTime?                     @db.Date
+  tiket_enddate               DateTime?                     @db.Date
+  tiket_harga                 Int?                          @default(0)
+  tiket_jumlah                Int?                          @default(0)
+  tiket_deskripsi             String?                       @db.Text
+  detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+}
+
+model cso {
+  id         Int        @id @default(autoincrement())
+  nama_cso   String?    @db.VarChar(255)
+  nohp       String?    @db.VarChar(20)
+  alamat     String?    @db.Text
+  provinsi   Int?
+  kota       Int?
+  kecamatan  Int?
+  cso_status Int?       @default(0)
+  cities     cities?    @relation(fields: [kota], references: [city_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cso_cities")
+  districts  districts? @relation(fields: [kecamatan], references: [dis_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cso_districts")
+  provinces  provinces? @relation(fields: [provinsi], references: [prov_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cso_provinces")
+  outlet     outlet[]
+
+  @@index([kota], map: "Index 2")
+  @@index([kecamatan], map: "Index 3")
+  @@index([provinsi], map: "Index 4")
+}
+
+model outlet {
+  id              Int               @id @default(autoincrement())
+  nama_outlet     String?           @db.VarChar(255)
+  alamat_outlet   String?           @db.Text
+  pic_outlet      String?           @db.VarChar(255)
+  cso_id          Int?
+  register_date   DateTime?         @default(now()) @db.Timestamp(0)
+  cso             cso?              @relation(fields: [cso_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_outlet_cso")
+  register_donasi register_donasi[]
+
+  @@index([cso_id], map: "Index 2")
+}
+
+model register_donasi {
+  id                 Int       @id @default(autoincrement())
+  jenis_donasi       Int?      @default(0)
+  nama_donatur       String?   @db.VarChar(255)
+  nohp_donatur       String?   @db.VarChar(255)
+  nominal            Int?      @default(0)
+  id_outlet          Int?
+  tanggal_donasi     DateTime? @default(now()) @db.Timestamp(0)
+  metode_pembayaran  String?   @db.VarChar(50)
+  bank               String?   @db.VarChar(50)
+  va_number          String?   @db.VarChar(250)
+  biller_code        String?   @db.VarChar(50)
+  transaction_status String?   @db.VarChar(50)
+  transaction_time   DateTime? @db.DateTime(0)
+  expiry_time        DateTime? @db.DateTime(0)
+  transaction_code   String?   @unique(map: "Index 3") @db.VarChar(50)
+  outlet             outlet?   @relation(fields: [id_outlet], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_register_donasi_outlet")
+
+  @@index([id_outlet], map: "Index 2")
 }

@@ -5,6 +5,11 @@ const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
 const { checkImkas } = require("../helper/imkas");
 
+const {
+  handlePayment,
+  cekStatus,
+} = require("../helper/midtrans");
+
 module.exports = {
   async checkImkas(req, res) {
     try {
@@ -1364,6 +1369,158 @@ ORDER BY aa.created_date DESC
     } catch (error) {
       res.status(500).json({
         message: error?.message,
+      });
+    }
+  },
+
+  async getOutlet(req, res) {
+    const outlet_id = Number(req.query.outlet_id) || 0
+
+    try {
+      const outlet = await prisma.outlet.findUnique({
+        where: {
+          id: outlet_id
+        },
+        include: {
+          cso: {
+            include: {
+              provinces: true,
+              cities: true,
+              districts: true
+            }
+          }
+        }
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: outlet,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async registerDonasi(req, res) {
+    try {
+      const {
+        jenis_donasi,
+        nama_donatur,
+        nohp_donatur,
+        nominal,
+        id_outlet,
+        metode_pembayaran,
+      } = req.body;
+
+      const response = await handlePayment({
+        paymentType: metode_pembayaran,
+        amount: nominal,
+      });
+      console.log("response:", response);
+
+      const isCashPayment = metode_pembayaran === 'cash';
+      const isMandiriPayment = metode_pembayaran === 'mandiri';
+
+      const biller_code = isMandiriPayment ? response?.data?.biller_code : null
+
+      const va_number = isCashPayment
+        ? null
+        : metode_pembayaran === "bca" || metode_pembayaran === "bri" || metode_pembayaran === "bni"
+          ? response?.data?.va_numbers[0]?.va_number || ''
+          : metode_pembayaran === "mandiri"
+            ? response?.data?.bill_key || ''
+            : metode_pembayaran === "gopay"
+              ? response?.data?.actions[0]?.url || ''
+              : "";
+
+      const transaction_status = isCashPayment ? 'settlement' : response?.data?.transaction_status || '';
+
+      const transaction_code = isCashPayment ? response : response?.data?.order_id || ''; // Kosong jika metode pembayaran adalah cash
+
+      const transaction_time = new Date();
+      const expiry_time = new Date();
+      expiry_time.setMinutes(expiry_time.getMinutes() + 15);
+
+      const postResult = await prisma.register_donasi.create({
+        data: {
+          jenis_donasi: Number(jenis_donasi),
+          nama_donatur,
+          nohp_donatur,
+          nominal,
+          id_outlet,
+          metode_pembayaran: isCashPayment ? "cash" : response.data?.payment_type || "",
+          bank: isCashPayment ? null : metode_pembayaran,
+          va_number: va_number,
+          biller_code,
+          transaction_status: transaction_status,
+          transaction_time: transaction_time,
+          expiry_time: expiry_time,
+          transaction_code: transaction_code,
+        },
+      });
+
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: postResult,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async checkPay(req, res) {
+    const order_id = req.body.order_id;
+    try {
+      // Cek status transaksi dari Midtrans
+      const stats = await cekStatus({ order: order_id }); // Pastikan orderId yang dikirimkan valid
+
+      // Log informasi dari Midtrans
+      console.log(
+        "Response dari Midtrans:",
+        JSON.stringify(stats.data, null, 2)
+      );
+
+      if (stats.data.status_code === "200") {
+
+        const log = await prisma.log_vendor.create({
+          data: {
+            vendor_api: stats?.config?.url,
+            url_api: req.originalUrl,
+            api_header: JSON.stringify(stats.headers),
+            api_body: stats?.config?.data,
+            api_response: JSON.stringify(stats.data),
+            payload: JSON.stringify(req.body),
+          },
+        });
+
+        await prisma.register_donasi.update({
+          where: {
+            transaction_code: order_id,
+          },
+          data: {
+            transaction_status: stats.data?.transaction_status || "",
+          },
+        });
+
+        return res.status(200).json({ message: "Sukses Ambil Data" });
+      } else if (stats.data.status_code === "404") {
+        return res.status(400).json({
+          message: "Transaksi tidak ditemukan. Pastikan ID transaksi benar.",
+        });
+      } else {
+        console.error("Transaksi tidak valid:", stats.data.transaction_status);
+        return res.status(400).json({
+          message: "Anda Belum Melakukan Pembayaran",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error.message);
+      return res.status(500).json({
+        message: error.message || "An error occurred",
       });
     }
   },

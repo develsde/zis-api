@@ -1,20 +1,36 @@
 const { prisma } = require("../../prisma/client");
-const fs = require("fs/promises");
+const fs = require("fs");
 const { customAlphabet } = require("nanoid");
 const { subMonths, subDays, format, endOfMonth } = require("date-fns");
 const { z } = require("zod");
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
-const { midtransfer, cekstatus } = require("../helper/midtrans");
+const {
+  midtransfer,
+  cekStatus,
+  handlePayment,
+  cancelPayment,
+  generateOrderId,
+} = require("../helper/midtrans");
+const { scheduleCekStatus } = require("../helper/background-jobs");
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
   8
 );
+const {
+  sendEmail,
+  generateTemplateMegaKonser,
+  generateTemplateCancelMegaKonser,
+  generateTemplatePembayaran,
+} = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
 const ExcelJS = require("exceljs");
 const axios = require("axios");
 const qs = require("qs");
+const { password } = require("../../config/config.db");
+const generatePdf = require("../helper/pdf")
+const path = require("path");
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -285,12 +301,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -556,7 +572,7 @@ module.exports = {
           },
         }),
       ]);
-      const stats = await cekstatus({
+      const stats = await cekStatus({
         order: id,
       });
       const log = await prisma.log_vendor.create({
@@ -1092,7 +1108,7 @@ module.exports = {
       const statuses = [];
 
       for (const orderId of orderIds) {
-        const statuss = await cekstatus({ order: orderId });
+        const statuss = await cekStatus({ order: orderId });
         const log = await prisma.log_vendor.create({
           data: {
             vendor_api: statuss?.config?.url,
@@ -1379,7 +1395,7 @@ module.exports = {
     const id = req.params.id;
     const order_id = req.body.order_id;
     try {
-      const stats = await cekstatus({
+      const stats = await cekStatus({
         order: id,
       });
       const log = await prisma.log_vendor.create({
@@ -1447,7 +1463,7 @@ module.exports = {
 
       const statuses = [];
       for (const orderId of orderIds) {
-        const statuss = await cekstatus({ order: orderId });
+        const statuss = await cekStatus({ order: orderId });
         const log = await prisma.log_vendor.create({
           data: {
             vendor_api: statuss?.config?.url,
@@ -1571,7 +1587,7 @@ module.exports = {
 
       // Fetch status asynchronously
       const statusPromises = orderIds.map((orderId) =>
-        cekstatus({ order: orderId })
+        cekStatus({ order: orderId })
       );
       const statuses = await Promise.all(statusPromises);
 
@@ -1745,12 +1761,14 @@ module.exports = {
         ongkir,
         gender,
         lokasi_penyaluran,
-        detail_qurban
+        detail_qurban,
       } = req.body;
 
       const totals = Number(harga) + Number(ongkir);
       if (detail_qurban.length < 1) {
-        return res.status(400).json({ message: "Masukkan detail qurban wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Masukkan detail qurban wajib diisi" });
       }
 
       const postResult = await prisma.activity_qurban.create({
@@ -1804,15 +1822,15 @@ module.exports = {
       //   },
       // });
       if (postResult) {
-        const transformedDetails = req.body.detail_qurban.map(detail => ({
-          paket_id : Number(detail.paket_id),
-          qurban_id : Number(postResult?.id),
+        const transformedDetails = req.body.detail_qurban.map((detail) => ({
+          paket_id: Number(detail.paket_id),
+          qurban_id: Number(postResult?.id),
           nama_mudohi: detail.nama_mudohi,
           qty: detail.qty,
-          total: String(detail.total)
+          total: String(detail.total),
         }));
         const detail = await prisma.detail_qurban.createMany({
-          data: transformedDetails
+          data: transformedDetails,
         });
         // let pn = no_wa;
         // pn = pn.replace(/\D/g, "");
@@ -1855,12 +1873,530 @@ module.exports = {
         // });
         res.status(200).json({
           message: "Sukses Kirim Data",
-          data: {postResult, detail},
+          data: { postResult, detail },
         });
       }
     } catch (error) {
       res.status(500).json({
         message: error.message,
+      });
+    }
+  },
+
+  async postPemesananMegaKonser(req, res) {
+    try {
+      // Destructure the request body based on the new schema
+      const {
+        nama,
+        telepon, // Changed from no_wa to telepon
+        email,
+        gender,
+        total_harga,
+        bank,
+        detail_pemesanan, // Changed from detail_qurban to detail_pemesanan
+      } = req.body;
+
+      // Validation for detail_pemesanan length
+      if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
+        return res
+          .status(400)
+          .json({ message: "Detail pemesanan wajib diisi" });
+      }
+
+      // await checkPay(idOrder);
+
+      //generate code pemesanan A00001 dst
+      // Step 1: Get the last order to determine the next kode_pemesanan
+      const lastOrder = await prisma.pemesanan_megakonser.findFirst({
+        orderBy: {
+          id: "desc", // Get the last created order
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const nextId = lastOrder ? lastOrder.id + 1 : 1;
+      const kode_pemesanan = `A${String(nextId).padStart(5, "0")}`;
+
+      const response = await handlePayment({
+        paymentType: bank,
+        amount: total_harga,
+        kode_pemesanan: kode_pemesanan,
+      });
+      console.log("response:", response);
+
+      const va_number =
+        bank === "bca" || bank === "bri" || bank === "bni"
+          ? response.data?.va_numbers[0]?.va_number
+          : bank === "mandiri"
+            ? response.data?.bill_key
+            : bank === "gopay"
+              ? response.data?.actions[0]?.url
+              : "";
+
+      const transaction_time = new Date();
+      const expiry_time = new Date();
+      expiry_time.setMinutes(expiry_time.getMinutes() + 15);
+
+      const postResult = await prisma.pemesanan_megakonser.create({
+        data: {
+          nama,
+          telepon,
+          email,
+          gender,
+          total_harga: Number(total_harga),
+          kode_pemesanan: kode_pemesanan,
+          metode_pembayaran: response.data?.payment_type || "",
+          bank,
+          va_number: va_number,
+          status: response.data?.transaction_status || "",
+          transaction_time: transaction_time,
+          expiry_time: expiry_time,
+          // orderId: data.orderId,
+        },
+      });
+
+      console.log("cek kode pemesanan:", postResult);
+
+      const tiketDetails = detail_pemesanan.map((detail) => {
+        return {
+          id_tiket: detail.id_tiket,
+          harga_tiket: detail.harga_tiket, // You can add other fields if needed
+        };
+      });
+
+      const transformedDetails = detail_pemesanan.map((detail, index) => {
+        const tiketTimestamp = new Date().getTime();
+        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
+          Math.random() * 1000
+        )}`;
+        const kode_tiket = `TK-${tiketUniqueId}`;
+
+        return {
+          id_pemesanan: postResult.id,
+          id_tiket: detail.id_tiket,
+          kode_tiket,
+        };
+      });
+
+      const detail = await prisma.detail_pemesanan_megakonser.createMany({
+        data: transformedDetails,
+      });
+
+      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+        where: {
+          kode_pemesanan: kode_pemesanan,
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+            },
+          },
+        },
+      });
+
+      const tempDir = path.join(__dirname, '../../uploads');
+
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+
+      try {
+        const pdfLink = await generatePdf({ orderDetails: pemesanan });
+        console.log('PDF link:', pdfLink);
+        scheduleCekStatus({ order: kode_pemesanan, email, pemesanan, filePath: pdfLink });
+      } catch (error) {
+        console.error('Failed to generate PDF:', error);
+      }
+
+      const templateEmail = await generateTemplatePembayaran({
+        email,
+        postResult,
+        detail: transformedDetails,
+        tiket: pemesanan
+      });
+
+      const msgId = await sendEmail({
+        email: email,
+        html: templateEmail,
+        subject: "Lakukan Pembayaran Tiket Megakonser",
+      });
+
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: { postResult, tiketDetails },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async getAllTiket(req, res) {
+    try {
+      const tiket = await prisma.tiket_konser.findMany();
+
+      return res.status(200).json({
+        success: true,
+        message: "Data tiket berhasil diambil",
+        data: tiket,
+      });
+    } catch (error) {
+      console.error("Error retrieving tickets:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: "Gagal mengambil data tiket",
+        error: error.message,
+      });
+    }
+  },
+
+  async handlePay(req, res) {
+    const paymentType = req.body.payment_type;
+
+    try {
+      const response = await handlePayment({ paymentType: paymentType });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: response.data,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error.message || "An error occurred",
+      });
+    }
+  },
+
+  // Implementasi pada checkPay
+
+  async checkPay(req, res, idOrder) {
+    const order_id = req.body.order_id;
+    const email = req.body.email;
+
+    console.log("order id:", order_id);
+    console.log("email:", email);
+
+    try {
+      // Cek status transaksi dari Midtrans
+      const stats = await cekStatus({ order: order_id }); // Pastikan orderId yang dikirimkan valid
+
+      // Log informasi dari Midtrans
+      console.log(
+        "Response dari Midtrans:",
+        JSON.stringify(stats.data, null, 2)
+      );
+
+      // Periksa status code dan transaction status
+      if (stats.data.status_code === "201") {
+        // Data tiket (sesuaikan dengan data yang sebenarnya)
+        const orderDetails = {
+          kode_pemesanan: order_id,
+          total_harga: stats.data.total_harga, // Pastikan ini diisi dengan harga yang sesuai
+          tiket: [
+            { kodeTiket: "TK001", hargaTiket: 250000, jenisTiket: "VIP" },
+            { kodeTiket: "TK002", hargaTiket: 150000, jenisTiket: "Reguler" },
+          ],
+        };
+
+        const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+          where: {
+            kode_pemesanan: order_id,
+          },
+          include: {
+            detail_pemesanan_megakonser: {
+              include: {
+                tiket_konser: true,
+              },
+            },
+          },
+        });
+
+        // Path untuk menyimpan PDF
+        const tempDir = path.join(__dirname, "../../uploads");
+        const filePath = path.join(tempDir, "document1.pdf");
+
+        // Pastikan direktori untuk menyimpan PDF ada
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        // Generate PDF dengan orderDetails
+        try {
+          const emai = await generatePdf(orderDetails, serverUrl);
+          console.log('PDF link:', emai);
+        } catch (error) {
+          console.error('Failed to generate PDF:', error);
+        }
+
+
+        // Generate email template
+        const templateEmail = await generateTemplateMegaKonser({
+          email: email,
+          password: email,
+          tiket: pemesanan,
+        });
+
+        // Kirim email dengan lampiran PDF
+
+        // Hapus file PDF setelah email terkirim
+        // fs.unlink(filePath, (err) => {
+        //   if (err) {
+        //     console.error("Error saat menghapus file PDF:", err);
+        //   }
+        // });
+        try {
+          await sendEmail({
+            email: email,
+            html: templateEmail,
+            subject: "Pembelian Tiket Mega Konser Indosat",
+            pdfPath: filePath
+          });
+
+          console.log("Email sent successfully!");
+          // fs.unlinkSync(filePath); // Hapus PDF setelah dikirim
+        } catch (error) {
+          console.error("Error sending email:", error);
+          return res.status(500).json({ message: "Failed to send email." });
+        }
+
+        // Log vendor dan update status transaksi
+        const log = await prisma.log_vendor.create({
+          data: {
+            vendor_api: stats?.config?.url,
+            url_api: req.originalUrl,
+            api_header: JSON.stringify(stats.headers),
+            api_body: stats?.config?.data,
+            api_response: JSON.stringify(stats.data),
+            payload: JSON.stringify(req.body),
+          },
+        });
+
+        // Update status pemesanan di database
+        await prisma.pemesanan_megakonser.update({
+          where: {
+            kode_pemesanan: order_id, // Pastikan ini sesuai dengan kode pemesanan Anda
+          },
+          data: {
+            status: stats.data?.transaction_status || "",
+          },
+        });
+
+        // Respon sukses
+        return res.status(200).json({ message: "Sukses Ambil Data" });
+      } else if (stats.data.status_code === "404") {
+        return res.status(400).json({
+          message: "Transaksi tidak ditemukan. Pastikan ID transaksi benar.",
+        });
+      } else {
+        console.error("Transaksi tidak valid:", stats.data.transaction_status);
+        return res.status(400).json({
+          message: "Anda Belum Melakukan Pembayaran",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error.message);
+      return res.status(500).json({
+        message: error.message || "An error occurred",
+      });
+    }
+  },
+
+  async cancelPay(req, res) {
+    const order = req.body.order_id;
+    // const telepon = req.body.telepon;
+    try {
+      const stats = await cancelPayment({
+        order: order,
+      });
+      // let pn = telepon;
+      // pn = pn.replace(/\D/g, "");
+      // if (pn.substring(0, 1) == "0") {
+      //   pn = "0" + pn.substring(1).trim();
+      // } else if (pn.substring(0, 3) == "62") {
+      //   pn = "0" + pn.substring(3).trim();
+      // }
+
+      // const msgId = await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text: "Pembatalan pembayaran anda telah berhasil. Terima kasih.",
+      // });
+
+      const templateEmail = await generateTemplateCancelMegaKonser({
+        email: email,
+        password: email,
+      });
+      const msgId = await sendEmail({
+        email: email,
+        html: templateEmail,
+        subject: "Pembelian Tiket Mega Konser Indosat",
+      });
+
+      const log = await prisma.log_vendor.create({
+        data: {
+          vendor_api: stats?.config?.url,
+          url_api: req.originalUrl,
+          api_header: JSON.stringify(stats.headers),
+          api_body: stats?.config?.data,
+          api_response: JSON.stringify(stats.data),
+          payload: JSON.stringify(req.body),
+        },
+      });
+
+      if (stats.data.status_code === 200) {
+        await prisma.pemesanan_megakonser.update({
+          where: {
+            kode_pemesanan: order,
+          },
+          data: {
+            status: stats.data?.transaction_status || "",
+          },
+        });
+      }
+      console.log(stats);
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        // data: stats,
+      });
+    } catch (error) {
+      console.error(error.message);
+      res.status(500).json({
+        message: error.message || "An error occurred",
+      });
+    }
+  },
+
+  async getTiketSold(req, res) {
+    try {
+      // Mengambil tiket dan menghitung total dibeli berdasarkan kondisi status 'settlement' atau 'capture'
+      const tiket_sold = await prisma.tiket_konser.findMany({
+        select: {
+          tiket_id: true,
+          tiket_nama: true,
+          detail_pemesanan_megakonser: {
+            // where: {
+            //   pemesanan_megakonser: {
+            //     OR: [
+            //       { status: 'settlement' },
+            //       { status: 'capture' }
+            //     ]
+            //   }
+            // },
+            select: {
+              id_tiket: true, // Field yang dibutuhkan untuk menghitung total pemesanan
+            },
+          },
+        },
+      });
+
+      // Mapping hasil untuk menyesuaikan output dengan struktur yang diinginkan
+      const data = tiket_sold.map((tiket) => ({
+        tiket_id: tiket.tiket_id,
+        tiket_nama: tiket.tiket_nama,
+        total_dibeli: tiket.detail_pemesanan_megakonser.length, // Menghitung jumlah total tiket yang dibeli
+      }));
+
+      return res.status(200).json({
+        success: true,
+        message: "Data tiket berhasil diambil",
+        data: data,
+      });
+    } catch (error) {
+      console.error("Error retrieving tickets:", error.message);
+      return res.status(500).json({
+        success: false,
+        message: "Gagal mengambil data tiket",
+        error: error.message,
+      });
+    }
+  },
+
+  async getPemesananMegakonser(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const kodePemesanan = req.query.kode_pemesanan || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "transaction_time";
+      const sortType = req.query.order || "desc";
+
+      const params = {
+        nama: {
+          contains: keyword,
+        },
+        kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
+      };
+
+      const [count, pemesanan] = await prisma.$transaction([
+        prisma.pemesanan_megakonser.count({
+          where: params,
+        }),
+        prisma.pemesanan_megakonser.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          // include: {
+          //   detail_pemesanan_megakonser: {
+          //     include: {
+          //       tiket_konser: true
+          //     }
+          //   },
+          // },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: pemesanan,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getDetailPemesananMegakonser(req, res) {
+    try {
+      const id = req.params.id;
+
+      const [count, ActUser] = await prisma.$transaction([
+        prisma.detail_pemesanan_megakonser.count({
+          where: {
+            id_pemesanan: Number(id),
+          },
+        }),
+        prisma.detail_pemesanan_megakonser.findMany({
+          where: {
+            id_pemesanan: Number(id),
+          },
+          include: {
+            tiket_konser: true,
+          },
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: ActUser,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
       });
     }
   },
