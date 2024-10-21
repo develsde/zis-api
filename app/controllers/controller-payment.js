@@ -87,7 +87,7 @@ module.exports = {
         totalAmount: price.toString().padStart(12, "0"),
         "discountRule": "0100",
         "discountAmount": "000000004000",
-        "origingoodsPrice ": "000000020000",
+        "origingoodsPrice": "000000020000",
         userDefinedl: "Nacha NGUJI COBAAA",
       },
     };
@@ -125,7 +125,9 @@ module.exports = {
         },
       });
 
-      return response;
+      const result = Buffer.from(response.data, 'base64').toString('utf-8');
+
+      return result;
     } catch (error) {
       // console.error(
       //   "Error:",
@@ -139,8 +141,8 @@ module.exports = {
         error: error.response?.data,
         message: error.message 
     };
-      // throw new Error(JSON.stringify(errorDetails));
-      console.log("Error Details:", errorDetails);
+    console.log("Error Details:", errorDetails);
+      throw new Error(JSON.stringify(errorDetails));
     }
   },
 
