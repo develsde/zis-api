@@ -7,8 +7,8 @@ const axios = require("axios");
 const midtransfer = async ({ order, price }) => {
   let snap = new midtransClient.Snap({
     // isProduction: true,
-    serverKey: `SB-Mid-server-GmNGnkLbIkewCWymVGimlZvs`,
-    clientKey: `SB-Mid-client-5Ws3t6vcKPsZ8tlJ`,
+    serverKey: serverkeys,
+    clientKey: clientkeys,
   });
   let parameter = {
     transaction_details: {
@@ -94,7 +94,7 @@ const cekStatus = async ({ order }) => {
         headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+            Authorization: `Basic ${auth}`
         },
       }
     );

@@ -1176,12 +1176,15 @@ model detail_pemesanan_megakonser {
   id                   Int                  @id @default(autoincrement())
   id_pemesanan         Int
   id_tiket             Int?
+  id_detail_tiket      Int?
   kode_tiket           String?              @db.VarChar(50)
   pemesanan_megakonser pemesanan_megakonser @relation(fields: [id_pemesanan], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pemesanan_megakonser")
   tiket_konser         tiket_konser?        @relation(fields: [id_tiket], references: [tiket_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_detail_pemesanan_megakonser_tiket_konser")
+  tiket_konser_detail  tiket_konser_detail? @relation(fields: [id_detail_tiket], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_detail_pemesanan_megakonser_tiket_konser_detail")
 
   @@index([id_pemesanan], map: "Index 2")
   @@index([id_tiket], map: "Index 3")
+  @@index([id_detail_tiket], map: "Index 4")
 }
 
 model pemesanan_megakonser {
@@ -1211,6 +1214,7 @@ model tiket_konser {
   tiket_jumlah                Int?                          @default(0)
   tiket_deskripsi             String?                       @db.Text
   detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+  tiket_konser_detail         tiket_konser_detail[]         @relation("TiketKonserToDetail")
 }
 
 model cso {
@@ -1268,9 +1272,13 @@ model register_donasi {
 }
 
 model tiket_konser_detail {
-  id                         Int     @id @default(autoincrement())
-  tiket_konser_detail_nama   String? @db.VarChar(100)
-  tiket_konser_id            Int?
-  tiket_konser_detail_desc   String? @db.VarChar(255)
-  tiket_konser_detail_status Int?    @default(0) @db.SmallInt
+  id                          Int                           @id @default(autoincrement())
+  tiket_konser_detail_nama    String?                       @db.VarChar(100)
+  tiket_konser_id             Int?
+  tiket_konser_detail_desc    String?                       @db.VarChar(255)
+  tiket_konser_detail_status  Int?                          @default(0) @db.SmallInt
+  detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+  tiket_konser                tiket_konser?                 @relation("TiketKonserToDetail", fields: [tiket_konser_id], references: [tiket_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tiket_konser_detail_tiket_konser")
+
+  @@index([tiket_konser_id], map: "Index 2")
 }

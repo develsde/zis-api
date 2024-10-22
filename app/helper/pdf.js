@@ -4,7 +4,7 @@ const path = require('path');
 const QRCode = require("qrcode");
 
 const generatePdf = async ({ orderDetails }) => {
-    const requiredFields = ['nama', 'kode_pemesanan', 'metode_pembayaran', 'va_number', 'total_harga', 'detail_pemesanan_megakonser'];
+    const requiredFields = ['nama', 'kode_pemesanan', 'metode_pembayaran', 'total_harga', 'detail_pemesanan_megakonser'];
     
     for (const field of requiredFields) {
         if (!orderDetails[field]) {
@@ -12,7 +12,9 @@ const generatePdf = async ({ orderDetails }) => {
         }
     }
 
-    const url = `https://portal.zisindosat.id`;
+    const kode_pemesanan = orderDetails.kode_pemesanan
+
+    const url = `Ke myerp.zisindosat.id/tiketscan/${kode_pemesanan}`;
     let qrCodePath;
     try {
         qrCodePath = await QRCode.toDataURL(url);
@@ -62,7 +64,7 @@ const generatePdf = async ({ orderDetails }) => {
             .text(`Nama: ${orderDetails.nama}`, {  align: 'left', indent: leftMargin })
             .text(`Kode Pemesanan: ${orderDetails.kode_pemesanan}`, {  align: 'left', indent: leftMargin })
             .text(`Metode Pembayaran: ${orderDetails.metode_pembayaran}`, {  align: 'left', indent: leftMargin })
-            .text(`Nomor Virtual Account: ${orderDetails.va_number}`, { align: 'left', indent: leftMargin })
+            // .text(`Nomor Virtual Account: ${orderDetails.va_number}`, { align: 'left', indent: leftMargin })
             .moveDown(2);
         
 
@@ -77,7 +79,7 @@ const generatePdf = async ({ orderDetails }) => {
             const tiketDetails = [
                 `Kode Tiket: ${tiket.kode_tiket}`,
                 `Harga Tiket: Rp ${tiket.tiket_konser.tiket_harga.toLocaleString("id-ID")}`,
-                `Jenis Tiket: ${tiket.tiket_konser.tiket_nama}`
+                `Jenis Tiket: ${tiket.tiket_konser_detail.tiket_konser_detail_nama}`
             ];
 
             doc.roundedRect(50, doc.y, ticketBoxWidth, tiketDetailsHeight, 10).stroke();

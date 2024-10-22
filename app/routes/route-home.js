@@ -39,7 +39,7 @@ router.post("/postQurban", home.postQurban)
 
 //Megakonser Portal
 router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
-router.get("/pemesananMegaKonse/:order_id", home.getPemesananByOrder)
+router.get("/pemesananMegaKonser/:order_id", home.getPemesananByOrder)
 router.get("/tiketMegaKonser", home.getAllTiket)
 router.post("/payment-gateway", home.handlePay)
 router.post("/check-payment", home.checkPay)

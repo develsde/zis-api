@@ -21,7 +21,7 @@ const scheduleCekStatus = async ({ order, email, pemesanan, filePath }) => {
 
   let elapsedMinutes = 0;
 
-  const task = cron.schedule("*/5 * * * * *", async () => {
+  const task = cron.schedule("*/2 * * * * ", async () => {
     try {
       let stats = await cekStatus({ order });
 
@@ -61,6 +61,7 @@ const scheduleCekStatus = async ({ order, email, pemesanan, filePath }) => {
           const templateEmailExpired = await generateTemplateExpiredMegaKonser({
             email,
             password: email,
+            tiket: pemesanan
           });
           const msgId = await sendEmail({
             email,
