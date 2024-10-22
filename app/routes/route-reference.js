@@ -43,4 +43,9 @@ router.get("/zis-report", authentication, refData.getReportZis);
 router.get("/wakaf-report", authentication, refData.getReportWakaf);
 router.get("/muzzaki-report", authentication, refData.getReportMuzzaki);
 
+//Salam Donasi
+router.get("/outlet", refData.getOutlet);
+router.post("/register-donasi", refData.registerDonasi);
+router.post("/check-payment", refData.checkPay)
+
 module.exports = router;

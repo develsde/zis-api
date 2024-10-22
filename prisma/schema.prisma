@@ -1259,6 +1259,7 @@ model register_donasi {
   biller_code        String?   @db.VarChar(50)
   transaction_status String?   @db.VarChar(50)
   transaction_time   DateTime? @db.DateTime(0)
+  settlement_time    DateTime? @db.DateTime(0)
   expiry_time        DateTime? @db.DateTime(0)
   transaction_code   String?   @unique(map: "Index 3") @db.VarChar(50)
   outlet             outlet?   @relation(fields: [id_outlet], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_register_donasi_outlet")
