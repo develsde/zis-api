@@ -6,14 +6,15 @@ const axios = require("axios");
 
 const midtransfer = async ({ order, price }) => {
   let snap = new midtransClient.Snap({
-    isProduction: true,
-    serverKey: serverkeys,
-    clientKey: clientkeys,
+    // isProduction: true,
+    serverKey: `SB-Mid-server-GmNGnkLbIkewCWymVGimlZvs`,
+    clientKey: `SB-Mid-client-5Ws3t6vcKPsZ8tlJ`,
   });
   let parameter = {
     transaction_details: {
       order_id: order,
       gross_amount: price,
+
     },
     credit_card: {
       secure: true,
@@ -29,9 +30,12 @@ const midtransfer = async ({ order, price }) => {
     let transactionRedirectUrl = transaction.redirect_url;
     console.log("transactionRedirectUrl:", transactionRedirectUrl);
 
+    let transactionStatus = transaction.transaction_status || 'pending';
+
     let paymentResponse = {
       redirect_url: transactionRedirectUrl,
       transaction_token: transactionToken,
+      // transaction_status: transactionStatus,
     };
 
     return {
@@ -49,6 +53,36 @@ const midtransfer = async ({ order, price }) => {
     };
   }
 };
+
+
+// const getTransactionStatus = async (orderId) => {
+//   console.log("lihat order id:", orderId);
+//   let core = new midtransClient.CoreApi({
+//     isProduction: true,
+//     serverKey: serverkeys,
+//     clientKey: clientkeys,
+//   });
+
+//   try {
+//     const statusResponse = await core.transaction.status(orderId);
+//     console.log("Transaction status:", statusResponse.transaction_status);
+
+//     return {
+//       success: true,
+//       transaction_status: statusResponse.transaction_status,
+//       data: statusResponse,
+//     };
+//   } catch (error) {
+//     console.log("Error fetching transaction status:", error.message);
+//     return {
+//       success: false,
+//       message: error.message,
+//     };
+//   }
+// };
+
+
+
 const cekStatus = async ({ order }) => {
   let serverKey = serverkeys + ":";
   let auth = Buffer.from(serverKey).toString("base64");
@@ -63,9 +97,9 @@ const cekStatus = async ({ order }) => {
         //   Authorization: `Basic ${auth}`,
         // },
         headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-            Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: 'Basic U0ItTWlkLXNlcnZlci1HbU5HbmtMYklrZXdDV3ltVkdpbWxadnM6'
         },
       }
     );
@@ -321,4 +355,5 @@ module.exports = {
   cancelPayment,
   expirePayment,
   handlePayment,
+  // getTransactionStatus,
 };

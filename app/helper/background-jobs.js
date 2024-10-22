@@ -21,7 +21,7 @@ const scheduleCekStatus = async ({ order, email, pemesanan, filePath }) => {
 
   let elapsedMinutes = 0;
 
-  const task = cron.schedule("*/2 * * * *", async () => {
+  const task = cron.schedule("*/5 * * * * *", async () => {
     try {
       let stats = await cekStatus({ order });
 
