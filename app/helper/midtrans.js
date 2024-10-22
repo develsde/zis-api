@@ -6,7 +6,7 @@ const axios = require("axios");
 
 const midtransfer = async ({ order, price }) => {
   let snap = new midtransClient.Snap({
-    // isProduction: true,
+    isProduction: true,
     serverKey: serverkeys,
     clientKey: clientkeys,
   });
