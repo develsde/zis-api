@@ -13,7 +13,7 @@ const midtransfer = async ({ order, price }) => {
   let parameter = {
     transaction_details: {
       order_id: order,
-      gross_amount: "1",
+      gross_amount: price,
 
     },
     credit_card: {
