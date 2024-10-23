@@ -1919,10 +1919,10 @@ module.exports = {
   
       const nextId = lastOrder ? lastOrder.id + 1 : 1;
       const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
-        detail_pemesanan[0].id_tiket === 2 ? 'B' :
-        detail_pemesanan[0].id_tiket === 3 ? 'C' :
-        detail_pemesanan[0].id_tiket === 4 ? 'D' :
-        detail_pemesanan[0].id_tiket === 5 ? 'E' : "F";
+        detail_pemesanan[0].id_tiket === 3 ? 'B' :
+        detail_pemesanan[0].id_tiket === 4 ? 'C' :
+        detail_pemesanan[0].id_tiket === 5 ? 'D' :
+          "E";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
   
       console.log(`Processing new order: ${kode_pemesanan} for email: ${email}`);
