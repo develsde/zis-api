@@ -25,7 +25,7 @@ const generatePdf = async ({ orderDetails }) => {
 
     return new Promise((resolve, reject) => {
         const doc = new PDFDocument({ size: 'A4', margin: 50 });
-        const filePath = path.join(__dirname, '../../uploads/output.pdf');
+        const filePath = path.join(__dirname, `../../uploads/output${kode_pemesanan}.pdf`);
         const writeStream = fs.createWriteStream(filePath);
 
         writeStream.on('error', (error) => {

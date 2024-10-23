@@ -1902,13 +1902,11 @@ module.exports = {
         bank,
         detail_pemesanan,
       } = req.body;
-
+  
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
-        return res
-          .status(400)
-          .json({ message: "Detail pemesanan wajib diisi" });
+        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
       }
-
+  
       // Generate kode_pemesanan A00001 dst
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: {
@@ -1918,52 +1916,38 @@ module.exports = {
           id: true,
         },
       });
-
+  
       const nextId = lastOrder ? lastOrder.id + 1 : 1;
       const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
         detail_pemesanan[0].id_tiket === 2 ? 'B' :
-        detail_pemesanan[0].id_tiket === 3 ? 'C':
-        detail_pemesanan[0].id_tiket === 4 ? 'D':
-        detail_pemesanan[0].id_tiket === 5 ? 'E':
-        "F";
-         // Tambahkan logika untuk id_tiket lainnya jika perlu
+        detail_pemesanan[0].id_tiket === 3 ? 'C' :
+        detail_pemesanan[0].id_tiket === 4 ? 'D' :
+        detail_pemesanan[0].id_tiket === 5 ? 'E' : "F";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
-
+  
+      console.log(`Processing new order: ${kode_pemesanan} for email: ${email}`);
+  
       // Menggunakan midtransfer untuk pembayaran Snap
       const response = await midtransfer({
         order: kode_pemesanan,
         price: total_harga,
       });
-
-      // Log vendor dan update status transaksi
-      const stats = response;  // Assuming this contains the data for logging
-      // const log = await prisma.log_vendor.create({
-      //   data: {
-      //     vendor_api: "Snap Midtrans",
-      //     url_api: req.originalUrl,
-      //     api_header: JSON.stringify(stats.headers),
-      //     api_body: stats?.config?.data,
-      //     api_response: JSON.stringify(stats.data),
-      //     payload: JSON.stringify(req.body),
-      //   },
-      // });
-
+  
+      console.log(`Midtrans response for order: ${kode_pemesanan}`, response);
+  
       if (!response.success) {
         return res.status(500).json({
           message: response.message,
         });
       }
-
+  
       const transaction_time = new Date();
       const expiry_time = new Date();
       expiry_time.setMinutes(expiry_time.getMinutes() + 15);
-
-      const param = typeof window !== 'undefined' ? window.location.href : '';
-      const status = param.match(/status_code=([^&]*)/);
+  
       const statusId = response.data.transaction_status;
-      const isSuccess = statusId === '200';
-      const displayStatus = isSuccess ? 'Berhasil' : 'gagal';
-
+      const displayStatus = statusId === '200' ? 'Berhasil' : 'gagal';
+  
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
           nama,
@@ -1978,20 +1962,22 @@ module.exports = {
           expiry_time: expiry_time,
         },
       });
-
+  
+      console.log(`Order created in DB: ${kode_pemesanan}, ID: ${postResult.id}`);
+  
       const tiketDetails = detail_pemesanan.map((detail) => ({
         id_tiket: detail.id_tiket,
         id_detail_tiket: detail.id_tiket_detail,
         harga_tiket: detail.harga_tiket,
       }));
-
+  
       const transformedDetails = detail_pemesanan.map((detail, index) => {
         const tiketTimestamp = new Date().getTime();
         const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
           Math.random() * 1000
         )}`;
         const kode_tiket = `TK-${tiketUniqueId}`;
-
+  
         return {
           id_pemesanan: postResult.id,
           id_tiket: detail.id_tiket,
@@ -1999,11 +1985,13 @@ module.exports = {
           kode_tiket,
         };
       });
-
+  
       await prisma.detail_pemesanan_megakonser.createMany({
         data: transformedDetails,
       });
-
+  
+      console.log(`Details inserted for order: ${kode_pemesanan}`);
+  
       const pemesanan = await prisma.pemesanan_megakonser.findUnique({
         where: {
           kode_pemesanan: kode_pemesanan,
@@ -2017,10 +2005,13 @@ module.exports = {
           },
         },
       });
-      console.log("lihat tiket")
-
+  
+      console.log(`Retrieved full order details for: ${kode_pemesanan}`);
+  
       try {
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
+        console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
+        
         scheduleCekStatus({
           order: kode_pemesanan,
           email,
@@ -2028,37 +2019,48 @@ module.exports = {
           filePath: pdfLink,
         });
       } catch (error) {
-        console.error('Failed to generate PDF:', error);
+        console.error(`Failed to generate PDF for order: ${kode_pemesanan}, error:`, error);
       }
-
+  
+      // Log before generating the email template
+      console.log(`Generating email template for order: ${kode_pemesanan}, email: ${email}`);
       const templateEmail = await generateTemplatePembayaran({
         email,
         postResult,
         detail: transformedDetails,
         tiket: pemesanan,
       });
-
+  
+      console.log(`Email template generated for order: ${kode_pemesanan}, email: ${email}`);
+  
+      // Log before sending the email
+      console.log(`Sending email for order: ${kode_pemesanan}, email: ${email}`);
       await sendEmail({
         email: email,
         html: templateEmail,
         subject: "Lakukan Pembayaran Tiket Megakonser",
       });
-
+  
+      console.log(`Email sent for order: ${kode_pemesanan}, email: ${email}`);
+  
       res.status(200).json({
         message: "Sukses Kirim Data",
         data: {
           postResult,
           tiketDetails,
           transactionToken: response.data.transaction_token,
-          redirectUrl: response.data.redirect_url
+          redirectUrl: response.data.redirect_url,
         },
       });
     } catch (error) {
+      console.error(`Error processing order: ${error.message}`);
       res.status(500).json({
         message: error.message,
       });
     }
   },
+  
+  
 
   async getPemesananByOrder(req, res) {
     try {
@@ -2205,7 +2207,7 @@ module.exports = {
           },
         },
       });
-      const filePath = path.join(__dirname, '../../uploads/output.pdf');
+      const filePath = path.join(__dirname, `../../uploads/output${order_id}.pdf`);
       // const writeStream = fs.createWriteStream(filePath);
 
       const email = pemesanan?.email
