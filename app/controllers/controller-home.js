@@ -1920,9 +1920,7 @@ module.exports = {
       const nextId = lastOrder ? lastOrder.id + 1 : 1;
       const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
         detail_pemesanan[0].id_tiket === 3 ? 'B' :
-        detail_pemesanan[0].id_tiket === 4 ? 'C' :
-        detail_pemesanan[0].id_tiket === 5 ? 'D' :
-          "E";
+        'C' ;
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
   
       console.log(`Processing new order: ${kode_pemesanan} for email: ${email}`);
@@ -2435,6 +2433,70 @@ module.exports = {
       });
     }
   },
+
+  async findPemesananMegakonser(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const kodePemesanan = req.query.kode_pemesanan || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "transaction_time";
+      const sortType = req.query.order || "desc";
+      
+      // Tambahkan parameter pencarian untuk no_hp dan email
+      const params = {
+        OR: [
+          {
+            nama: {
+              contains: keyword,
+            },
+          },
+          {
+            no_hp: {
+              contains: keyword,
+            },
+          },
+          {
+            email: {
+              contains: keyword,
+            },
+          },
+        ],
+        kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
+      };
+  
+      const [count, pemesanan] = await prisma.$transaction([
+        prisma.pemesanan_megakonser.count({
+          where: params,
+        }),
+        prisma.pemesanan_megakonser.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+  
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: pemesanan,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  
 
   async getDetailPemesananMegakonser(req, res) {
     try {
