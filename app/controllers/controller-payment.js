@@ -1,7 +1,7 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
 const CryptoJS = require("crypto-js");
-const moment = require('moment');
+const moment = require("moment");
 
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
@@ -74,21 +74,20 @@ module.exports = {
 
     const datas = {
       PaymentRequest: {
-        version: "8.0",
-        timestamp: timesg,
-        merchantID: "321000000000014",
-        uniqueTransactionCode:
-          phone_number,
-        currencyCode: "360",
-        msisdn: phone_number,
-        idSOF: id_SOF,
-        trxType: "paymentonly",
+        "version": "8.0",
+        "timeStamp": timesg,
+        "merchantID": "321000000000014",
+        "uniqueTransactionCode": Math.random().toString().slice(2, 14).padStart(12, '0'),
+        "currencyCode": "360",
+        "msisdn": phone_number,
+        "idSOF": id_SOF,
+        "trxType": "paymentonly",
         "shippingcostAmount": "000000022000",
-        totalAmount: price.toString().padStart(12, "0"),
+        "totalAmount": price.toString().padStart(12, "0"),
         "discountRule": "0100",
         "discountAmount": "000000004000",
         "origingoodsPrice": "000000020000",
-        userDefinedl: "Nacha NGUJI COBAAA",
+        "userDefinedl": "Nacha NGUJI COBAAA",
       },
     };
     const str_data = JSON.stringify(datas)
@@ -111,7 +110,6 @@ module.exports = {
     const auth = await Auth();
 
     const data = CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str_data))
-    // console.log(data);
     
     try {
       const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/sof_payment_only", 
@@ -125,9 +123,14 @@ module.exports = {
         },
       });
 
-      const result = Buffer.from(response.data, 'base64').toString('utf-8');
-
-      return result;
+      if (response.data && typeof response.data == "string") {
+        const decodedResult = Buffer.from(response.data, "base64").toString("utf-8");
+        console.log("Decoded Response:", decodedResult);
+        return decodedResult;
+      } else {
+        console.log("Response is not a Base64-encoded string:", response.data);
+        return response.data; // Return as-is if it's not Base64
+      }
     } catch (error) {
       // console.error(
       //   "Error:",
@@ -141,38 +144,42 @@ module.exports = {
         error: error.response?.data,
         message: error.message 
     };
-    console.log("Error Details:", errorDetails);
-      throw new Error(JSON.stringify(errorDetails));
+      // throw new Error(JSON.stringify(errorDetails));
+      console.log("Error Details:", errorDetails);
     }
   },
 
-  async cancelPay(req, res){
+  async cancelPay(req, res) {
     const now = new Date();
     const rfc7231Date = now.toUTCString();
     const username = "zisindosat";
     const { uniqueID } = req.body;
     const data = {
       VoidRequest: {
-        uniqueTransactionCode: uniqueID
-      }
-    }
+        uniqueTransactionCode: uniqueID,
+      },
+    };
     const hashedData = CryptoJS.SHA256(data);
     const digested = CryptoJS.enc.Base64.stringify(hashedData);
     const check = await poPost({
       date: rfc7231Date,
       digest: digested,
-      url:"/rest/api/sof_void"
+      url: "/rest/api/sof_void",
     });
     const auth = await Auth();
     try {
-      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/sof_void", data, {
-        headers: {
-          "Content-Type": "application/json",
-          Date: rfc7231Date,
-          Authorization: `${auth}:${check}`,
-          Username: username,
-        },
-      });
+      const response = await axios.post(
+        "https://im3.artajasa.co.id:9443/rest/api/sof_void",
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Date: rfc7231Date,
+            Authorization: `${auth}:${check}`,
+            Username: username,
+          },
+        }
+      );
 
       return response;
     } catch (error) {
@@ -184,33 +191,37 @@ module.exports = {
     }
   },
 
-  async infoPay(req, res){
+  async infoPay(req, res) {
     const now = new Date();
     const rfc7231Date = now.toUTCString();
     const username = "zisindosat";
     const { uniqueID } = req.body;
     const data = {
       checkStatus: {
-        uniqueTransactionCode: uniqueID
-      }
-    }
+        uniqueTransactionCode: uniqueID,
+      },
+    };
     const hashedData = CryptoJS.SHA256(data);
     const digested = CryptoJS.enc.Base64.stringify(hashedData);
     const check = await poPost({
       date: rfc7231Date,
       digest: digested,
-      url:"/rest/api/checkStatusTrx"
+      url: "/rest/api/checkStatusTrx",
     });
     const auth = await Auth();
     try {
-      const response = await axios.post("https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx", data, {
-        headers: {
-          "Content-Type": "application/json",
-          Date: rfc7231Date,
-          Authorization: `${auth}:${check}`,
-          Username: username,
-        },
-      });
+      const response = await axios.post(
+        "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
+        data,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Date: rfc7231Date,
+            Authorization: `${auth}:${check}`,
+            Username: username,
+          },
+        }
+      );
 
       return response;
     } catch (error) {
