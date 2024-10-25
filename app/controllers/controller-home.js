@@ -1928,12 +1928,14 @@ module.exports = {
           id: true,
         },
       });
-  
-      const nextId = lastOrder ? lastOrder.id + 1 : 1;
+      
+      const baseId = 686; // Nilai dasar jika data kosong
+      const nextId = lastOrder ? lastOrder.id + 1 : baseId;
       const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
         detail_pemesanan[0].id_tiket === 3 ? 'B' :
-        'C' ;
+        'C';
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
+      
   
       console.log(`Processing new order: ${kode_pemesanan} for email: ${email}`);
   
@@ -2355,14 +2357,14 @@ module.exports = {
           tiket_id: true,
           tiket_nama: true,
           detail_pemesanan_megakonser: {
-            // where: {
-            //   pemesanan_megakonser: {
-            //     OR: [
-            //       { status: 'settlement' },
-            //       { status: 'capture' }
-            //     ]
-            //   }
-            // },
+            where: {
+              pemesanan_megakonser: {
+                OR: [
+                  { status: 'settlement' },
+                  { status: 'capture' }
+                ]
+              }
+            },
             select: {
               id_tiket: true, // Field yang dibutuhkan untuk menghitung total pemesanan
             },
