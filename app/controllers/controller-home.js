@@ -2522,6 +2522,7 @@ module.exports = {
           },
           include: {
             tiket_konser: true,
+            tiket_konser_detail:true,
           },
         }),
       ]);
