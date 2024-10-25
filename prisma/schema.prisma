@@ -1194,6 +1194,7 @@ model pemesanan_megakonser {
   telepon                     String?                       @db.VarChar(250)
   gender                      String?                       @db.VarChar(50)
   total_harga                 Int?
+  kode_affiliator             String?                       @unique(map: "Index 3") @db.VarChar(10)
   kode_pemesanan              String?                       @unique(map: "Index 2") @db.VarChar(50)
   metode_pembayaran           String?                       @db.VarChar(250)
   bank                        String?                       @db.VarChar(250)
@@ -1202,6 +1203,7 @@ model pemesanan_megakonser {
   transaction_time            DateTime?                     @db.DateTime(0)
   expiry_time                 DateTime?                     @db.DateTime(0)
   detail_pemesanan_megakonser detail_pemesanan_megakonser[]
+  affiliator                  affiliator?                   @relation(fields: [kode_affiliator], references: [kode], onDelete: NoAction, onUpdate: NoAction, map: "FK_pemesanan_megakonser_affiliator")
 }
 
 model tiket_konser {
@@ -1243,6 +1245,7 @@ model outlet {
   pic_outlet      String?           @db.VarChar(255)
   cso_id          Int?
   register_date   DateTime?         @default(now()) @db.Timestamp(0)
+  code_outlet     String?           @db.VarChar(25)
   cso             cso?              @relation(fields: [cso_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_outlet_cso")
   register_donasi register_donasi[]
 
@@ -1281,4 +1284,13 @@ model tiket_konser_detail {
   tiket_konser                tiket_konser?                 @relation("TiketKonserToDetail", fields: [tiket_konser_id], references: [tiket_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_tiket_konser_detail_tiket_konser")
 
   @@index([tiket_konser_id], map: "Index 2")
+}
+
+model affiliator {
+  id                   Int                   @id @default(autoincrement())
+  nama                 String?               @db.VarChar(250)
+  kode                 String?               @unique(map: "Index 2") @db.VarChar(10)
+  pic                  String?               @db.VarChar(250)
+  status               Int?                  @default(0)
+  pemesanan_megakonser pemesanan_megakonser?
 }

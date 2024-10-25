@@ -1890,6 +1890,7 @@ module.exports = {
       });
     }
   },
+  
 
   async postPemesananMegaKonser(req, res) {
     try {
@@ -1899,12 +1900,23 @@ module.exports = {
         email,
         gender,
         total_harga,
+        kode_affiliator,
         bank,
         detail_pemesanan,
       } = req.body;
   
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
         return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+      }
+
+      if (kode_affiliator) {
+        const affiliator = await prisma.affiliator.findUnique({
+          where: { kode: kode_affiliator },
+        });
+  
+        if (!affiliator) {
+          return res.status(400).json({ message: "Kode Affiliator tidak tersedia" });
+        }
       }
   
       // Generate kode_pemesanan A00001 dst
@@ -1953,6 +1965,7 @@ module.exports = {
           email,
           gender,
           total_harga: Number(total_harga),
+          kode_affiliator,
           kode_pemesanan: kode_pemesanan,
           metode_pembayaran: "snap", // Indikasikan menggunakan Snap
           status: displayStatus,
@@ -2390,9 +2403,23 @@ module.exports = {
       const sortType = req.query.order || "desc";
 
       const params = {
-        nama: {
-          contains: keyword,
-        },
+        OR: [
+          {
+            nama: {
+              contains: keyword,
+            },
+          },
+          {
+            telepon: {
+              contains: keyword,
+            },
+          },
+          {
+            email: {
+              contains: keyword,
+            },
+          },
+        ],
         kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
       };
 
@@ -2434,68 +2461,49 @@ module.exports = {
     }
   },
 
-  async findPemesananMegakonser(req, res) {
-    try {
-      const keyword = req.query.keyword || "";
-      const kodePemesanan = req.query.kode_pemesanan || "";
-      const page = Number(req.query.page || 1);
-      const perPage = Number(req.query.perPage || 10);
-      const skip = (page - 1) * perPage;
-      const sortBy = req.query.sortBy || "transaction_time";
-      const sortType = req.query.order || "desc";
+  // async findPemesananMegakonser(req, res) {
+  //   try {
+  //     const keyword = req.query.keyword || "";
+  //     const kodePemesanan = req.query.kode_pemesanan || "";
+  //     const page = Number(req.query.page || 1);
+  //     const perPage = Number(req.query.perPage || 10);
+  //     const skip = (page - 1) * perPage;
+  //     const sortBy = req.query.sortBy || "transaction_time";
+  //     const sortType = req.query.order || "desc";
       
-      // Tambahkan parameter pencarian untuk no_hp dan email
-      const params = {
-        OR: [
-          {
-            nama: {
-              contains: keyword,
-            },
-          },
-          {
-            no_hp: {
-              contains: keyword,
-            },
-          },
-          {
-            email: {
-              contains: keyword,
-            },
-          },
-        ],
-        kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
-      };
+  //     // Tambahkan parameter pencarian untuk no_hp dan email
+ 
   
-      const [count, pemesanan] = await prisma.$transaction([
-        prisma.pemesanan_megakonser.count({
-          where: params,
-        }),
-        prisma.pemesanan_megakonser.findMany({
-          orderBy: {
-            [sortBy]: sortType,
-          },
-          where: params,
-          skip,
-          take: perPage,
-        }),
-      ]);
+  //     const [count, pemesanan] = await prisma.$transaction([
+  //       prisma.pemesanan_megakonser.count({
+  //         where: params,
+  //       }),
+  //       prisma.pemesanan_megakonser.findMany({
+  //         orderBy: {
+  //           [sortBy]: sortType,
+  //         },
+  //         where: params,
+  //         skip,
+  //         take: perPage,
+  //       }),
+  //     ]);
   
-      res.status(200).json({
-        message: "Sukses Ambil Data",
-        data: pemesanan,
-        pagination: {
-          total: count,
-          page,
-          hasNext: count > page * perPage,
-          totalPage: Math.ceil(count / perPage),
-        },
-      });
-    } catch (error) {
-      res.status(500).json({
-        message: error?.message,
-      });
-    }
-  },
+  //     res.status(200).json({
+  //       message: "Sukses Ambil Data",
+  //       data: pemesanan,
+  //       pagination: {
+  //         total: count,
+  //         page,
+  //         hasNext: count > page * perPage,
+  //         totalPage: Math.ceil(count / perPage),
+  //       },
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({
+  //       message: error?.message,
+  //     });
+  //   }
+  // },
   
 
   async getDetailPemesananMegakonser(req, res) {

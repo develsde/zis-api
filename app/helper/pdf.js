@@ -14,7 +14,7 @@ const generatePdf = async ({ orderDetails }) => {
 
     const kode_pemesanan = orderDetails.kode_pemesanan
 
-    const url = `Ke myerp.zisindosat.id/tiketscan/${kode_pemesanan}`;
+    const url = `myerp.zisindosat.id/tiketscan/${kode_pemesanan}`;
     let qrCodePath;
     try {
         qrCodePath = await QRCode.toDataURL(url);
