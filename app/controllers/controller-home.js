@@ -2357,14 +2357,14 @@ module.exports = {
           tiket_id: true,
           tiket_nama: true,
           detail_pemesanan_megakonser: {
-            where: {
-              pemesanan_megakonser: {
-                OR: [
-                  { status: 'settlement' },
-                  { status: 'capture' }
-                ]
-              }
-            },
+            // where: {
+            //   pemesanan_megakonser: {
+            //     OR: [
+            //       { status: 'settlement' },
+            //       { status: 'capture' }
+            //     ]
+            //   }
+            // },
             select: {
               id_tiket: true, // Field yang dibutuhkan untuk menghitung total pemesanan
             },
