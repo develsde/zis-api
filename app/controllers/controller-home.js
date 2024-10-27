@@ -34,6 +34,7 @@ const { password } = require("../../config/config.db");
 const generatePdf = require("../helper/pdf")
 const path = require("path");
 const { error } = require("console");
+const { schedule } = require("node-cron");
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -2538,4 +2539,144 @@ module.exports = {
       });
     }
   },
+
+  async resendEmail(req, res,){
+    try {
+      const {order_id} = req.params;
+
+      const pemesanan = await prisma.detail_pemesanan_megakonser.findMany({
+        where:{
+          kode_pemesanan: order_id,
+        },
+        include:{
+          tiket_konser:true,
+          tiket_konser_detail:true,
+        }
+      })
+   try {
+    const pdfLink = await generatePdf({orderDetails: pemesanan});
+    console.log(`PDF generated for order: ${order_id}, filePath: ${pdfLink}`);
+
+    const templateEmail = await generateTemplateMegaKonser({
+      email,
+      password:email,
+      tiket:pemesanan
+    });
+
+    const msgId = await sendEmailWithPdf({
+      email,
+      html: templateEmail,
+      subject: "Pembelian Tiket Sound of Freedom",
+      pdfPath: pdfLink
+    })
+
+    console.log(`Email with PDF sent for order: ${order_id}`)
+
+   } catch (error) {
+    console.error(`Failed generated for order: ${order_id}, error:`, error );
+   }
+
+
+    } catch (error) {
+      console.error(`Error resend email`);
+      res.status(500).json({
+        message: error.message
+      })
+    }
+  },
+
+
+  async exportAllPemesananToExcel(req, res) {
+    try {
+      // Ambil semua data dari tabel pemesanan_megakonser
+      const pemesananData = await prisma.pemesanan_megakonser.findMany({
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+        },
+      });
+  
+      // Membuat workbook dan worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Data Semua Pemesanan');
+  
+      // Menambahkan header ke worksheet
+      worksheet.columns = [
+        { header: 'ID Pemesanan', key: 'id', width: 15 },
+        { header: 'Nama', key: 'nama', width: 20 },
+        { header: 'Telepon', key: 'telepon', width: 15 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Gender', key: 'gender', width: 10 },
+        { header: 'Total Harga', key: 'total_harga', width: 15 },
+        { header: 'Kode Affiliator', key: 'kode_affiliator', width: 15 },
+        { header: 'Kode Pemesanan', key: 'kode_pemesanan', width: 20 },
+        { header: 'Metode Pembayaran', key: 'metode_pembayaran', width: 20 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Transaction Time', key: 'transaction_time', width: 25 },
+        { header: 'Expiry Time', key: 'expiry_time', width: 25 },
+        { header: 'Detail Tiket Nama', key: 'detail_tiket_nama', width: 25 },
+        { header: 'Detail Tiket Harga', key: 'detail_tiket_harga', width: 15 },
+      ];
+  
+      // Menambahkan semua data pemesanan ke worksheet
+      pemesananData.forEach((order) => {
+        // Tambahkan data utama pemesanan ke worksheet
+        worksheet.addRow({
+          id: order.id,
+          nama: order.nama,
+          telepon: order.telepon,
+          email: order.email,
+          gender: order.gender,
+          total_harga: order.total_harga,
+          kode_affiliator: order.kode_affiliator,
+          kode_pemesanan: order.kode_pemesanan,
+          metode_pembayaran: order.metode_pembayaran,
+          status: order.status,
+          transaction_time: order.transaction_time,
+          expiry_time: order.expiry_time,
+          detail_tiket_nama: '', // Kosong untuk menambah detail di bawahnya
+          detail_tiket_harga: '',
+        });
+  
+        // Menambahkan detail pemesanan di baris berikutnya
+        order.detail_pemesanan_megakonser.forEach((detail) => {
+          worksheet.addRow({
+            id: '',
+            nama: '',
+            telepon: '',
+            email: '',
+            gender: '',
+            total_harga: '',
+            kode_affiliator: '',
+            kode_pemesanan: '',
+            metode_pembayaran: '',
+            status: '',
+            transaction_time: '',
+            expiry_time: '',
+            detail_tiket_nama: detail.tiket_konser_detail?.tiket_konser_detail_nama,
+            detail_tiket_harga: detail.harga_tiket,
+          });
+        });
+      });
+  
+      // Simpan file Excel ke folder uploads
+      const filename = `Semua_Pemesanan_MegaKonser_${Date.now()}.xlsx`;
+      const uploadPath = path.join(__dirname, '../../uploads', filename); // Set the path to uploads directory
+      await workbook.xlsx.writeFile(uploadPath);
+  
+      // Memberikan respons file yang dapat diunduh
+      res.status(200).json({
+        message: 'Data semua pemesanan berhasil diekspor ke Excel',
+        file: filename,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  }
 };
