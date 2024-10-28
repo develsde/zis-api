@@ -2588,51 +2588,88 @@ module.exports = {
     }
   },
 
-  async resendEmail(req, res,) {
+  async resendEmail(req, res) {
     try {
-      const { order_id } = req.params;
-
-      const pemesanan = await prisma.detail_pemesanan_megakonser.findMany({
+      const { kode_pemesanan } = req.params; // Ganti order_id dengan kode_pemesanan
+  
+      // Ambil data pemesanan berdasarkan kode_pemesanan
+      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
         where: {
-          kode_pemesanan: order_id,
+          kode_pemesanan: kode_pemesanan, // Ganti order_id dengan kode_pemesanan
         },
         include: {
-          tiket_konser: true,
-          tiket_konser_detail: true,
-        }
-      })
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+        },
+      });
+  
+      // Jika data pemesanan tidak ditemukan, kembalikan respon error
+      if (!pemesanan) {
+        return res.status(404).json({
+          success: false,
+          message: `Pemesanan dengan kode ${kode_pemesanan} tidak ditemukan.`,
+        });
+      }
+  
+      // Dapatkan email dari data pemesanan
+      const { email } = pemesanan;
+  
       try {
+        // Buat file PDF berdasarkan detail pemesanan
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
-        console.log(`PDF generated for order: ${order_id}, filePath: ${pdfLink}`);
-
+        console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
+  
+        // Buat template email menggunakan detail pemesanan
         const templateEmail = await generateTemplateMegaKonser({
           email,
-          password: email,
-          tiket: pemesanan
+          tiket: pemesanan, // Isi detail pemesanan sebagai tiket
         });
-
+  
+        // Kirim email dengan lampiran PDF
         const msgId = await sendEmailWithPdf({
           email,
           html: templateEmail,
           subject: "Pembelian Tiket Sound of Freedom",
-          pdfPath: pdfLink
-        })
-
-        console.log(`Email with PDF sent for order: ${order_id}`)
-
+          pdfPath: pdfLink,
+        });
+  
+        // Hapus file PDF setelah email terkirim
+        fs.unlink(pdfLink, (err) => {
+          if (err) {
+            console.error("Error saat menghapus file PDF:", err);
+          }
+        });
+  
+        console.log(`Email with PDF sent for order: ${kode_pemesanan}`);
+        return res.status(200).json({
+          success: true,
+          message: `Email berhasil dikirim ulang untuk order ${kode_pemesanan}`,
+          msgId: msgId,
+        });
+  
       } catch (error) {
-        console.error(`Failed generated for order: ${order_id}, error:`, error);
+        console.error(`Gagal membuat atau mengirim email untuk order ${kode_pemesanan}, error:`, error);
+        return res.status(500).json({
+          success: false,
+          message: `Gagal mengirim email untuk order ${kode_pemesanan}`,
+          error: error.message,
+        });
       }
-
-
     } catch (error) {
-      console.error(`Error resend email`);
-      res.status(500).json({
-        message: error.message
-      })
+      console.error("Error dalam resend email:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat mengirim ulang email",
+        error: error.message,
+      });
     }
   },
-
+  
+  
 
   async exportAllPemesananToExcel(req, res) {
     try {

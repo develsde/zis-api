@@ -49,7 +49,7 @@ router.get("/tiket-sold", home.getTiketSold)
 //Megakonser ERP
 router.get("/pemesanan-megakonser", home.getPemesananMegakonser)
 router.get("/detail-pemesanan-megakonser/:id", home.getDetailPemesananMegakonser)
-router.get("/resendEmail/:order_id", home.resendEmail)
+router.get("/resendEmail/:kode_pemesanan", home.resendEmail)
 router.get("/exportAllDataPemesanan", home.exportAllPemesananToExcel)
 router.get("/getPenjualanMegakonser", home.getPenjualanMegakonser)
 
