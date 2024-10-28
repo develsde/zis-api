@@ -2425,6 +2425,33 @@ module.exports = {
         kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
       };
 
+      // const [count, pemesanan] = await prisma.$transaction([
+      //     prisma.pemesanan_megakonser.count({
+      //         where: params,
+      //     }),
+      //     prisma.pemesanan_megakonser.findMany({
+      //         orderBy: {
+      //             [sortBy]: sortType,
+      //         },
+      //         where: params,
+      //         include: {
+      //             detail_pemesanan_megakonser: {
+      //                 include: {
+      //                     tiket_konser: true,
+      //                     tiket_konser_detail: {
+      //                         select: {
+      //                             tiket_konser_detail_nama: true, // Memastikan kolom ini diambil
+      //                         }
+      //                     },
+      //                 },
+      //             },
+      //         },
+      //         skip,
+      //         take: perPage,
+      //     }),
+      // ]);
+
+
       const [count, pemesanan] = await prisma.$transaction([
         prisma.pemesanan_megakonser.count({
           where: params,
@@ -2434,21 +2461,42 @@ module.exports = {
             [sortBy]: sortType,
           },
           where: params,
-          // include: {
-          //   detail_pemesanan_megakonser: {
-          //     include: {
-          //       tiket_konser: true
-          //     }
-          //   },
-          // },
-          skip,
-          take: perPage,
+          include: {
+            detail_pemesanan_megakonser: {
+              include: {
+                tiket_konser: true, // Mengambil semua field dari tiket_konser
+                tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
+              },
+            },
+          },
+          skip, // Menggunakan offset untuk paginasi
+          take: perPage, // Mengambil jumlah data sesuai perPage
         }),
       ]);
 
+
+      // Memformat data agar lebih mudah diakses
+      // const formattedData = pemesanan.map(pesan => ({
+      //     ...pesan,
+      //     detail_pemesanan: pesan.detail_pemesanan_megakonser.map(detail => ({
+      //         ...detail,
+      //         tiket_konser_detail_nama: detail.tiket_konser_detail.tiket_konser_detail_nama, // Akses nama tiket konser detail
+      //     })),
+      // }));
+
+      const formattedData = pemesanan.map(pesan => ({
+        ...pesan,
+        detail_pemesanan: pesan.detail_pemesanan_megakonser.map(detail => ({
+          ...detail,
+          tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
+        })),
+      }));
+
+      console.log(JSON.stringify(formattedData, null, 2)); // Cek hasil
+
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: pemesanan,
+        data: formattedData,
         pagination: {
           total: count,
           page,
