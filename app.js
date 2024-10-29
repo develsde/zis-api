@@ -78,10 +78,12 @@ app.use("/dashboard", dashboardRoute);
 //paymentroute
 app.use("/payment", paymentRoute);
 
-app.get("/payment-success", (req, res) => {
+app.post("/payment-success", (req, res) => {
   const referer = req.get("referer");
   const origin = req.get("origin");
 
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
   console.log("Referer:", referer);
   console.log("Origin:", origin);
 
