@@ -86,7 +86,7 @@ app.get("/payment-success", (req, res) => {
   console.log("Origin:", origin);
 
   const responseData = { status: "success received" };
-  const base64Data = CryptoJS.enc.Base64.stringify(responseData);
+  const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
 
   res.status(200).json({ data: base64Data });
 });
