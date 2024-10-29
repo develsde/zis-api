@@ -78,20 +78,26 @@ app.use("/dashboard", dashboardRoute);
 //paymentroute
 app.use("/payment", paymentRoute);
 
-app.post("/payment-success", (req, res) => {
-  const referer = req.get("referer");
-  const origin = req.get("origin");
+app.post("/payment-success", bodyParser.json(), (req, res) => {
+  try {
+    const referer = req.get("referer");
+    const origin = req.get("origin");
 
-  console.log("Headers:", req.headers);
-  console.log("Body:", req.body);
-  console.log("Referer:", referer);
-  console.log("Origin:", origin);
+    console.log("Headers:", req?.headers);
+    console.log("Body:", req?.body);
+    console.log("Referer:", referer);
+    console.log("Origin:", origin);
 
-  const responseData = { status: "success received" };
-  const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
+    const responseData = { status: "success received" };
+    const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
 
-  res.status(200).json({ data: base64Data });
+    res.status(200).json({ data: base64Data });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(400).json({ error: "Invalid JSON payload" });
+  }
 });
+
 
 app.get("/", (req, res) => {
   res.send("Selamat Datang Di Portal ZISWAF Indosat");
