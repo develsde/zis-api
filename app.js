@@ -84,66 +84,108 @@ const rawBodySaver = (req, res, buf, encoding) => {
   }
 };
 
-app.post("/payment-success", 
-  express.raw({ 
-    type: '*/*',
-    limit: '50mb',
-    verify: rawBodySaver
-  }), 
-  (req, res) => {
+app.post("/payment-success", bodyParser.json({ 
+  strict: false, 
+  verify: (req, res, buf) => {
     try {
-      console.log('Raw Request Headers:', req?.headers);
-      console.log('Raw Request Body:', req?.rawBody);
-      
-      const referer = req.get("referer");
-      const origin = req.get("origin");
-
-      let parsedBody;
-      if (req.headers['content-type']?.includes('application/json')) {
-        try {
-          parsedBody = JSON.parse(req.rawBody);
-        } catch (parseError) {
-          console.log('JSON Parse Error:', parseError);
-          parsedBody = { rawContent: req.rawBody };
-        }
-      } else {
-        parsedBody = { rawContent: req.rawBody };
-      }
-
-      const responseData = {
-        status: "success received",
-        timestamp: new Date().toISOString(),
-        receivedData: parsedBody,
-        metadata: {
-          contentType: req.headers['content-type'],
-          origin: origin,
-          referer: referer
-        }
-      };
-
-      const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
-
-      console.log('Successfully processed request');
-
-      return res.status(200).json(base64Data);
-
-    } catch (error) {
-      console.error('Payment Processing Error:', {
-        error: error.message,
-        stack: error.stack,
-        headers: req?.headers,
-        rawBody: req?.rawBody
-      });
-
-      return res.status(400).json({
-        status: "error",
-        timestamp: new Date().toISOString(),
-        error: {
-          message: "Failed to process notification",
-          details: error.message
-        }
-      });
+      req.rawBody = buf.toString();
+    } catch (e) {
+      console.error('Error in body parsing verification:', e);
+      req.rawBody = null;
     }
+  }
+}), async (req, res) => {
+  try {
+    if (!req.body && !req.rawBody) {
+      console.error('Empty request received');
+      throw new Error('Request body is empty');
+    }
+
+    const referer = req.get("referer");
+    const origin = req.get("origin");
+    let decodedData;
+    if (req.body.data) {
+      try {
+        decodedData = JSON.parse(
+          Buffer.from(req.body.data, "base64").toString("utf-8")
+        );
+        console.log("Decoded Data:", decodedData);
+      } catch (decodeError) {
+        console.warn("Failed to decode Base64 data:", {
+          error: decodeError.message,
+          base64Content: req.body.data,
+        });
+        throw new Error("Invalid Base64 data");
+      }
+    } else {
+      throw new Error("Missing 'data' field in the request body");
+    }
+    const requestData = {
+      timestamp: new Date().toISOString(),
+      headers: req?.headers,
+      rawBody: req.rawBody,
+      parsedBody: decodedData,
+      config: req?.config,
+      referer: referer,
+      origin: origin
+    };
+
+    console.log('Payment Success Request:', JSON.stringify(requestData, null, 2));
+
+    const responseData = {
+      status: "success received"
+    };
+    const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
+
+    console.log('Successfully processed payment notification:', {
+      timestamp: new Date().toISOString(),
+      responseData: responseData
+    });
+
+    return res.status(200).json(base64Data);
+
+  } catch (error) {
+    console.error('Payment Success Error:', {
+      timestamp: new Date().toISOString(),
+      error: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      },
+      requestData: {
+        headers: req?.headers,
+        body: req?.body,
+        config: req?.config,
+        rawBody: req?.rawBody,
+        referer: req.get("referer"),
+        origin: req.get("origin")
+      }
+    });
+
+    let statusCode = 400;
+    let errorMessage = error.message;
+
+    if (error.name === 'SyntaxError') {
+      statusCode = 400;
+      errorMessage = 'Invalid JSON format in request';
+    } else if (error.name === 'TypeError') {
+      statusCode = 422;
+      errorMessage = 'Invalid data type in request';
+    } else if (error.message.includes('empty')) {
+      statusCode = 400;
+      errorMessage = 'Request body is empty';
+    }
+
+    return res.status(statusCode).json({
+      status: "error",
+      timestamp: new Date().toISOString(),
+      error: {
+        message: errorMessage,
+        type: error.name,
+        code: statusCode
+      }
+    });
+  }
 });
 
 
