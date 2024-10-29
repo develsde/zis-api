@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const express = require("express");
+const CryptoJS = require('crypto-js');
 const bodyParser = require("body-parser");
 
 const app = express();
@@ -76,6 +77,19 @@ app.use("/dashboard", dashboardRoute);
 
 //paymentroute
 app.use("/payment", paymentRoute);
+
+app.get("/payment-success", (req, res) => {
+  const referer = req.get("referer");
+  const origin = req.get("origin");
+
+  console.log("Referer:", referer);
+  console.log("Origin:", origin);
+
+  const responseData = { status: "success received" };
+  const base64Data = CryptoJS.enc.Base64.stringify(responseData);
+
+  res.status(200).json({ data: base64Data });
+});
 
 app.get("/", (req, res) => {
   res.send("Selamat Datang Di Portal ZISWAF Indosat");
