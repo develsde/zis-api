@@ -49,7 +49,7 @@ app.use("/public/uploads", express.static(path.join(__dirname, "uploads/")));
 
 app.use(
   cors({
-    origin: ["https://portal.zisindosat.id", "http://localhost:3000", "http://localhost:5173", "https://myerp.zisindosat.id", "https://ipg.artajasa.co.id/"],
+    origin: ["https://portal.zisindosat.id", "http://localhost:3000", "http://localhost:5173", "https://myerp.zisindosat.id", "https://ipg.artajasa.co.id"],
   })
 );
 app.use("/auth", appRoute);
