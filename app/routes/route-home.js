@@ -52,6 +52,8 @@ router.get("/detail-pemesanan-megakonser/:id", home.getDetailPemesananMegakonser
 router.get("/resendEmail/:kode_pemesanan", home.resendEmail)
 router.get("/exportAllDataPemesanan", home.exportAllPemesananToExcel)
 router.get("/getPenjualanMegakonser", home.getPenjualanMegakonser)
+router.get("/getPenjualanAffiliator", home.getPenjualanAffiliator)
+router.get("/getAffiliator", home.getAffiliator)
 
 
 module.exports = router;

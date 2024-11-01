@@ -2397,7 +2397,8 @@ module.exports = {
   async getPemesananMegakonser(req, res) {
     try {
       const keyword = req.query.keyword || "";
-      const kodePemesanan = req.query.kode_pemesanan || "";
+      const status = req.query.status || "";
+      const kode_affiliator = req.query.kode_affiliator || ""
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
@@ -2421,8 +2422,14 @@ module.exports = {
               contains: keyword,
             },
           },
+          {
+            kode_pemesanan: {
+              contains: keyword,
+            },
+          },
         ],
-        kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
+        ...(status && { status }),
+        ...(kode_affiliator && { kode_affiliator })
       };
 
       // const [count, pemesanan] = await prisma.$transaction([
@@ -2468,6 +2475,7 @@ module.exports = {
                 tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
               },
             },
+            affiliator: true,
           },
           skip, // Menggunakan offset untuk paginasi
           take: perPage, // Mengambil jumlah data sesuai perPage
@@ -2591,7 +2599,7 @@ module.exports = {
   async resendEmail(req, res) {
     try {
       const { kode_pemesanan } = req.params; // Ganti order_id dengan kode_pemesanan
-  
+
       // Ambil data pemesanan berdasarkan kode_pemesanan
       const pemesanan = await prisma.pemesanan_megakonser.findUnique({
         where: {
@@ -2606,7 +2614,7 @@ module.exports = {
           },
         },
       });
-  
+
       // Jika data pemesanan tidak ditemukan, kembalikan respon error
       if (!pemesanan) {
         return res.status(404).json({
@@ -2614,21 +2622,21 @@ module.exports = {
           message: `Pemesanan dengan kode ${kode_pemesanan} tidak ditemukan.`,
         });
       }
-  
+
       // Dapatkan email dari data pemesanan
       const { email } = pemesanan;
-  
+
       try {
         // Buat file PDF berdasarkan detail pemesanan
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
         console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
-  
+
         // Buat template email menggunakan detail pemesanan
         const templateEmail = await generateTemplateMegaKonser({
           email,
           tiket: pemesanan, // Isi detail pemesanan sebagai tiket
         });
-  
+
         // Kirim email dengan lampiran PDF
         const msgId = await sendEmailWithPdf({
           email,
@@ -2636,21 +2644,21 @@ module.exports = {
           subject: "Pembelian Tiket Sound of Freedom",
           pdfPath: pdfLink,
         });
-  
+
         // Hapus file PDF setelah email terkirim
         fs.unlink(pdfLink, (err) => {
           if (err) {
             console.error("Error saat menghapus file PDF:", err);
           }
         });
-  
+
         console.log(`Email with PDF sent for order: ${kode_pemesanan}`);
         return res.status(200).json({
           success: true,
           message: `Email berhasil dikirim ulang untuk order ${kode_pemesanan}`,
           msgId: msgId,
         });
-  
+
       } catch (error) {
         console.error(`Gagal membuat atau mengirim email untuk order ${kode_pemesanan}, error:`, error);
         return res.status(500).json({
@@ -2668,8 +2676,8 @@ module.exports = {
       });
     }
   },
-  
-  
+
+
 
   async exportAllPemesananToExcel(req, res) {
     try {
@@ -2864,6 +2872,101 @@ module.exports = {
         message: "Sukses Ambil Data",
         dataPenjualan: penjualan,
         totalPendapatan: totalPendapatan._sum.total_harga,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getPenjualanAffiliator(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+
+      const params = {
+        OR: [
+          {
+            nama: {
+              contains: keyword,
+            }
+          },
+          {
+            kode: {
+              contains: keyword,
+            }
+          },
+        ]
+      };
+
+      const [count, result] = await prisma.$transaction([
+        prisma.affiliator.count({
+          where: params,
+        }),
+        prisma.affiliator.findMany({
+          where: params,
+          select: {
+            nama: true,
+            kode: true,
+            pemesanan_megakonser: {
+              where: { status: 'settlement' },
+              select: {
+                total_harga: true,
+              },
+            },
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      const affiliatorsWithTotalHarga = result.map((affiliator) => {
+        const totalHarga = affiliator.pemesanan_megakonser.reduce(
+          (sum, order) => sum + order.total_harga,
+          0
+        );
+
+        return {
+          nama: affiliator.nama,
+          kode: affiliator.kode,
+          total_harga: totalHarga,
+        };
+      });
+
+      // Urutkan hasil berdasarkan total_harga secara menurun
+      affiliatorsWithTotalHarga.sort((a, b) => b.total_harga - a.total_harga);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: affiliatorsWithTotalHarga,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getAffiliator(req, res) {
+    try {
+      const affiliator = await prisma.affiliator.findMany({
+        // where: {
+        //   status: 1
+        // }
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: affiliator,
       });
     } catch (error) {
       res.status(500).json({
