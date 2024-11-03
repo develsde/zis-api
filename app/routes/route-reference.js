@@ -3,6 +3,7 @@ const { refData } = require("../controllers");
 const path = require("path");
 const { authentication, authorization } = require("../../config/auth");
 const { upload } = require("../helper/upload");
+const { ref } = require("pdfkit");
 
 // GET localhost:8080/home => Ambil data semua dari awal
 router.get("/provinces", refData.provinces);
@@ -48,4 +49,10 @@ router.get("/outlet", refData.getOutlet);
 router.post("/register-donasi", refData.registerDonasi);
 router.post("/check-payment", refData.checkPay)
 
+//salam donasi erp
+router.get("/cso",authentication, refData.getAllCso );
+router.put("/update/:id", authentication, refData.updateCso);
+router.get("/AllOutlet",authentication, refData.getAllOutlet);
+router.get("/TransOutlet",authentication, refData.getTransaksiPerOutlet);
+router.post("/create", authentication,refData.createOutlet);
 module.exports = router;

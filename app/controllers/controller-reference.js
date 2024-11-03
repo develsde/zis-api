@@ -4,6 +4,10 @@ const fs = require("fs/promises");
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
 const { checkImkas } = require("../helper/imkas");
+const QRCode = require("qrcode");
+const path = require('path');
+const { createCanvas, loadImage } = require('canvas');
+const Jimp = require("jimp");
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
 
@@ -12,6 +16,7 @@ const {
   cekStatus,
   midtransfer,
 } = require("../helper/midtrans");
+const { error } = require("console");
 
 module.exports = {
   async checkImkas(req, res) {
@@ -1406,6 +1411,360 @@ ORDER BY aa.created_date DESC
     }
   },
 
+  async getAllCso(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+
+      const params = {
+        nama_cso: {
+          contains: keyword,
+        }
+      }
+
+      const [count, cso] = await prisma.$transaction([
+        prisma.cso.count({
+          where: params,
+        }),
+        prisma.cso.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          include: {
+            provinces: true,
+            cities: true,
+            districts: true,
+            user:true,
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: cso,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async updateCso(req, res){
+    try {
+      const csoId = req.params.id;
+      const {nama_cso, nohp, alamat, user_id} = req.body;
+
+        if (!nama_cso || !nohp || !alamat) {
+          return res.status(400).json({
+            message:"Nama, Alamat, dan Nomor Telepon Harus Diisi",
+          });
+        }
+
+        await prisma.cso.update({
+          where:{
+            id: Number(csoId),
+          },
+          data:{
+            nama_cso: nama_cso,
+            nohp: nohp,
+            alamat: alamat,
+            user_id:Number(user_id)
+          },
+        });
+
+        return res.status(200).json({
+          message: "Sukses",
+          data: "Berhasil Update Data Cso",
+        });
+    } catch (error) {
+      return res.status(500).json({
+        message:error?.message,
+      });
+    }
+  },
+
+  async getAllOutlet(req, res) {
+    try {
+      const userId = req.user.user_id; // Pastikan `userId` diambil dari session login
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || 'asc';
+
+      // Cari CSO ID berdasarkan user_id yang login
+      const cso = await prisma.cso.findFirst({
+        where: { user_id: userId }
+      });
+
+      if (!cso) {
+        return res.status(404).json({ message: "CSO tidak ditemukan untuk user ini" });
+      }
+
+      const params = {
+        pic_outlet: {
+          contains: keyword,
+        },
+        cso_id: cso.id // Gunakan `cso.id` sebagai filter untuk `id_cso`
+      };
+
+      const [count, outlet] = await prisma.$transaction([
+        prisma.outlet.count({
+          where: params,
+        }),
+        prisma.outlet.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          include: {
+            cso: true,
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: outlet,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  
+
+  
+  
+  async createOutlet(req, res) {
+      try {
+          const schema = z.object({
+              nama_outlet: z.string(),
+              alamat_outlet: z.string(),
+              pic_outlet: z.string(),
+          });
+  
+          const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
+          const body = await schema.safeParseAsync({
+              nama_outlet,
+              alamat_outlet,
+              pic_outlet,
+          });
+  
+          let errorObj = {};
+  
+          if (body.error) {
+              body.error.issues.forEach((issue) => {
+                  errorObj[issue.path[0]] = issue.message;
+              });
+              body.error = errorObj;
+          }
+  
+          if (!body.success) {
+              return res.status(400).json({
+                  message: "Beberapa Field Harus Diisi",
+                  error: errorObj,
+              });
+          }
+  
+          // Cari CSO ID berdasarkan user_id yang login
+          const userId = req.user.user_id;
+          const cso = await prisma.cso.findFirst({
+              where: { user_id: userId },
+          });
+  
+          if (!cso) {
+              return res.status(404).json({
+                  message: "CSO tidak ditemukan untuk user ini",
+              });
+          }
+  
+          // Cek apakah outlet sudah ada berdasarkan nama
+          const currentOutlet = await prisma.outlet.findFirst({
+              where: {
+                  nama_outlet: body.data.nama_outlet,
+              },
+          });
+  
+          if (currentOutlet) {
+              return res.status(400).json({
+                  message: "Outlet Sudah Terdaftar",
+              });
+          }
+  
+          // Buat outlet baru
+          const newOutlet = await prisma.outlet.create({
+              data: {
+                  nama_outlet: body.data.nama_outlet,
+                  alamat_outlet: body.data.alamat_outlet,
+                  pic_outlet: body.data.pic_outlet,
+                  cso_id: cso.id,
+                  register_date: new Date(),
+              },
+          });
+  
+          // URL untuk QR code
+          const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${newOutlet.id}`;
+  
+          // Generate QR code
+          const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
+  
+          // Load QR code image
+          const qrCodeImage = await loadImage(qrCodeDataUrl);
+  
+          // Load logo image
+          const logoPath = path.resolve(__dirname, '../../uploads/zis.png'); // Ganti dengan path logo Anda
+          const logoImage = await loadImage(logoPath);
+  
+          // Buat canvas untuk menggambar QR code dan logo
+          const canvas = createCanvas(qrCodeImage.width, qrCodeImage.height);
+          const ctx = canvas.getContext('2d');
+  
+          // Gambar QR code ke canvas
+          ctx.drawImage(qrCodeImage, 0, 0);
+  
+          // Ukuran logo
+          const logoSize = 60; // Sesuaikan ukuran sesuai kebutuhan
+          ctx.drawImage(logoImage, (canvas.width - logoSize) / 2, (canvas.height - logoSize) / 2, logoSize, logoSize);
+  
+          // Dapatkan data URL untuk QR code dengan logo
+          const qrCodeWithLogoData = canvas.toDataURL('image/png');
+  
+          // Kembalikan respon dengan QR code
+          return res.status(200).json({
+              message: "Sukses",
+              data: "Berhasil Menambahkan Outlet dengan QR Code",
+              qrCodeUrl,
+              qrCodeWithLogoData, // QR code data URL to be displayed on frontend
+          });
+      } catch (error) {
+          return res.status(500).json({
+              message: error?.message,
+          });
+      }
+  },
+  
+
+  
+  
+
+  async getTransaksiPerOutlet(req, res) {
+    try {
+      const userId = req.user.user_id;
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id_outlet";
+      const sortType = req.query.order || 'asc';
+
+      // Get the CSO ID for the logged-in user
+      const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
+      if (!cso) {
+        return res.status(404).json({ message: "CSO tidak ditemukan untuk user ini" });
+      }
+      const csoId = cso.id;
+
+      // Fetch outlets based on cso_id
+      const outlets = await prisma.outlet.findMany({
+        where: {
+          cso_id: csoId,
+          pic_outlet: { contains: keyword },
+        },
+        select: {
+          id: true,
+          nama_outlet: true,
+          alamat_outlet: true,
+        },
+        skip,
+        take: perPage,
+      });
+
+      const outletIds = outlets.map(outlet => outlet.id);
+
+      // Fetch total count of unique outlets matching the query
+      const count = await prisma.outlet.count({
+        where: {
+          cso_id: csoId,
+          pic_outlet: { contains: keyword },
+        },
+      });
+
+      // Get transactions grouped by outlet, calculating both nominal sum and transaction count
+      const transaksi = await prisma.register_donasi.groupBy({
+        by: ['id_outlet'],
+        _sum: { nominal: true },
+        _count: { id_outlet: true },
+        where: {
+          outlet: { id: { in: outletIds } },
+          transaction_status: 'settlement',
+        },
+        orderBy: { [sortBy]: sortType },
+      });
+
+      const csoData = await prisma.cso.findUnique({
+        where: { id: csoId },
+        select: { nama_cso: true },
+      });
+
+      const formatCurrency = (value) => `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+
+      const result = outlets.map(outlet => {
+        const transaksiItem = transaksi.find(item => item.id_outlet === outlet.id);
+        return {
+          id: outlet.id,
+          nama_outlet: outlet.nama_outlet,
+          alamat_outlet: outlet.alamat_outlet || 'Tidak Diketahui',
+          nama_cso: csoData ? csoData.nama_cso : 'Tidak Diketahui',
+          total: formatCurrency(transaksiItem ? transaksiItem._sum.nominal || 0 : 0),
+          total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
+        };
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Transaksi Per Outlet",
+        data: result,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+
+
+
   async registerDonasi(req, res) {
 
     function generateOrderId(paymentType) {
@@ -1520,6 +1879,7 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+
 
   async checkPay(req, res) {
     const order_id = req.body.order_id;

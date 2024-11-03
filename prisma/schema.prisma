@@ -110,6 +110,7 @@ model user {
   mustahiq_id           Int?                    @unique
   article               article[]
   beneficiary           beneficiary[]
+  cso                   cso[]
   document_type         document_type[]
   ebs_validation        ebs_validation[]
   institusi             institusi[]
@@ -1231,14 +1232,17 @@ model cso {
   kota       Int?
   kecamatan  Int?
   cso_status Int?       @default(0)
+  user_id    Int?
   cities     cities?    @relation(fields: [kota], references: [city_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cso_cities")
   districts  districts? @relation(fields: [kecamatan], references: [dis_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cso_districts")
   provinces  provinces? @relation(fields: [provinsi], references: [prov_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_cso_provinces")
+  user       user?      @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "cso_user_FK")
   outlet     outlet[]
 
   @@index([kota], map: "Index 2")
   @@index([kecamatan], map: "Index 3")
   @@index([provinsi], map: "Index 4")
+  @@index([user_id], map: "cso_user_FK")
 }
 
 model outlet {
