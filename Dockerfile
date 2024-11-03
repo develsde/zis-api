@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 node:18-alpine
+FROM --platform=linux/amd64 node:20-alpine
 # FROM --platform=linux/amd64 keymetrics/pm2:latest-alpine
 WORKDIR /usr/src/app
 # # Bundle APP files
