@@ -27,7 +27,6 @@
     "express-rate-limit": "^7.1.5",
     "googleapis": "^144.0.0",
     "https": "^1.0.0",
-    "jimp": "^1.6.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "md5": "^2.3.0",
