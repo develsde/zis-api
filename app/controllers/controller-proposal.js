@@ -373,30 +373,30 @@ module.exports = {
       }
       console.log(pn)
       console.log(pn.replace(/[^0-9\.]+/g, ""))
-      const checks = await sendImkas({
-        phone: pn.replace(/[^0-9\.]+/g, ""),
-        nom: '50',
-        id: `10${userId}`,
-        desc: "Pengecekan Nomor",
-      });
-      const log = await prisma.log_vendor.create({
-        data: {
-          vendor_api: checks?.config?.url,
-          url_api: req.originalUrl,
-          api_header: JSON.stringify(checks.headers),
-          api_body: checks?.config?.data,
-          api_response: JSON.stringify(checks.data),
-          payload: JSON.stringify(req.body),
-        },
-      });
-      const check = checks?.data
-      console.log(check);
+      // const checks = await sendImkas({
+      //   phone: pn.replace(/[^0-9\.]+/g, ""),
+      //   nom: '50',
+      //   id: `10${userId}`,
+      //   desc: "Pengecekan Nomor",
+      // });
+      // const log = await prisma.log_vendor.create({
+      //   data: {
+      //     vendor_api: checks?.config?.url,
+      //     url_api: req.originalUrl,
+      //     api_header: JSON.stringify(checks.headers),
+      //     api_body: checks?.config?.data,
+      //     api_response: JSON.stringify(checks.data),
+      //     payload: JSON.stringify(req.body),
+      //   },
+      // });
+      // const check = checks?.data
+      // console.log(check);
 
-      if (check.responseCode != '00') {
-        return res.status(400).json({ message: check.responseDescription });
-      }
+      // if (check.responseCode != '00') {
+      //   return res.status(400).json({ message: check.responseDescription });
+      // }
 
-      if (check.responseCode == '00') {
+      // if (check.responseCode == '00') {
         const ProposalResult = await prisma.proposal.create({
           data: {
             user: {
@@ -445,7 +445,8 @@ module.exports = {
           data: ProposalResult,
         });
       }
-    } catch (error) {
+    // } 
+    catch (error) {
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
