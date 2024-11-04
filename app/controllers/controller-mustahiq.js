@@ -1,6 +1,6 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs");
-const { sendImkas } = require("../helper/imkas");
+// const { sendImkas } = require("../helper/imkas");
 
 module.exports = {
   async details(req, res) {
