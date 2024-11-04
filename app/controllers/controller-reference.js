@@ -1560,6 +1560,7 @@ ORDER BY aa.created_date DESC
   
   async createOutlet(req, res) {
     try {
+        // Validation
         const schema = z.object({
             nama_outlet: z.string(),
             alamat_outlet: z.string(),
@@ -1567,12 +1568,7 @@ ORDER BY aa.created_date DESC
         });
 
         const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
-        const body = await schema.safeParseAsync({
-            nama_outlet,
-            alamat_outlet,
-            pic_outlet,
-        });
-
+        const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
         let errorObj = {};
 
         if (body.error) {
@@ -1590,9 +1586,7 @@ ORDER BY aa.created_date DESC
         }
 
         const userId = req.user.user_id;
-        const cso = await prisma.cso.findFirst({
-            where: { user_id: userId },
-        });
+        const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
 
         if (!cso) {
             return res.status(404).json({
@@ -1601,9 +1595,7 @@ ORDER BY aa.created_date DESC
         }
 
         const currentOutlet = await prisma.outlet.findFirst({
-            where: {
-                nama_outlet: body.data.nama_outlet,
-            },
+            where: { nama_outlet: body.data.nama_outlet },
         });
 
         if (currentOutlet) {
@@ -1626,41 +1618,65 @@ ORDER BY aa.created_date DESC
         const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
 
         const qrCodeImage = await loadImage(qrCodeDataUrl);
-
         const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
         const logoImage = await loadImage(logoPath);
 
-        // Adjusted sizes and border
-        const borderSize = 10; // Reduced border size
-        const blackBorderSize = 5; // Outer black border
-        const enlargedQrSize = 300;
-        const canvasHeight = enlargedQrSize + borderSize * 2 + blackBorderSize * 2 + 60;
-        const canvas = createCanvas(enlargedQrSize + borderSize * 2 + blackBorderSize * 2, canvasHeight);
+        // Load background image
+        const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
+        const backgroundImage = await loadImage(backgroundImagePath);
+
+        // Set up canvas dimensions
+        const canvasWidth = 400;
+        const canvasHeight = 600;
+        const qrSize = 250; // Increase QR code size
+        const reducedBorderSize = 20; // Reduced white area behind the QR code
+        const textMargin = 40;
+
+        // Create canvas
+        const canvas = createCanvas(canvasWidth, canvasHeight);
         const ctx = canvas.getContext('2d');
 
-        // Draw black outer border
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Calculate the scale for the background image
+        const backgroundScaleWidth = canvasWidth / backgroundImage.width;
+        const backgroundScaleHeight = canvasHeight / backgroundImage.height;
+        const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight); // Use the larger scale to cover the canvas
 
-        // Draw white inner border inside the black border
+        // Draw the background image
+        const bgX = (canvasWidth / 2) - (backgroundImage.width * backgroundScale / 2);
+        const bgY = (canvasHeight / 2) - (backgroundImage.height * backgroundScale / 2);
+        ctx.drawImage(
+            backgroundImage,
+            bgX,
+            bgY,
+            backgroundImage.width * backgroundScale,
+            backgroundImage.height * backgroundScale
+        );
+
+        // Draw the smaller white area behind the QR code
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(blackBorderSize, blackBorderSize, canvas.width - blackBorderSize * 2, canvas.height - blackBorderSize * 2);
+        ctx.fillRect(
+            (canvasWidth - (qrSize + reducedBorderSize)) / 2,
+            canvasHeight - qrSize - textMargin - 60,
+            qrSize + reducedBorderSize,
+            qrSize + textMargin
+        );
 
-        // Draw QR code inside the white border
-        ctx.drawImage(qrCodeImage, blackBorderSize + borderSize, blackBorderSize + borderSize, enlargedQrSize, enlargedQrSize);
+        // Draw QR code in the center of the white area
+        const qrX = (canvasWidth - qrSize) / 2;
+        const qrY = canvasHeight - qrSize - textMargin - 40;
+        ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
 
-        // Center logo on QR code
-        const logoSize = 100;
-        const logoX = canvas.width / 2 - logoSize / 2;
-        const logoY = blackBorderSize + borderSize + (enlargedQrSize / 2) - (logoSize / 2);
-
+        // Draw the logo centered on top of the QR code
+        const logoSize = 50;
+        const logoX = qrX + (qrSize / 2) - (logoSize / 2);
+        const logoY = qrY + (qrSize / 2) - (logoSize / 2);
         ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
 
-        // Add text below QR code
+        // Add text under the QR code
         ctx.fillStyle = '#000000';
-        ctx.font = '25px Arial';
+        ctx.font = 'bold 20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(`Salam Donasi ${newOutlet.id}`, canvas.width / 2, canvasHeight - 20);
+        ctx.fillText(`Salam Donasi ${newOutlet.id}`, canvasWidth / 2, canvasHeight - 20);
 
         const qrCodeWithLogoData = canvas.toDataURL('image/png');
 
@@ -1676,6 +1692,8 @@ ORDER BY aa.created_date DESC
         });
     }
 },
+
+
 
   async getTransaksiPerOutlet(req, res) {
     try {
