@@ -7,7 +7,6 @@ const { checkImkas } = require("../helper/imkas");
 const QRCode = require("qrcode");
 const path = require('path');
 const { createCanvas, loadImage } = require('canvas');
-const Jimp = require("jimp");
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
 
