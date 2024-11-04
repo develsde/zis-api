@@ -1516,7 +1516,7 @@ ORDER BY aa.created_date DESC
       }
 
       const params = {
-        pic_outlet: {
+        nama_outlet: {
           contains: keyword,
         },
         cso_id: cso.id // Gunakan `cso.id` sebagai filter untuk `id_cso`
@@ -1558,120 +1558,124 @@ ORDER BY aa.created_date DESC
   },
 
   
-
-  
-  
   async createOutlet(req, res) {
-      try {
-          const schema = z.object({
-              nama_outlet: z.string(),
-              alamat_outlet: z.string(),
-              pic_outlet: z.string(),
-          });
-  
-          const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
-          const body = await schema.safeParseAsync({
-              nama_outlet,
-              alamat_outlet,
-              pic_outlet,
-          });
-  
-          let errorObj = {};
-  
-          if (body.error) {
-              body.error.issues.forEach((issue) => {
-                  errorObj[issue.path[0]] = issue.message;
-              });
-              body.error = errorObj;
-          }
-  
-          if (!body.success) {
-              return res.status(400).json({
-                  message: "Beberapa Field Harus Diisi",
-                  error: errorObj,
-              });
-          }
-  
-          // Cari CSO ID berdasarkan user_id yang login
-          const userId = req.user.user_id;
-          const cso = await prisma.cso.findFirst({
-              where: { user_id: userId },
-          });
-  
-          if (!cso) {
-              return res.status(404).json({
-                  message: "CSO tidak ditemukan untuk user ini",
-              });
-          }
-  
-          // Cek apakah outlet sudah ada berdasarkan nama
-          const currentOutlet = await prisma.outlet.findFirst({
-              where: {
-                  nama_outlet: body.data.nama_outlet,
-              },
-          });
-  
-          if (currentOutlet) {
-              return res.status(400).json({
-                  message: "Outlet Sudah Terdaftar",
-              });
-          }
-  
-          // Buat outlet baru
-          const newOutlet = await prisma.outlet.create({
-              data: {
-                  nama_outlet: body.data.nama_outlet,
-                  alamat_outlet: body.data.alamat_outlet,
-                  pic_outlet: body.data.pic_outlet,
-                  cso_id: cso.id,
-                  register_date: new Date(),
-              },
-          });
-  
-          // URL untuk QR code
-          const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${newOutlet.id}`;
-  
-          // Generate QR code
-          const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
-  
-          // Load QR code image
-          const qrCodeImage = await loadImage(qrCodeDataUrl);
-  
-          // Load logo image
-          const logoPath = path.resolve(__dirname, '../../uploads/zis.png'); // Ganti dengan path logo Anda
-          const logoImage = await loadImage(logoPath);
-  
-          // Buat canvas untuk menggambar QR code dan logo
-          const canvas = createCanvas(qrCodeImage.width, qrCodeImage.height);
-          const ctx = canvas.getContext('2d');
-  
-          // Gambar QR code ke canvas
-          ctx.drawImage(qrCodeImage, 0, 0);
-  
-          // Ukuran logo
-          const logoSize = 60; // Sesuaikan ukuran sesuai kebutuhan
-          ctx.drawImage(logoImage, (canvas.width - logoSize) / 2, (canvas.height - logoSize) / 2, logoSize, logoSize);
-  
-          // Dapatkan data URL untuk QR code dengan logo
-          const qrCodeWithLogoData = canvas.toDataURL('image/png');
-  
-          // Kembalikan respon dengan QR code
-          return res.status(200).json({
-              message: "Sukses",
-              data: "Berhasil Menambahkan Outlet dengan QR Code",
-              qrCodeUrl,
-              qrCodeWithLogoData, // QR code data URL to be displayed on frontend
-          });
-      } catch (error) {
-          return res.status(500).json({
-              message: error?.message,
-          });
-      }
-  },
-  
+    try {
+        const schema = z.object({
+            nama_outlet: z.string(),
+            alamat_outlet: z.string(),
+            pic_outlet: z.string(),
+        });
 
-  
-  
+        const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
+        const body = await schema.safeParseAsync({
+            nama_outlet,
+            alamat_outlet,
+            pic_outlet,
+        });
+
+        let errorObj = {};
+
+        if (body.error) {
+            body.error.issues.forEach((issue) => {
+                errorObj[issue.path[0]] = issue.message;
+            });
+            body.error = errorObj;
+        }
+
+        if (!body.success) {
+            return res.status(400).json({
+                message: "Beberapa Field Harus Diisi",
+                error: errorObj,
+            });
+        }
+
+        const userId = req.user.user_id;
+        const cso = await prisma.cso.findFirst({
+            where: { user_id: userId },
+        });
+
+        if (!cso) {
+            return res.status(404).json({
+                message: "CSO tidak ditemukan untuk user ini",
+            });
+        }
+
+        const currentOutlet = await prisma.outlet.findFirst({
+            where: {
+                nama_outlet: body.data.nama_outlet,
+            },
+        });
+
+        if (currentOutlet) {
+            return res.status(400).json({
+                message: "Outlet Sudah Terdaftar",
+            });
+        }
+
+        const newOutlet = await prisma.outlet.create({
+            data: {
+                nama_outlet: body.data.nama_outlet,
+                alamat_outlet: body.data.alamat_outlet,
+                pic_outlet: body.data.pic_outlet,
+                cso_id: cso.id,
+                register_date: new Date(),
+            },
+        });
+
+        const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${newOutlet.id}`;
+        const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
+
+        const qrCodeImage = await loadImage(qrCodeDataUrl);
+
+        const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
+        const logoImage = await loadImage(logoPath);
+
+        // Adjusted sizes and border
+        const borderSize = 10; // Reduced border size
+        const blackBorderSize = 5; // Outer black border
+        const enlargedQrSize = 300;
+        const canvasHeight = enlargedQrSize + borderSize * 2 + blackBorderSize * 2 + 60;
+        const canvas = createCanvas(enlargedQrSize + borderSize * 2 + blackBorderSize * 2, canvasHeight);
+        const ctx = canvas.getContext('2d');
+
+        // Draw black outer border
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw white inner border inside the black border
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(blackBorderSize, blackBorderSize, canvas.width - blackBorderSize * 2, canvas.height - blackBorderSize * 2);
+
+        // Draw QR code inside the white border
+        ctx.drawImage(qrCodeImage, blackBorderSize + borderSize, blackBorderSize + borderSize, enlargedQrSize, enlargedQrSize);
+
+        // Center logo on QR code
+        const logoSize = 100;
+        const logoX = canvas.width / 2 - logoSize / 2;
+        const logoY = blackBorderSize + borderSize + (enlargedQrSize / 2) - (logoSize / 2);
+
+        ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
+
+        // Add text below QR code
+        ctx.fillStyle = '#000000';
+        ctx.font = '25px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Salam Donasi ${newOutlet.id}`, canvas.width / 2, canvasHeight - 20);
+
+        const qrCodeWithLogoData = canvas.toDataURL('image/png');
+
+        return res.status(200).json({
+            message: "Sukses",
+            data: "Berhasil Menambahkan Outlet dengan QR Code",
+            qrCodeUrl,
+            qrCodeWithLogoData,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            message: error?.message,
+        });
+    }
+},
 
   async getTransaksiPerOutlet(req, res) {
     try {
@@ -1694,7 +1698,7 @@ ORDER BY aa.created_date DESC
       const outlets = await prisma.outlet.findMany({
         where: {
           cso_id: csoId,
-          pic_outlet: { contains: keyword },
+          nama_outlet: { contains: keyword },
         },
         select: {
           id: true,
