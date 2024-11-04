@@ -1674,7 +1674,7 @@ ORDER BY aa.created_date DESC
 
         // Add text under the QR code
         ctx.fillStyle = '#000000';
-        ctx.font = 'bold 20px Arial';
+        ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(`Salam Donasi ${newOutlet.id}`, canvasWidth / 2, canvasHeight - 20);
 
