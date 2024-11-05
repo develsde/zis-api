@@ -1677,7 +1677,7 @@ ORDER BY aa.created_date DESC
 
         // Add text under the QR code using the same format as updateOutlet
         const text = `Salam Donasi ${newOutlet.id}`;
-        const fontSize = 20;
+        const fontSize = 50;
         ctx.fillStyle = '#000000';
         ctx.font = `bold ${fontSize}px`; // Menggunakan sans-serif sebagai fallback
         ctx.textAlign = 'center';
@@ -1820,7 +1820,7 @@ async updateOutlet(req, res) {
 
     // Menggambar teks menggunakan font Roboto (fallback ke sans-serif)
     const text = `Salam Donasi ${updatedOutlet.id}`;
-    const fontSize = 20;
+    const fontSize = 50;
     ctx.fillStyle = '#000000';
     ctx.font = `bold ${fontSize}px`; // Gunakan sans-serif sebagai fallback
 
