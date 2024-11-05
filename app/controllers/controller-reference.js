@@ -9,7 +9,7 @@ const path = require('path');
 const { createCanvas, loadImage, registerFont } = require('canvas');
 
 // Load font
-registerFont(path.resolve(__dirname, '../../uploads/Roboto-Black.ttf'), { family: 'Roboto' });
+// registerFont(path.resolve(__dirname, '../../uploads/Roboto-Black.ttf'), { family: 'Roboto' });
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
 
@@ -1561,7 +1561,7 @@ ORDER BY aa.created_date DESC
   },
 
 
-  async createOutlet(req, res) {
+ async createOutlet(req, res) {
     try {
         // Validasi input
         const schema = z.object({
