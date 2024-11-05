@@ -55,4 +55,5 @@ router.put("/update/:id", authentication, refData.updateCso);
 router.get("/AllOutlet",authentication, refData.getAllOutlet);
 router.get("/TransOutlet",authentication, refData.getTransaksiPerOutlet);
 router.post("/create", authentication,refData.createOutlet);
+router.put("/updateOutlet/:id", authentication,refData.updateOutlet);
 module.exports = router;
