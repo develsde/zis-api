@@ -1679,7 +1679,7 @@ ORDER BY aa.created_date DESC
         const text = `Salam Donasi ${newOutlet.id}`;
         const fontSize = 20;
         ctx.fillStyle = '#000000';
-        ctx.font = `bold ${fontSize}px sans-serif`; // Menggunakan sans-serif sebagai fallback
+        ctx.font = `bold ${fontSize}px`; // Menggunakan sans-serif sebagai fallback
         ctx.textAlign = 'center';
         ctx.fillText(text, canvasWidth / 2, canvasHeight - 20);
 
@@ -1822,7 +1822,7 @@ async updateOutlet(req, res) {
     const text = `Salam Donasi ${updatedOutlet.id}`;
     const fontSize = 20;
     ctx.fillStyle = '#000000';
-    ctx.font = `bold ${fontSize}px sans-serif`; // Gunakan sans-serif sebagai fallback
+    ctx.font = `bold ${fontSize}px`; // Gunakan sans-serif sebagai fallback
 
     const textWidth = ctx.measureText(text).width;
     const textX = (canvasWidth - textWidth) / 2;
