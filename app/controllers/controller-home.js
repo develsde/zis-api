@@ -1986,11 +1986,8 @@ module.exports = {
       }));
 
       const transformedDetails = detail_pemesanan.map((detail, index) => {
-        const tiketTimestamp = new Date().getTime();
-        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
-          Math.random() * 1000
-        )}`;
-        const kode_tiket = `TK-${tiketUniqueId}`;
+        const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
+
 
         return {
           id_pemesanan: postResult.id,
@@ -3041,11 +3038,7 @@ module.exports = {
       }));
 
       const transformedDetails = detail_pemesanan.map((detail, index) => {
-        const tiketTimestamp = new Date().getTime();
-        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
-          Math.random() * 1000
-        )}`;
-        const kode_tiket = `TK-${tiketUniqueId}`;
+        const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
 
         return {
           id_pemesanan: postResult.id,
