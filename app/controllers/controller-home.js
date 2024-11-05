@@ -2974,4 +2974,136 @@ module.exports = {
       });
     }
   },
+
+  async postPemesananMegaKonserErp(req, res) {
+    try {
+      const {
+        nama,
+        telepon,
+        email,
+        gender,
+        total_harga,
+        // kode_affiliator,
+        // bank,
+        detail_pemesanan,
+      } = req.body;
+
+      if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
+        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+      }
+
+      // if (kode_affiliator) {
+      //   const affiliator = await prisma.affiliator.findUnique({
+      //     where: { kode: kode_affiliator },
+      //   });
+
+      //   if (!affiliator) {
+      //     return res.status(400).json({ message: "Kode Affiliator tidak tersedia" });
+      //   }
+      // }
+
+      const lastOrder = await prisma.pemesanan_megakonser.findFirst({
+        orderBy: {
+          id: "desc",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const baseId = 686;
+      const nextId = lastOrder ? lastOrder.id + 1 : baseId;
+      const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
+        detail_pemesanan[0].id_tiket === 3 ? 'B' :
+          'C';
+      const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
+
+      const postResult = await prisma.pemesanan_megakonser.create({
+        data: {
+          nama,
+          telepon,
+          email,
+          gender,
+          total_harga: Number(total_harga),
+          // kode_affiliator,
+          kode_pemesanan: kode_pemesanan,
+          metode_pembayaran: "B2B",
+          status: 'settlement',
+          // transaction_time: transaction_time,
+          // expiry_time: expiry_time,
+        },
+      });
+
+      const tiketDetails = detail_pemesanan.map((detail) => ({
+        id_tiket: detail.id_tiket,
+        id_detail_tiket: detail.id_tiket_detail,
+        harga_tiket: detail.harga_tiket,
+      }));
+
+      const transformedDetails = detail_pemesanan.map((detail, index) => {
+        const tiketTimestamp = new Date().getTime();
+        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
+          Math.random() * 1000
+        )}`;
+        const kode_tiket = `TK-${tiketUniqueId}`;
+
+        return {
+          id_pemesanan: postResult.id,
+          id_tiket: detail.id_tiket,
+          id_detail_tiket: detail.id_tiket_detail,
+          kode_tiket,
+        };
+      });
+
+      await prisma.detail_pemesanan_megakonser.createMany({
+        data: transformedDetails,
+      });
+
+      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+        where: {
+          kode_pemesanan: kode_pemesanan,
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+        },
+      });
+
+      try {
+        const pdfLink = await generatePdf({ orderDetails: pemesanan });
+
+        const templateEmail = await generateTemplateMegaKonser({
+          email,
+          password: email,
+          tiket: pemesanan,
+        });
+
+        const msgId = await sendEmailWithPdf({
+          email,
+          html: templateEmail,
+          subject: "Pembelian Tiket Sound of Freedom",
+          pdfPath: pdfLink,
+        });
+      } catch (error) {
+        console.error(`Failed to generate PDF for order: ${kode_pemesanan}, error:`, error);
+      }
+
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: {
+          postResult,
+          tiketDetails,
+        },
+      });
+    } catch (error) {
+      console.error(`Error processing order: ${error.message}`);
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
 };
