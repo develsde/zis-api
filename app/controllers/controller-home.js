@@ -2073,35 +2073,44 @@ module.exports = {
 
 
 
-  async getPemesananByOrder(req, res) {
+  async getDetailByKodePemesanan(req, res) {
     try {
-      // Validate request parameters
-      const { order_id } = req.params; // Assuming order_id comes from the URL parameters
-
-      if (!order_id) {
-        return res.status(400).json({ message: 'Order ID is required' });
-      }
-
-      // Fetch pemesanan from the database
-      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
-        where: {
-          kode_pemesanan: order_id,
-        },
+      const kodePemesanan = req.params.kode_pemesanan;
+  
+      const [count, ActUser] = await prisma.$transaction([
+        prisma.detail_pemesanan_megakonser.count({
+          where: {
+            pemesanan_megakonser: {
+              kode_pemesanan: kodePemesanan,
+            },
+          },
+        }),
+        prisma.detail_pemesanan_megakonser.findMany({
+          where: {
+            pemesanan_megakonser: {
+              kode_pemesanan: kodePemesanan,
+            },
+          },
+          include: {
+            tiket_konser: true,
+            tiket_konser_detail: true,
+            pemesanan_megakonser: true,
+          },
+        }),
+      ]);
+  
+      res.status(200).json({
+        message: "Sukses Ambil Data Berdasarkan Kode Pemesanan",
+        count: count,
+        data: ActUser,
       });
-
-      // Check if pemesanan was found
-      if (!pemesanan) {
-        return res.status(404).json({ message: 'Pemesanan not found' });
-      }
-
-      // Send the pemesanan data as a response
-      return res.status(200).json(pemesanan);
     } catch (error) {
-      // Handle any errors that occur during the process
-      console.error('Error fetching pemesanan:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({
+        message: error?.message,
+      });
     }
   },
+  
 
 
 
