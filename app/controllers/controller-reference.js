@@ -1570,44 +1570,44 @@ ORDER BY aa.created_date DESC
         alamat_outlet: z.string(),
         pic_outlet: z.string(),
       });
-
+  
       const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
       const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
       let errorObj = {};
-
+  
       if (body.error) {
         body.error.issues.forEach((issue) => {
           errorObj[issue.path[0]] = issue.message;
         });
         body.error = errorObj;
       }
-
+  
       if (!body.success) {
         return res.status(400).json({
           message: "Beberapa Field Harus Diisi",
           error: errorObj,
         });
       }
-
+  
       const userId = req.user.user_id;
       const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
-
+  
       if (!cso) {
         return res.status(404).json({
           message: "CSO tidak ditemukan untuk user ini",
         });
       }
-
+  
       const currentOutlet = await prisma.outlet.findFirst({
         where: { nama_outlet: body.data.nama_outlet },
       });
-
+  
       if (currentOutlet) {
         return res.status(400).json({
           message: "Outlet Sudah Terdaftar",
         });
       }
-
+  
       const newOutlet = await prisma.outlet.create({
         data: {
           nama_outlet: body.data.nama_outlet,
@@ -1617,37 +1617,35 @@ ORDER BY aa.created_date DESC
           register_date: new Date(),
         },
       });
-
+  
       const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${newOutlet.id}`;
-      const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
-
+      const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl, { width: 800 });
+  
       const qrCodeImage = await loadImage(qrCodeDataUrl);
       const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
       const logoImage = await loadImage(logoPath);
-
-      // Load background image
+  
       const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
       const backgroundImage = await loadImage(backgroundImagePath);
-
-      // Set up canvas dimensions
-      const canvasWidth = 400;
-      const canvasHeight = 600;
-      const qrSize = 250;
-      const reducedBorderSize = 20;
-      const textMargin = 40;
-
-      // Create canvas
+  
+      // Set up canvas for A4 size at 300 DPI
+      const canvasWidth = 2480;  // A4 width in pixels at 300 DPI
+      const canvasHeight = 3508; // A4 height in pixels at 300 DPI
+      const qrSize = 700;        // Adjusted QR code size for A4
+      const logoSize = 150;      // Adjusted logo size
+      const borderSize = 60;     // Adjusted border size
+      const textMargin = 100;    // Adjusted text margin
+  
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext('2d');
-
-      // Calculate the scale for the background image
+  
+      // Scale the background to fit A4 size
       const backgroundScaleWidth = canvasWidth / backgroundImage.width;
       const backgroundScaleHeight = canvasHeight / backgroundImage.height;
       const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight);
-
-      // Draw the background image
-      const bgX = (canvasWidth / 2) - (backgroundImage.width * backgroundScale / 2);
-      const bgY = (canvasHeight / 2) - (backgroundImage.height * backgroundScale / 2);
+  
+      const bgX = (canvasWidth - backgroundImage.width * backgroundScale) / 2;
+      const bgY = (canvasHeight - backgroundImage.height * backgroundScale) / 2;
       ctx.drawImage(
         backgroundImage,
         bgX,
@@ -1655,39 +1653,37 @@ ORDER BY aa.created_date DESC
         backgroundImage.width * backgroundScale,
         backgroundImage.height * backgroundScale
       );
-
-      // Draw the smaller white area behind the QR code
+  
+      // Draw white area behind QR code
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(
-        (canvasWidth - (qrSize + reducedBorderSize)) / 2,
-        canvasHeight - qrSize - textMargin - 60,
-        qrSize + reducedBorderSize,
+        (canvasWidth - (qrSize + borderSize)) / 2,
+        canvasHeight - qrSize - textMargin - 300,
+        qrSize + borderSize,
         qrSize + textMargin
       );
-
-      // Draw QR code in the center of the white area
+  
+      // Draw QR code centered in white area
       const qrX = (canvasWidth - qrSize) / 2;
-      const qrY = canvasHeight - qrSize - textMargin - 40;
+      const qrY = canvasHeight - qrSize - textMargin - 300;
       ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
-
-      // Draw the logo centered on top of the QR code
-      const logoSize = 50;
-      const logoX = qrX + (qrSize / 2) - (logoSize / 2);
-      const logoY = qrY + (qrSize / 2) - (logoSize / 2);
+  
+      // Draw logo centered over QR code
+      const logoX = qrX + (qrSize - logoSize) / 2;
+      const logoY = qrY + (qrSize - logoSize) / 2;
       ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
-
-
-      // Menggambar teks di bawah QR code menggunakan font Roboto
+  
+      // Draw text below QR code with larger font
       registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
       const text = `Salam Donasi ${newOutlet.id}`;
-      const fontSize = 20;
+      const fontSize = 60;  // Adjusted font size for A4
       ctx.fillStyle = '#000000';
-      ctx.font = `bold ${fontSize}px Roboto`; // Menggunakan font Roboto
+      ctx.font = `bold ${fontSize}px Roboto`;
       ctx.textAlign = 'center';
-      ctx.fillText(text, canvasWidth / 2, canvasHeight - 20);
-
+      ctx.fillText(text, canvasWidth / 2, canvasHeight - 100);
+  
       const qrCodeWithLogoData = canvas.toDataURL('image/png');
-
+  
       return res.status(200).json({
         message: "Sukses",
         data: "Berhasil Menambahkan Outlet dengan QR Code",
@@ -1700,57 +1696,58 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+  
 
-
+  
   async updateOutlet(req, res) {
     const outletId = req.params.id;
     try {
-      // Validasi
+      // Validation
       const schema = z.object({
         nama_outlet: z.string().optional(),
         alamat_outlet: z.string().optional(),
         pic_outlet: z.string().optional(),
       });
-
+  
       const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
       const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
       let errorObj = {};
-
+  
       if (body.error) {
         body.error.issues.forEach((issue) => {
           errorObj[issue.path[0]] = issue.message;
         });
         body.error = errorObj;
       }
-
+  
       if (!body.success) {
         return res.status(400).json({
           message: "Beberapa Field Harus Diisi",
           error: errorObj,
         });
       }
-
+  
       const userId = req.user.user_id;
       const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
-
+  
       if (!cso) {
         return res.status(404).json({
           message: "CSO tidak ditemukan untuk user ini",
         });
       }
-
-      // Periksa apakah outlet ada
+  
+      // Check if outlet exists
       const outlet = await prisma.outlet.findFirst({
         where: { id: Number(outletId), cso_id: cso.id },
       });
-
+  
       if (!outlet) {
         return res.status(404).json({
           message: "Outlet tidak ditemukan",
         });
       }
-
-      // Perbarui detail outlet
+  
+      // Update outlet details
       const updatedOutlet = await prisma.outlet.update({
         where: {
           id: Number(outletId),
@@ -1761,36 +1758,36 @@ ORDER BY aa.created_date DESC
           ...(body.data.pic_outlet && { pic_outlet: body.data.pic_outlet }),
         },
       });
-
+  
       // Generate QR code URL
       const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${updatedOutlet.id}`;
       const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
-
+  
       const qrCodeImage = await loadImage(qrCodeDataUrl);
       const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
       const logoImage = await loadImage(logoPath);
-
+  
       // Load background image
       const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
       const backgroundImage = await loadImage(backgroundImagePath);
-
-      // Set up canvas dimensions
-      const canvasWidth = 400;
-      const canvasHeight = 600;
-      const qrSize = 250;
-      const reducedBorderSize = 20;
-      const textMargin = 40;
-
-      // Buat canvas
+  
+      // Set A4 canvas dimensions at 300 DPI (2480x3508 pixels)
+      const canvasWidth = 2480;
+      const canvasHeight = 3508;
+      const qrSize = 1200; // Adjust QR size for A4
+      const reducedBorderSize = 100; // Border around the QR
+      const textMargin = 200;
+  
+      // Create canvas at A4 size
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext('2d');
-
-      // Hitung skala untuk gambar latar belakang
+  
+      // Calculate background scale
       const backgroundScaleWidth = canvasWidth / backgroundImage.width;
       const backgroundScaleHeight = canvasHeight / backgroundImage.height;
       const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight);
-
-      // Gambar gambar latar belakang
+  
+      // Draw background image
       const bgX = (canvasWidth / 2) - (backgroundImage.width * backgroundScale / 2);
       const bgY = (canvasHeight / 2) - (backgroundImage.height * backgroundScale / 2);
       ctx.drawImage(
@@ -1800,42 +1797,42 @@ ORDER BY aa.created_date DESC
         backgroundImage.width * backgroundScale,
         backgroundImage.height * backgroundScale
       );
-
-      // Gambar area putih kecil di belakang QR code
+  
+      // Draw white area behind QR code
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(
         (canvasWidth - (qrSize + reducedBorderSize)) / 2,
-        canvasHeight - qrSize - textMargin - 60,
+        canvasHeight - qrSize - textMargin - 200,
         qrSize + reducedBorderSize,
         qrSize + textMargin
       );
-
-      // Gambar QR code di tengah area putih
+  
+      // Draw QR code in center of the white area
       const qrX = (canvasWidth - qrSize) / 2;
-      const qrY = canvasHeight - qrSize - textMargin - 40;
+      const qrY = canvasHeight - qrSize - textMargin - 160;
       ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
-
-      // Gambar logo yang terletak di atas QR code
-      const logoSize = 50;
+  
+      // Draw logo centered on QR code
+      const logoSize = 200;
       const logoX = qrX + (qrSize / 2) - (logoSize / 2);
       const logoY = qrY + (qrSize / 2) - (logoSize / 2);
       ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
-
-      // Menggambar teks menggunakan font Roboto (fallback ke sans-serif)
+  
+      // Draw text with larger font size
       registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
       const text = `Salam Donasi ${updatedOutlet.id}`;
-      const fontSize = 20;
+      const fontSize = 100;
       ctx.fillStyle = '#000000';
-      ctx.font = `bold ${fontSize}px Roboto, sans-serif`; // Menggunakan Roboto dengan fallback ke sans-serif
-
+      ctx.font = `bold ${fontSize}px Roboto`;
+  
       const textWidth = ctx.measureText(text).width;
       const textX = (canvasWidth - textWidth) / 2;
-      const textY = canvasHeight - 20;
-
+      const textY = canvasHeight - 100;
+  
       ctx.fillText(text, textX, textY);
-
+  
       const qrCodeWithLogoData = canvas.toDataURL('image/png');
-
+  
       return res.status(200).json({
         message: "Sukses",
         data: "Outlet berhasil diperbarui dengan QR Code",
@@ -1848,6 +1845,9 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+  
+  
+
 
   async getTransaksiPerOutlet(req, res) {
     try {

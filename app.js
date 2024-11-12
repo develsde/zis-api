@@ -84,109 +84,125 @@ const rawBodySaver = (req, res, buf, encoding) => {
   }
 };
 
-// app.post("/payment-success", bodyParser.json({ 
-//   strict: false, 
-//   verify: (req, res, buf) => {
-//     try {
-//       req.rawBody = buf.toString();
-//     } catch (e) {
-//       console.error('Error in body parsing verification:', e);
-//       req.rawBody = null;
-//     }
-//   }
-// }), async (req, res) => {
-//   try {
-//     if (!req.body && !req.rawBody) {
-//       console.error('Empty request received');
-//       throw new Error('Request body is empty');
-//     }
+app.post("/payment-success", bodyParser.json({ 
+  strict: false, 
+  verify: (req, res, buf) => {
+    try {
+      req.rawBody = buf.toString();
+    } catch (e) {
+      console.error('Error in body parsing verification:', e);
+      req.rawBody = null;
+    }
+  }
+}), async (req, res) => {
+  try {
+    if (!req.body && !req.rawBody) {
+      console.error('Empty request received');
+      throw new Error('Request body is empty');
+    }
 
-//     const referer = req.get("referer");
-//     const origin = req.get("origin");
-//     let decodedData;
-//     if (req.body.data) {
-//       try {
-//         decodedData = JSON.parse(
-//           Buffer.from(req.body.data, "base64").toString("utf-8")
-//         );
-//         console.log("Decoded Data:", decodedData);
-//       } catch (decodeError) {
-//         console.warn("Failed to decode Base64 data:", {
-//           error: decodeError.message,
-//           base64Content: req.body.data,
-//         });
-//         throw new Error("Invalid Base64 data");
-//       }
-//     } else {
-//       throw new Error("Missing 'data' field in the request body");
-//     }
-//     const requestData = {
-//       timestamp: new Date().toISOString(),
-//       headers: req?.headers,
-//       rawBody: req.rawBody,
-//       parsedBody: decodedData,
-//       config: req?.config,
-//       referer: referer,
-//       origin: origin
-//     };
+    const referer = req.get("referer");
+    const origin = req.get("origin");
+    let decodedData;
 
-//     console.log('Payment Success Request:', JSON.stringify(requestData, null, 2));
+    // Step 1: Check if 'data' field exists in the body
+    if (req.body.data) {
+      // Step 2: Decode the Base64 'data' field
+      try {
+        const decodedBase64 = Buffer.from(req.body.data, "base64").toString("utf-8");
+        console.log("Decoded Base64 Data:", decodedBase64);
 
-//     const responseData = {
-//       status: "success received"
-//     };
-//     const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
+        // Step 3: Parse the decoded string as JSON
+        try {
+          decodedData = JSON.parse(decodedBase64);
+          console.log("Decoded Data:", decodedData);
+        } catch (parseError) {
+          console.warn("Failed to parse decoded data:", {
+            error: parseError.message,
+            decodedData: decodedBase64,
+          });
+          throw new Error("Invalid JSON format after decoding Base64 data");
+        }
 
-//     console.log('Successfully processed payment notification:', {
-//       timestamp: new Date().toISOString(),
-//       responseData: responseData
-//     });
+      } catch (decodeError) {
+        console.warn("Failed to decode Base64 data:", {
+          error: decodeError.message,
+          base64Content: req.body.data,
+        });
+        throw new Error("Invalid Base64 data");
+      }
+    } else {
+      throw new Error("Missing 'data' field in the request body");
+    }
 
-//     return res.status(200).json(base64Data);
+    const requestData = {
+      timestamp: new Date().toISOString(),
+      headers: req?.headers,
+      rawBody: req.rawBody,
+      parsedBody: decodedData,
+      config: req?.config,
+      referer: referer,
+      origin: origin
+    };
 
-//   } catch (error) {
-//     console.error('Payment Success Error:', {
-//       timestamp: new Date().toISOString(),
-//       error: {
-//         message: error.message,
-//         stack: error.stack,
-//         name: error.name
-//       },
-//       requestData: {
-//         headers: req?.headers,
-//         body: req?.body,
-//         config: req?.config,
-//         rawBody: req?.rawBody,
-//         referer: req.get("referer"),
-//         origin: req.get("origin")
-//       }
-//     });
+    console.log('Payment Success Request:', JSON.stringify(requestData, null, 2));
 
-//     let statusCode = 400;
-//     let errorMessage = error.message;
+    const responseData = {
+      status: "success received"
+    };
+    const base64Data = Buffer.from(JSON.stringify(responseData)).toString("base64");
 
-//     if (error.name === 'SyntaxError') {
-//       statusCode = 400;
-//       errorMessage = 'Invalid JSON format in request';
-//     } else if (error.name === 'TypeError') {
-//       statusCode = 422;
-//       errorMessage = 'Invalid data type in request';
-//     } else if (error.message.includes('empty')) {
-//       statusCode = 400;
-//       errorMessage = 'Request body is empty';
-//     }
+    console.log('Successfully processed payment notification:', {
+      timestamp: new Date().toISOString(),
+      responseData: responseData
+    });
 
-//     return res.status(statusCode).json({
-//       status: "error",
-//       timestamp: new Date().toISOString(),
-//       error: {
-//         message: errorMessage,
-//         type: error.name,
-//         code: statusCode
-//       }
-//     });
-//   }
-// });
+    return res.status(200).json(base64Data);
+
+  } catch (error) {
+    console.error('Payment Success Error:', {
+      timestamp: new Date().toISOString(),
+      error: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      },
+      requestData: {
+        headers: req?.headers,
+        body: req?.body,
+        config: req?.config,
+        rawBody: req?.rawBody,
+        referer: req.get("referer"),
+        origin: req.get("origin")
+      }
+    });
+
+    let statusCode = 400;
+    let errorMessage = error.message;
+
+    if (error.name === 'SyntaxError') {
+      statusCode = 400;
+      errorMessage = 'Invalid JSON format in request';
+    } else if (error.name === 'TypeError') {
+      statusCode = 422;
+      errorMessage = 'Invalid data type in request';
+    } else if (error.message.includes('empty')) {
+      statusCode = 400;
+      errorMessage = 'Request body is empty';
+    }
+
+    return res.status(statusCode).json({
+      status: "error",
+      timestamp: new Date().toISOString(),
+      error: {
+        message: errorMessage,
+        type: error.name,
+        code: statusCode
+      }
+    });
+  }
+});
+
 
 // app.post("/payment-success", bodyParser.text({
 //   type: '*/*',
@@ -296,123 +312,273 @@ const rawBodySaver = (req, res, buf, encoding) => {
 //   }
 // });
 
-app.post(
-  "/payment-success",
-  bodyParser.text({
-    type: "*/*",
-    verify: (req, res, buf) => {
-      try {
-        req.rawBody = buf.toString();
-        console.log("liat:", req)
-      } catch (e) {
-        console.error("Error in body parsing verification:", e);
-        req.rawBody = null;
-      }
-    },
-  }),
-  async (req, res) => {
-    try {
-      // Pastikan rawBody tersedia
-      if (!req.rawBody) {
-        console.error("Empty request received");
-        throw new Error("Request body is empty");
-      }
+// app.post(
+//   "/payment-success",
+//   bodyParser.text({
+//     type: "*/*",
+//     verify: (req, res, buf) => {
+//       try {
+//         req.rawBody = buf.toString();
+//       } catch (e) {
+//         console.error("Error in body parsing verification:", e);
+//         req.rawBody = null;
+//       }
+//     },
+//   }),
+//   async (req, res) => {
+//     try {
+//       // Pastikan rawBody tersedia
+//       if (!req.rawBody) {
+//         console.error("Empty request received");
+//         throw new Error("Request body is empty");
+//       }
 
-      const referer = req.get("referer");
-      const origin = req.get("origin");
-      let decodedData;
-      const base64Content = req.rawBody;
+//       let decodedData;
+//       const base64Content = req.rawBody;
 
-      if (base64Content) {
-        try {
-          // Langkah pertama: lakukan decode dari Base64, kemudian parse ke JSON
-          const utf8DecodedData = Buffer.from(base64Content, "base64").toString("utf-8");
-          decodedData = JSON.parse(utf8DecodedData);
-          console.log("Decoded Data:", decodedData);
-        } catch (decodeError) {
-          console.warn("Failed to decode Base64 data:", {
-            error: decodeError.message,
-            base64Content: base64Content,
-          });
-          throw new Error("Invalid Base64 data");
-        }
-      } else {
-        throw new Error("Missing 'data' field in the request body");
-      }
+//       if (base64Content) {
+//         try {
+//           // Langkah pertama: lakukan decode dari Base64, kemudian parse ke JSON
+//           const utf8DecodedData = Buffer.from(base64Content, "base64").toString("utf-8");
+//           console.log("mentah:", base64Content);
+//           console.log("setengah", utf8DecodedData);
+//           decodedData = JSON.parse(utf8DecodedData);
+//           console.log("Decoded Data:", decodedData);
+//         } catch (decodeError) {
+//           console.warn("Failed to decode Base64 data:", {
+//             error: decodeError.message,
+//             base64Content: base64Content,
+//           });
+//           throw new Error("Invalid Base64 data");
+//         }
+//       } else {
+//         throw new Error("Missing 'data' field in the request body");
+//       }
 
-      // Struktur data request untuk logging atau debugging
-      const requestData = {
-        timestamp: new Date().toISOString(),
-        headers: req?.headers,
-        rawBody: req.rawBody,
-        parsedBody: decodedData,
-        config: req?.config,
-        referer: referer,
-        origin: origin,
-      };
+//       // Struktur data request untuk logging atau debugging
+//       const requestData = {
+//         timestamp: new Date().toISOString(),
+//         headers: req?.headers,
+//         rawBody: req.rawBody,
+//         parsedBody: decodedData,
+//       };
 
-      console.log("Payment Success Request:", JSON.stringify(requestData, null, 2));
+//       console.log("Payment Success Request:", JSON.stringify(requestData, null, 2));
 
-      // Response sukses
-      const responseData = {
-        status: "success received",
-      };
-      const base64Response = Buffer.from(JSON.stringify(responseData)).toString("base64");
+//       // Response sukses
+//       const responseData = {
+//         status: "success received",
+//       };
+//       const base64Response = Buffer.from(JSON.stringify(responseData)).toString("base64");
 
-      console.log("Successfully processed payment notification:", {
-        timestamp: new Date().toISOString(),
-        responseData: responseData,
-      });
+//       console.log("Successfully processed payment notification:", {
+//         timestamp: new Date().toISOString(),
+//         responseData: responseData,
+//       });
 
-      // Kirimkan response dalam format Base64
-      return res.status(200).json(base64Response);
-    } catch (error) {
-      console.error("Payment Success Error:", {
-        timestamp: new Date().toISOString(),
-        error: {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-        },
-        requestData: {
-          headers: req?.headers,
-          body: req?.body,
-          config: req?.config,
-          rawBody: req?.rawBody,
-          referer: req.get("referer"),
-          origin: req.get("origin"),
-        },
-      });
+//       // Kirimkan response dalam format Base64
+//       return res.status(200).json({ response: base64Response });
+//     } catch (error) {
+//       console.error("Payment Success Error:", {
+//         timestamp: new Date().toISOString(),
+//         error: {
+//           message: error.message,
+//           stack: error.stack,
+//           name: error.name,
+//         },
+//         requestData: {
+//           headers: req?.headers,
+//           body: req?.body,
+//           rawBody: req?.rawBody,
+//         },
+//       });
 
-      let statusCode = 400;
-      let errorMessage = error.message;
+//       let statusCode = 400;
+//       let errorMessage = error.message;
 
-      if (error.name === "SyntaxError") {
-        statusCode = 400;
-        errorMessage = "Invalid JSON format in request";
-      } else if (error.name === "TypeError") {
-        statusCode = 422;
-        errorMessage = "Invalid data type in request";
-      } else if (error.message.includes("empty")) {
-        statusCode = 400;
-        errorMessage = "Request body is empty";
-      }
+//       if (error.name === "SyntaxError") {
+//         statusCode = 400;
+//         errorMessage = "Invalid JSON format in request";
+//       } else if (error.message.includes("empty")) {
+//         statusCode = 400;
+//         errorMessage = "Request body is empty";
+//       }
 
-      // Kirim response error dengan status dan informasi yang jelas
-      return res.status(statusCode).json({
-        status: "error",
-        timestamp: new Date().toISOString(),
-        error: {
-          message: errorMessage,
-          type: error.name,
-          code: statusCode,
-        },
-      });
-    }
-  }
-);
+//       // Kirim response error dengan status dan informasi yang jelas
+//       return res.status(statusCode).json({
+//         status: "error",
+//         timestamp: new Date().toISOString(),
+//         error: {
+//           message: errorMessage,
+//           type: error.name,
+//           code: statusCode,
+//         },
+//       });
+//     }
+//   }
+// );
+
+// Middleware untuk rute selain "/payment-success"
+// Middleware JSON hanya untuk rute selain "/payment-success"
+// app.use((req, res, next) => {
+//   if (req.path !== "/payment-success") {
+//     express.json()(req, res, next);
+//   } else {
+//     next();
+//   }
+// });
+
+// // Rute "/payment-success" untuk menangani data Base64
+// app.post(
+//   "/payment-success",
+//   express.raw({
+//     type: "*/*",
+//     verify: (req, res, buf) => {
+//       try {
+//         req.rawBody = buf.toString();
+//       } catch (e) {
+//         console.error("Kesalahan dalam verifikasi parsing body:", e);
+//         req.rawBody = null;
+//       }
+//     },
+//   }),
+//   async (req, res) => {
+//     try {
+//       if (!req.rawBody) {
+//         throw new Error("Badan permintaan kosong");
+//       }
+
+//       let decodedData;
+//       const base64Content = req.rawBody;
+
+//       if (base64Content) {
+//         try {
+//           // Decode Base64 ke UTF-8, lalu parsing ke JSON
+//           const utf8DecodedData = Buffer.from(base64Content, "base64").toString("utf-8");
+//           console.log("Konten Base64 Mentah:", base64Content);
+//           console.log("Konten Terdecode UTF-8:", utf8DecodedData);
+//           decodedData = JSON.parse(utf8DecodedData);
+//           console.log("Data Terparse:", decodedData);
+//         } catch (decodeError) {
+//           console.warn("Gagal mendecode data Base64:", {
+//             error: decodeError.message,
+//             base64Content,
+//           });
+//           throw new Error("Data Base64 tidak valid");
+//         }
+//       } else {
+//         throw new Error("Badan permintaan hilang atau konten Base64 tidak valid");
+//       }
+
+//       console.log("Permintaan Payment Success:", {
+//         timestamp: new Date().toISOString(),
+//         headers: req.headers,
+//         rawBody: req.rawBody,
+//         parsedBody: decodedData,
+//       });
+
+//       // Mengirimkan respon sukses dalam format Base64
+//       const responseData = { status: "berhasil diterima" };
+//       const base64Response = Buffer.from(JSON.stringify(responseData)).toString("base64");
+
+//       console.log("Berhasil memproses notifikasi pembayaran:", {
+//         timestamp: new Date().toISOString(),
+//         responseData,
+//       });
+
+//       return res.status(200).json({ response: base64Response });
+//     } catch (error) {
+//       console.error("Kesalahan Payment Success:", {
+//         timestamp: new Date().toISOString(),
+//         error: {
+//           message: error.message,
+//           stack: error.stack,
+//           name: error.name,
+//         },
+//         requestData: {
+//           headers: req.headers,
+//           body: req.body,
+//           rawBody: req.rawBody,
+//         },
+//       });
+
+//       let statusCode = 400;
+//       let errorMessage = error.message;
+
+//       if (error.name === "SyntaxError") {
+//         errorMessage = "Format JSON tidak valid dalam permintaan";
+//       } else if (error.message.includes("kosong")) {
+//         errorMessage = "Badan permintaan kosong";
+//       }
+
+//       return res.status(statusCode).json({
+//         status: "error",
+//         timestamp: new Date().toISOString(),
+//         error: {
+//           message: errorMessage,
+//           type: error.name,
+//           code: statusCode,
+//         },
+//       });
+//     }
+//   }
+// );
 
 
+
+
+// // Middleware global yang menonaktifkan express.json() untuk rute "/payment-success"
+// app.use((req, res, next) => {
+//   if (req.path !== "/payment-success") {
+//     express.json()(req, res, next);  // Parsing JSON hanya untuk route selain "/payment-success"
+//   } else {
+//     next();
+//   }
+// });
+
+// Rute "/payment-success" khusus untuk menerima plain text dengan header JSON
+// app.post(
+//   "/payment-success",
+//   express.raw({ type: "*/*" }), // Menangani semua tipe konten sebagai teks mentah
+//   async (req, res) => {
+//     try {
+//       if (!req.body) {
+//         throw new Error("Body kosong atau tidak valid");
+//       }
+
+//       let decodedData;
+//       const base64Content = req.body.toString(); // Ambil body sebagai string
+
+//       try {
+//         // Decode dari Base64 ke UTF-8, kemudian parsing ke JSON
+//         const utf8DecodedData = Buffer.from(base64Content, "base64").toString("utf-8");
+//         console.log("Data Terdecode UTF-8:", utf8DecodedData);
+//         decodedData = JSON.parse(utf8DecodedData); // Parsing string UTF-8 sebagai JSON
+//       } catch (decodeError) {
+//         console.error("Gagal mendecode data Base64:", decodeError);
+//         throw new Error("Data Base64 tidak valid atau JSON tidak valid");
+//       }
+
+//       console.log("Data Callback Diterima:", decodedData);
+
+//       // Respon sukses
+//       const responseData = { status: "berhasil diterima" };
+//       const base64Response = Buffer.from(JSON.stringify(responseData)).toString("base64");
+
+//       return res.status(200).json({ response: base64Response });
+//     } catch (error) {
+//       console.error("Kesalahan dalam memproses callback:", error);
+
+//       return res.status(400).json({
+//         status: "error",
+//         error: {
+//           message: error.message,
+//           type: error.name,
+//         },
+//       });
+//     }
+//   }
+// );
 
 
 app.get("/", (req, res) => {
