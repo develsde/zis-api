@@ -1178,6 +1178,7 @@ model detail_pemesanan_megakonser {
   id_tiket             Int?
   id_detail_tiket      Int?
   kode_tiket           String?              @db.VarChar(50)
+  status               Int?                 @default(0)
   pemesanan_megakonser pemesanan_megakonser @relation(fields: [id_pemesanan], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK__pemesanan_megakonser")
   tiket_konser         tiket_konser?        @relation(fields: [id_tiket], references: [tiket_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_detail_pemesanan_megakonser_tiket_konser")
   tiket_konser_detail  tiket_konser_detail? @relation(fields: [id_detail_tiket], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_detail_pemesanan_megakonser_tiket_konser_detail")
@@ -1194,7 +1195,7 @@ model pemesanan_megakonser {
   telepon                     String?                       @db.VarChar(250)
   gender                      String?                       @db.VarChar(50)
   total_harga                 Int?
-  kode_affiliator             String?                       @unique(map: "Index 3") @db.VarChar(10)
+  kode_affiliator             String?                       @db.VarChar(10)
   kode_pemesanan              String?                       @unique(map: "Index 2") @db.VarChar(50)
   metode_pembayaran           String?                       @db.VarChar(250)
   bank                        String?                       @db.VarChar(250)
@@ -1204,6 +1205,8 @@ model pemesanan_megakonser {
   expiry_time                 DateTime?                     @db.DateTime(0)
   detail_pemesanan_megakonser detail_pemesanan_megakonser[]
   affiliator                  affiliator?                   @relation(fields: [kode_affiliator], references: [kode], onDelete: NoAction, onUpdate: NoAction, map: "FK_pemesanan_megakonser_affiliator")
+
+  @@index([kode_affiliator], map: "Index 3")
 }
 
 model tiket_konser {
@@ -1287,10 +1290,10 @@ model tiket_konser_detail {
 }
 
 model affiliator {
-  id                   Int                   @id @default(autoincrement())
-  nama                 String?               @db.VarChar(250)
-  kode                 String?               @unique(map: "Index 2") @db.VarChar(10)
-  pic                  String?               @db.VarChar(250)
-  status               Int?                  @default(0)
-  pemesanan_megakonser pemesanan_megakonser?
+  id                   Int                    @id @default(autoincrement())
+  nama                 String?                @db.VarChar(250)
+  kode                 String?                @unique(map: "Index 2") @db.VarChar(10)
+  pic                  String?                @db.VarChar(250)
+  status               Int?                   @default(0)
+  pemesanan_megakonser pemesanan_megakonser[]
 }

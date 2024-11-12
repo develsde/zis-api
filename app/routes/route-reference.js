@@ -12,6 +12,7 @@ router.get("/gla", authentication, refData.glaccount);
 router.get("/all-program", authentication, refData.getDataProgram); //new for mt940 Header
 router.get("/all-muzaki", authentication, refData.getAllMuzaki); //new for mt940 Headerx`
 router.get("/glaccMt", authentication, refData.glaccountMt940); //new for mt940
+router.get("/glaccManual", authentication, refData.glaccountManual); //new for mt940
 router.get("/gltype", authentication, refData.gltype);
 router.post("/addgl", authentication, refData.createGlAccount);
 router.put("/updategl/:id", authentication, refData.updateGlAccount);
