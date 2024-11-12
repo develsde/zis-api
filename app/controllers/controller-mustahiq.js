@@ -1,6 +1,6 @@
 const { prisma } = require("../../prisma/client");
 const fs = require("fs");
-const { sendImkas } = require("../helper/imkas");
+// const { sendImkas } = require("../helper/imkas");
 
 module.exports = {
   async details(req, res) {
@@ -73,30 +73,30 @@ module.exports = {
       }
       console.log(pn)
       console.log(pn.replace(/[^0-9\.]+/g, ""))
-      const checks = await sendImkas({
-        phone: pn.replace(/[^0-9\.]+/g, ""),
-        nom: '50',
-        id: `10${userId}`,
-        desc: "Pengecekan Nomor",
-      });
-      const log = await prisma.log_vendor.create({
-        data: {
-          vendor_api: checks?.config?.url,
-          url_api: req.originalUrl,
-          api_header: JSON.stringify(checks.headers),
-          api_body: checks?.config?.data,
-          api_response: JSON.stringify(checks.data),
-          payload: JSON.stringify(req.body),
-        },
-      });
-      const check = checks?.data
-      console.log(check);
+      // const checks = await sendImkas({
+      //   phone: pn.replace(/[^0-9\.]+/g, ""),
+      //   nom: '50',
+      //   id: `10${userId}`,
+      //   desc: "Pengecekan Nomor",
+      // });
+      // const log = await prisma.log_vendor.create({
+      //   data: {
+      //     vendor_api: checks?.config?.url,
+      //     url_api: req.originalUrl,
+      //     api_header: JSON.stringify(checks.headers),
+      //     api_body: checks?.config?.data,
+      //     api_response: JSON.stringify(checks.data),
+      //     payload: JSON.stringify(req.body),
+      //   },
+      // });
+      // const check = checks?.data
+      // console.log(check);
 
-      if (check.responseCode != '00') {
-        return res.status(400).json({ message: check.responseDescription });
-      }
+      // if (check.responseCode != '00') {
+      //   return res.status(400).json({ message: check.responseDescription });
+      // }
 
-      if (check.responseCode == '00') {
+      // if (check.responseCode == '00') {
         const mustahiqResult = await prisma.mustahiq.create({
           data: {
             user: {
@@ -125,7 +125,8 @@ module.exports = {
           data: mustahiqResult,
         });
       }
-    } catch (error) {
+    // } 
+    catch (error) {
       const ktp_url = req.files?.ktp_file?.[0].path;
       const kk_url = req.files?.kk_file?.[0].path;
 

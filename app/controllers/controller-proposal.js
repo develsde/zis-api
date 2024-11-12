@@ -376,7 +376,7 @@ module.exports = {
       const checks = await sendImkas({
         phone: pn.replace(/[^0-9\.]+/g, ""),
         nom: '50',
-        id: `10${userId}`,
+        id: `10${userId}${Date.now()}`,
         desc: "Pengecekan Nomor",
       });
       const log = await prisma.log_vendor.create({
@@ -445,7 +445,8 @@ module.exports = {
           data: ProposalResult,
         });
       }
-    } catch (error) {
+    }
+    catch (error) {
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,

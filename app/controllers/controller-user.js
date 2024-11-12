@@ -377,6 +377,57 @@ module.exports = {
     }
   },
 
+  async resetPasswordErp(req, res) {
+    try {
+      const { password } = req.body;
+      const { user_id } = req.params;  // Corrected this line to get user_id directly from req.params
+  
+      // Check if password is missing
+      if (!password) {
+        return res.status(400).json({
+          message: "Gagal reset password, password harus diisi",
+        });
+      }
+  
+      // Find user by user_id
+      const user = await prisma.user.findUnique({
+        where: {
+          user_id: Number(user_id), // Ensure the user_id is a number if it's not a string
+        },
+      });
+  
+      // If user not found
+      if (!user) {
+        return res.status(400).json({
+          message: "Gagal reset password, user tidak ditemukan",
+        });
+      }
+  
+      // Hash the new password
+      const hashedPassword = await argon2.hash(password);
+  
+      // Update the user's password
+      await prisma.user.update({
+        where: {
+          user_id: Number(user_id),  // Use user_id in the update query
+        },
+        data: {
+          user_password: hashedPassword,
+        },
+      });
+  
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Reset Password",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  
+
   async verifiedUser(req, res) {
     try {
       const email = req.body.email;

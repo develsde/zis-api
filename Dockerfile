@@ -31,6 +31,15 @@ COPY . .
 #RUN touch /usr/src/app/uploads
 #RUN mv /usr/src/app/uploads ../uploads/
 
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    cairo-dev \
+    pango-dev \
+    jpeg-dev \
+    giflib-dev
+
 RUN apk update
 
 #RUN apk add git

@@ -25,6 +25,7 @@ router.put("/update", authentication, user.updateUser);
 router.post("/verifed", user.verifiedUser);
 router.put("/password", authentication, user.updatePasswordWithAuth);
 router.post("/resetpassword", user.resetPassword);
+router.post("/resetpassERP/:user_id", user.resetPasswordErp);
 router.post("/forgot-password", user.forgotPassword);
 
 module.exports = router;

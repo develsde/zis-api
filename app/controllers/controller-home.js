@@ -34,6 +34,7 @@ const { password } = require("../../config/config.db");
 const generatePdf = require("../helper/pdf")
 const path = require("path");
 const { error } = require("console");
+const { schedule } = require("node-cron");
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -1890,7 +1891,7 @@ module.exports = {
       });
     }
   },
-  
+
 
   async postPemesananMegaKonser(req, res) {
     try {
@@ -1904,7 +1905,7 @@ module.exports = {
         bank,
         detail_pemesanan,
       } = req.body;
-  
+
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
         return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
       }
@@ -1913,12 +1914,12 @@ module.exports = {
         const affiliator = await prisma.affiliator.findUnique({
           where: { kode: kode_affiliator },
         });
-  
+
         if (!affiliator) {
           return res.status(400).json({ message: "Kode Affiliator tidak tersedia" });
         }
       }
-  
+
       // Generate kode_pemesanan A00001 dst
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: {
@@ -1928,38 +1929,38 @@ module.exports = {
           id: true,
         },
       });
-      
+
       const baseId = 686; // Nilai dasar jika data kosong
       const nextId = lastOrder ? lastOrder.id + 1 : baseId;
       const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
         detail_pemesanan[0].id_tiket === 3 ? 'B' :
-        'C';
+          'C';
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
-      
-  
+
+
       console.log(`Processing new order: ${kode_pemesanan} for email: ${email}`);
-  
+
       // Menggunakan midtransfer untuk pembayaran Snap
       const response = await midtransfer({
         order: kode_pemesanan,
         price: total_harga,
       });
-  
+
       console.log(`Midtrans response for order: ${kode_pemesanan}`, response);
-  
+
       if (!response.success) {
         return res.status(500).json({
           message: response.message,
         });
       }
-  
+
       const transaction_time = new Date();
       const expiry_time = new Date();
       expiry_time.setMinutes(expiry_time.getMinutes() + 15);
-  
+
       const statusId = response.data.transaction_status;
       const displayStatus = statusId === '200' ? 'Berhasil' : 'gagal';
-  
+
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
           nama,
@@ -1975,22 +1976,19 @@ module.exports = {
           expiry_time: expiry_time,
         },
       });
-  
+
       console.log(`Order created in DB: ${kode_pemesanan}, ID: ${postResult.id}`);
-  
+
       const tiketDetails = detail_pemesanan.map((detail) => ({
         id_tiket: detail.id_tiket,
         id_detail_tiket: detail.id_tiket_detail,
         harga_tiket: detail.harga_tiket,
       }));
-  
+
       const transformedDetails = detail_pemesanan.map((detail, index) => {
-        const tiketTimestamp = new Date().getTime();
-        const tiketUniqueId = `${tiketTimestamp}-${index}-${Math.floor(
-          Math.random() * 1000
-        )}`;
-        const kode_tiket = `TK-${tiketUniqueId}`;
-  
+        const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
+
+
         return {
           id_pemesanan: postResult.id,
           id_tiket: detail.id_tiket,
@@ -1998,13 +1996,13 @@ module.exports = {
           kode_tiket,
         };
       });
-  
+
       await prisma.detail_pemesanan_megakonser.createMany({
         data: transformedDetails,
       });
-  
+
       console.log(`Details inserted for order: ${kode_pemesanan}`);
-  
+
       const pemesanan = await prisma.pemesanan_megakonser.findUnique({
         where: {
           kode_pemesanan: kode_pemesanan,
@@ -2018,13 +2016,13 @@ module.exports = {
           },
         },
       });
-  
+
       console.log(`Retrieved full order details for: ${kode_pemesanan}`);
-  
+
       try {
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
         console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
-        
+
         scheduleCekStatus({
           order: kode_pemesanan,
           email,
@@ -2034,7 +2032,7 @@ module.exports = {
       } catch (error) {
         console.error(`Failed to generate PDF for order: ${kode_pemesanan}, error:`, error);
       }
-  
+
       // Log before generating the email template
       console.log(`Generating email template for order: ${kode_pemesanan}, email: ${email}`);
       const templateEmail = await generateTemplatePembayaran({
@@ -2043,9 +2041,9 @@ module.exports = {
         detail: transformedDetails,
         tiket: pemesanan,
       });
-  
+
       console.log(`Email template generated for order: ${kode_pemesanan}, email: ${email}`);
-  
+
       // Log before sending the email
       console.log(`Sending email for order: ${kode_pemesanan}, email: ${email}`);
       await sendEmail({
@@ -2053,9 +2051,9 @@ module.exports = {
         html: templateEmail,
         subject: "Lakukan Pembayaran Tiket Megakonser",
       });
-  
+
       console.log(`Email sent for order: ${kode_pemesanan}, email: ${email}`);
-  
+
       res.status(200).json({
         message: "Sukses Kirim Data",
         data: {
@@ -2072,38 +2070,47 @@ module.exports = {
       });
     }
   },
-  
-  
 
-  async getPemesananByOrder(req, res) {
+
+
+  async getDetailByKodePemesanan(req, res) {
     try {
-      // Validate request parameters
-      const { order_id } = req.params; // Assuming order_id comes from the URL parameters
-
-      if (!order_id) {
-        return res.status(400).json({ message: 'Order ID is required' });
-      }
-
-      // Fetch pemesanan from the database
-      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
-        where: {
-          kode_pemesanan: order_id,
-        },
+      const kodePemesanan = req.params.kode_pemesanan;
+  
+      const [count, ActUser] = await prisma.$transaction([
+        prisma.detail_pemesanan_megakonser.count({
+          where: {
+            pemesanan_megakonser: {
+              kode_pemesanan: kodePemesanan,
+            },
+          },
+        }),
+        prisma.detail_pemesanan_megakonser.findMany({
+          where: {
+            pemesanan_megakonser: {
+              kode_pemesanan: kodePemesanan,
+            },
+          },
+          include: {
+            tiket_konser: true,
+            tiket_konser_detail: true,
+            pemesanan_megakonser: true,
+          },
+        }),
+      ]);
+  
+      res.status(200).json({
+        message: "Sukses Ambil Data Berdasarkan Kode Pemesanan",
+        count: count,
+        data: ActUser,
       });
-
-      // Check if pemesanan was found
-      if (!pemesanan) {
-        return res.status(404).json({ message: 'Pemesanan not found' });
-      }
-
-      // Send the pemesanan data as a response
-      return res.status(200).json(pemesanan);
     } catch (error) {
-      // Handle any errors that occur during the process
-      console.error('Error fetching pemesanan:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({
+        message: error?.message,
+      });
     }
   },
+  
 
 
 
@@ -2360,8 +2367,7 @@ module.exports = {
             where: {
               pemesanan_megakonser: {
                 OR: [
-                  { status: 'settlement' },
-                  { status: 'capture' }
+                  { status: 'settlement' }
                 ]
               }
             },
@@ -2397,7 +2403,8 @@ module.exports = {
   async getPemesananMegakonser(req, res) {
     try {
       const keyword = req.query.keyword || "";
-      const kodePemesanan = req.query.kode_pemesanan || "";
+      const status = req.query.status || "";
+      const kode_affiliator = req.query.kode_affiliator || ""
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
@@ -2421,9 +2428,42 @@ module.exports = {
               contains: keyword,
             },
           },
+          {
+            kode_pemesanan: {
+              contains: keyword,
+            },
+          },
         ],
-        kode_pemesanan: kodePemesanan ? { equals: kodePemesanan } : undefined,
+        ...(status && { status }),
+        ...(kode_affiliator && { kode_affiliator })
       };
+
+      // const [count, pemesanan] = await prisma.$transaction([
+      //     prisma.pemesanan_megakonser.count({
+      //         where: params,
+      //     }),
+      //     prisma.pemesanan_megakonser.findMany({
+      //         orderBy: {
+      //             [sortBy]: sortType,
+      //         },
+      //         where: params,
+      //         include: {
+      //             detail_pemesanan_megakonser: {
+      //                 include: {
+      //                     tiket_konser: true,
+      //                     tiket_konser_detail: {
+      //                         select: {
+      //                             tiket_konser_detail_nama: true, // Memastikan kolom ini diambil
+      //                         }
+      //                     },
+      //                 },
+      //             },
+      //         },
+      //         skip,
+      //         take: perPage,
+      //     }),
+      // ]);
+
 
       const [count, pemesanan] = await prisma.$transaction([
         prisma.pemesanan_megakonser.count({
@@ -2434,21 +2474,43 @@ module.exports = {
             [sortBy]: sortType,
           },
           where: params,
-          // include: {
-          //   detail_pemesanan_megakonser: {
-          //     include: {
-          //       tiket_konser: true
-          //     }
-          //   },
-          // },
-          skip,
-          take: perPage,
+          include: {
+            detail_pemesanan_megakonser: {
+              include: {
+                tiket_konser: true, // Mengambil semua field dari tiket_konser
+                tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
+              },
+            },
+            affiliator: true,
+          },
+          skip, // Menggunakan offset untuk paginasi
+          take: perPage, // Mengambil jumlah data sesuai perPage
         }),
       ]);
 
+
+      // Memformat data agar lebih mudah diakses
+      // const formattedData = pemesanan.map(pesan => ({
+      //     ...pesan,
+      //     detail_pemesanan: pesan.detail_pemesanan_megakonser.map(detail => ({
+      //         ...detail,
+      //         tiket_konser_detail_nama: detail.tiket_konser_detail.tiket_konser_detail_nama, // Akses nama tiket konser detail
+      //     })),
+      // }));
+
+      const formattedData = pemesanan.map(pesan => ({
+        ...pesan,
+        detail_pemesanan: pesan.detail_pemesanan_megakonser.map(detail => ({
+          ...detail,
+          tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
+        })),
+      }));
+
+      console.log(JSON.stringify(formattedData, null, 2)); // Cek hasil
+
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: pemesanan,
+        data: formattedData,
         pagination: {
           total: count,
           page,
@@ -2472,10 +2534,10 @@ module.exports = {
   //     const skip = (page - 1) * perPage;
   //     const sortBy = req.query.sortBy || "transaction_time";
   //     const sortType = req.query.order || "desc";
-      
+
   //     // Tambahkan parameter pencarian untuk no_hp dan email
- 
-  
+
+
   //     const [count, pemesanan] = await prisma.$transaction([
   //       prisma.pemesanan_megakonser.count({
   //         where: params,
@@ -2489,7 +2551,7 @@ module.exports = {
   //         take: perPage,
   //       }),
   //     ]);
-  
+
   //     res.status(200).json({
   //       message: "Sukses Ambil Data",
   //       data: pemesanan,
@@ -2506,7 +2568,7 @@ module.exports = {
   //     });
   //   }
   // },
-  
+
 
   async getDetailPemesananMegakonser(req, res) {
     try {
@@ -2524,7 +2586,7 @@ module.exports = {
           },
           include: {
             tiket_konser: true,
-            tiket_konser_detail:true,
+            tiket_konser_detail: true,
           },
         }),
       ]);
@@ -2536,6 +2598,513 @@ module.exports = {
     } catch (error) {
       res.status(500).json({
         message: error?.message,
+      });
+    }
+  },
+
+  async resendEmail(req, res) {
+    try {
+      const { kode_pemesanan } = req.params; // Ganti order_id dengan kode_pemesanan
+
+      // Ambil data pemesanan berdasarkan kode_pemesanan
+      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+        where: {
+          kode_pemesanan: kode_pemesanan, // Ganti order_id dengan kode_pemesanan
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+        },
+      });
+
+      // Jika data pemesanan tidak ditemukan, kembalikan respon error
+      if (!pemesanan) {
+        return res.status(404).json({
+          success: false,
+          message: `Pemesanan dengan kode ${kode_pemesanan} tidak ditemukan.`,
+        });
+      }
+
+      // Dapatkan email dari data pemesanan
+      const { email } = pemesanan;
+
+      try {
+        // Buat file PDF berdasarkan detail pemesanan
+        const pdfLink = await generatePdf({ orderDetails: pemesanan });
+        console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
+
+        // Buat template email menggunakan detail pemesanan
+        const templateEmail = await generateTemplateMegaKonser({
+          email,
+          tiket: pemesanan, // Isi detail pemesanan sebagai tiket
+        });
+
+        // Kirim email dengan lampiran PDF
+        const msgId = await sendEmailWithPdf({
+          email,
+          html: templateEmail,
+          subject: "Pembelian Tiket Sound of Freedom",
+          pdfPath: pdfLink,
+        });
+
+        // Hapus file PDF setelah email terkirim
+        fs.unlink(pdfLink, (err) => {
+          if (err) {
+            console.error("Error saat menghapus file PDF:", err);
+          }
+        });
+
+        console.log(`Email with PDF sent for order: ${kode_pemesanan}`);
+        return res.status(200).json({
+          success: true,
+          message: `Email berhasil dikirim ulang untuk order ${kode_pemesanan}`,
+          msgId: msgId,
+        });
+
+      } catch (error) {
+        console.error(`Gagal membuat atau mengirim email untuk order ${kode_pemesanan}, error:`, error);
+        return res.status(500).json({
+          success: false,
+          message: `Gagal mengirim email untuk order ${kode_pemesanan}`,
+          error: error.message,
+        });
+      }
+    } catch (error) {
+      console.error("Error dalam resend email:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat mengirim ulang email",
+        error: error.message,
+      });
+    }
+  },
+
+
+
+  async exportAllPemesananToExcel(req, res) {
+    try {
+      // Ambil semua data dari tabel pemesanan_megakonser
+      const pemesananData = await prisma.pemesanan_megakonser.findMany({
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+        },
+      });
+
+      // Membuat workbook dan worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Data Semua Pemesanan');
+
+      // Menambahkan header ke worksheet
+      worksheet.columns = [
+        { header: 'ID Pemesanan', key: 'id', width: 15 },
+        { header: 'Nama', key: 'nama', width: 20 },
+        { header: 'Telepon', key: 'telepon', width: 15 },
+        { header: 'Email', key: 'email', width: 25 },
+        { header: 'Gender', key: 'gender', width: 10 },
+        { header: 'Total Harga', key: 'total_harga', width: 15 },
+        { header: 'Kode Affiliator', key: 'kode_affiliator', width: 15 },
+        { header: 'Kode Pemesanan', key: 'kode_pemesanan', width: 20 },
+        { header: 'Metode Pembayaran', key: 'metode_pembayaran', width: 20 },
+        { header: 'Status', key: 'status', width: 15 },
+        { header: 'Transaction Time', key: 'transaction_time', width: 25 },
+        { header: 'Expiry Time', key: 'expiry_time', width: 25 },
+        { header: 'Detail Tiket Nama', key: 'detail_tiket_nama', width: 25 },
+        { header: 'Detail Tiket Harga', key: 'detail_tiket_harga', width: 15 },
+      ];
+
+      // Menambahkan semua data pemesanan ke worksheet
+      pemesananData.forEach((order) => {
+        // Tambahkan data utama pemesanan ke worksheet
+        worksheet.addRow({
+          id: order.id,
+          nama: order.nama,
+          telepon: order.telepon,
+          email: order.email,
+          gender: order.gender,
+          total_harga: order.total_harga,
+          kode_affiliator: order.kode_affiliator,
+          kode_pemesanan: order.kode_pemesanan,
+          metode_pembayaran: order.metode_pembayaran,
+          status: order.status,
+          transaction_time: order.transaction_time,
+          expiry_time: order.expiry_time,
+          detail_tiket_nama: '', // Kosong untuk menambah detail di bawahnya
+          detail_tiket_harga: '',
+        });
+
+        // Menambahkan detail pemesanan di baris berikutnya
+        order.detail_pemesanan_megakonser.forEach((detail) => {
+          worksheet.addRow({
+            id: '',
+            nama: '',
+            telepon: '',
+            email: '',
+            gender: '',
+            total_harga: '',
+            kode_affiliator: '',
+            kode_pemesanan: '',
+            metode_pembayaran: '',
+            status: '',
+            transaction_time: '',
+            expiry_time: '',
+            detail_tiket_nama: detail.tiket_konser_detail?.tiket_konser_detail_nama,
+            detail_tiket_harga: detail.harga_tiket,
+          });
+        });
+      });
+
+      // Simpan file Excel ke folder uploads
+      const filename = `Semua_Pemesanan_MegaKonser_${Date.now()}.xlsx`;
+      const uploadPath = path.join(__dirname, '../../uploads', filename); // Set the path to uploads directory
+      await workbook.xlsx.writeFile(uploadPath);
+
+      // Memberikan respons file yang dapat diunduh
+      res.status(200).json({
+        message: 'Data semua pemesanan berhasil diekspor ke Excel',
+        file: filename,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+  async getPenjualanMegakonser(req, res) {
+    try {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+
+      const params = {
+        created_date: {
+          gte: validStart,
+          lte: validEnd,
+        },
+      };
+
+      const totalPendapatan = await prisma.pemesanan_megakonser.aggregate({
+        _sum: {
+          total_harga: true,
+        },
+        where: {
+          status: 'settlement',
+        },
+      });
+
+      const pemesanan = await prisma.detail_pemesanan_megakonser.findMany({
+        where: {
+          pemesanan_megakonser: {
+            status: 'settlement',
+          },
+        },
+        select: {
+          id_detail_tiket: true,
+          tiket_konser_detail: {
+            select: {
+              id: true,
+              tiket_konser_detail_nama: true,
+              tiket_konser: {
+                select: {
+                  tiket_id: true,
+                  tiket_nama: true,
+                  tiket_harga: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const groupedData = pemesanan.reduce((acc, item) => {
+        const { tiket_konser } = item.tiket_konser_detail;
+        const tiketKey = tiket_konser.tiket_id;
+
+        if (!acc[tiketKey]) {
+          acc[tiketKey] = {
+            tiket_id: tiket_konser.tiket_id,
+            tiket_nama: tiket_konser.tiket_nama,
+            tiket_harga: tiket_konser.tiket_harga,
+            total_pembelian: 0,
+            detail_tiket: {},
+          };
+        }
+
+        acc[tiketKey].total_pembelian += 1;
+
+        const detailKey = item.tiket_konser_detail.id;
+
+        if (!acc[tiketKey].detail_tiket[detailKey]) {
+          acc[tiketKey].detail_tiket[detailKey] = {
+            detail_tiket_id: detailKey,
+            tiket_konser_detail_nama: item.tiket_konser_detail.tiket_konser_detail_nama,
+            jumlah_dipesan: 0,
+          };
+        }
+
+        acc[tiketKey].detail_tiket[detailKey].jumlah_dipesan += 1;
+
+        return acc;
+      }, {});
+
+      const penjualan = Object.values(groupedData).map(tiket => ({
+        tiket_id: tiket.tiket_id,
+        tiket_nama: tiket.tiket_nama,
+        tiket_harga: tiket.tiket_harga,
+        total_pembelian: tiket.total_pembelian,
+        detail_tiket: Object.values(tiket.detail_tiket),
+      }));
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        dataPenjualan: penjualan,
+        totalPendapatan: totalPendapatan._sum.total_harga,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getPenjualanAffiliator(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+
+      const params = {
+        OR: [
+          {
+            nama: {
+              contains: keyword,
+            }
+          },
+          {
+            kode: {
+              contains: keyword,
+            }
+          },
+        ]
+      };
+
+      const [count, result] = await prisma.$transaction([
+        prisma.affiliator.count({
+          where: params,
+        }),
+        prisma.affiliator.findMany({
+          where: params,
+          select: {
+            nama: true,
+            kode: true,
+            pemesanan_megakonser: {
+              where: { status: 'settlement' },
+              select: {
+                total_harga: true,
+              },
+            },
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      const affiliatorsWithTotalHarga = result.map((affiliator) => {
+        const totalHarga = affiliator.pemesanan_megakonser.reduce(
+          (sum, order) => sum + order.total_harga,
+          0
+        );
+
+        return {
+          nama: affiliator.nama,
+          kode: affiliator.kode,
+          total_harga: totalHarga,
+        };
+      });
+
+      // Urutkan hasil berdasarkan total_harga secara menurun
+      affiliatorsWithTotalHarga.sort((a, b) => b.total_harga - a.total_harga);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: affiliatorsWithTotalHarga,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getAffiliator(req, res) {
+    try {
+      const affiliator = await prisma.affiliator.findMany({
+        // where: {
+        //   status: 1
+        // }
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: affiliator,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async postPemesananMegaKonserErp(req, res) {
+    try {
+      const {
+        nama,
+        telepon,
+        email,
+        gender,
+        total_harga,
+        // kode_affiliator,
+        // bank,
+        detail_pemesanan,
+      } = req.body;
+
+      if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
+        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+      }
+
+      // if (kode_affiliator) {
+      //   const affiliator = await prisma.affiliator.findUnique({
+      //     where: { kode: kode_affiliator },
+      //   });
+
+      //   if (!affiliator) {
+      //     return res.status(400).json({ message: "Kode Affiliator tidak tersedia" });
+      //   }
+      // }
+
+      const lastOrder = await prisma.pemesanan_megakonser.findFirst({
+        orderBy: {
+          id: "desc",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const baseId = 686;
+      const nextId = lastOrder ? lastOrder.id + 1 : baseId;
+      const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
+        detail_pemesanan[0].id_tiket === 3 ? 'B' :
+          'C';
+      const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
+
+      const postResult = await prisma.pemesanan_megakonser.create({
+        data: {
+          nama,
+          telepon,
+          email,
+          gender,
+          total_harga: Number(total_harga),
+          // kode_affiliator,
+          kode_pemesanan: kode_pemesanan,
+          metode_pembayaran: "B2B",
+          status: 'settlement',
+          // transaction_time: transaction_time,
+          // expiry_time: expiry_time,
+        },
+      });
+
+      const tiketDetails = detail_pemesanan.map((detail) => ({
+        id_tiket: detail.id_tiket,
+        id_detail_tiket: detail.id_tiket_detail,
+        harga_tiket: detail.harga_tiket,
+      }));
+
+      const transformedDetails = detail_pemesanan.map((detail, index) => {
+        const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        return {
+          id_pemesanan: postResult.id,
+          id_tiket: detail.id_tiket,
+          id_detail_tiket: detail.id_tiket_detail,
+          kode_tiket,
+        };
+      });
+
+      await prisma.detail_pemesanan_megakonser.createMany({
+        data: transformedDetails,
+      });
+
+      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+        where: {
+          kode_pemesanan: kode_pemesanan,
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+        },
+      });
+
+      try {
+        const pdfLink = await generatePdf({ orderDetails: pemesanan });
+
+        const templateEmail = await generateTemplateMegaKonser({
+          email,
+          password: email,
+          tiket: pemesanan,
+        });
+
+        const msgId = await sendEmailWithPdf({
+          email,
+          html: templateEmail,
+          subject: "Pembelian Tiket Sound of Freedom",
+          pdfPath: pdfLink,
+        });
+      } catch (error) {
+        console.error(`Failed to generate PDF for order: ${kode_pemesanan}, error:`, error);
+      }
+
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: {
+          postResult,
+          tiketDetails,
+        },
+      });
+    } catch (error) {
+      console.error(`Error processing order: ${error.message}`);
+      res.status(500).json({
+        message: error.message,
       });
     }
   },

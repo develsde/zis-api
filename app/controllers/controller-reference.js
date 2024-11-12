@@ -4,6 +4,13 @@ const fs = require("fs/promises");
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
 const { checkImkas } = require("../helper/imkas");
+const QRCode = require("qrcode");
+const path = require('path');
+const { createCanvas, loadImage, registerFont } = require('canvas');
+
+// Load font
+
+
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
 
@@ -12,6 +19,7 @@ const {
   cekStatus,
   midtransfer,
 } = require("../helper/midtrans");
+const { error } = require("console");
 
 module.exports = {
   async checkImkas(req, res) {
@@ -1475,6 +1483,532 @@ ORDER BY aa.created_date DESC
     }
   },
 
+  async getAllCso(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+
+      const params = {
+        nama_cso: {
+          contains: keyword,
+        }
+      }
+
+      const [count, cso] = await prisma.$transaction([
+        prisma.cso.count({
+          where: params,
+        }),
+        prisma.cso.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          include: {
+            provinces: true,
+            cities: true,
+            districts: true,
+            user: true,
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: cso,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async updateCso(req, res) {
+    try {
+      const csoId = req.params.id;
+      const { nama_cso, nohp, alamat, user_id } = req.body;
+
+      if (!nama_cso || !nohp || !alamat) {
+        return res.status(400).json({
+          message: "Nama, Alamat, dan Nomor Telepon Harus Diisi",
+        });
+      }
+
+      await prisma.cso.update({
+        where: {
+          id: Number(csoId),
+        },
+        data: {
+          nama_cso: nama_cso,
+          nohp: nohp,
+          alamat: alamat,
+          user_id: Number(user_id)
+        },
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Update Data Cso",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getAllOutlet(req, res) {
+    try {
+      const userId = req.user.user_id; // Pastikan `userId` diambil dari session login
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || 'asc';
+
+      // Cari CSO ID berdasarkan user_id yang login
+      const cso = await prisma.cso.findFirst({
+        where: { user_id: userId }
+      });
+
+      if (!cso) {
+        return res.status(404).json({ message: "CSO tidak ditemukan untuk user ini" });
+      }
+
+      const params = {
+        nama_outlet: {
+          contains: keyword,
+        },
+        cso_id: cso.id // Gunakan `cso.id` sebagai filter untuk `id_cso`
+      };
+
+      const [count, outlet] = await prisma.$transaction([
+        prisma.outlet.count({
+          where: params,
+        }),
+        prisma.outlet.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          include: {
+            cso: true,
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: outlet,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
+
+  async createOutlet(req, res) {
+    try {
+      // Validasi input
+      const schema = z.object({
+        nama_outlet: z.string(),
+        alamat_outlet: z.string(),
+        pic_outlet: z.string(),
+      });
+  
+      const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
+      const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
+      let errorObj = {};
+  
+      if (body.error) {
+        body.error.issues.forEach((issue) => {
+          errorObj[issue.path[0]] = issue.message;
+        });
+        body.error = errorObj;
+      }
+  
+      if (!body.success) {
+        return res.status(400).json({
+          message: "Beberapa Field Harus Diisi",
+          error: errorObj,
+        });
+      }
+  
+      const userId = req.user.user_id;
+      const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
+  
+      if (!cso) {
+        return res.status(404).json({
+          message: "CSO tidak ditemukan untuk user ini",
+        });
+      }
+  
+      const currentOutlet = await prisma.outlet.findFirst({
+        where: { nama_outlet: body.data.nama_outlet },
+      });
+  
+      if (currentOutlet) {
+        return res.status(400).json({
+          message: "Outlet Sudah Terdaftar",
+        });
+      }
+  
+      const newOutlet = await prisma.outlet.create({
+        data: {
+          nama_outlet: body.data.nama_outlet,
+          alamat_outlet: body.data.alamat_outlet,
+          pic_outlet: body.data.pic_outlet,
+          cso_id: cso.id,
+          register_date: new Date(),
+        },
+      });
+  
+      const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${newOutlet.id}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl, { width: 800 });
+  
+      const qrCodeImage = await loadImage(qrCodeDataUrl);
+      const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
+      const logoImage = await loadImage(logoPath);
+  
+      const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
+      const backgroundImage = await loadImage(backgroundImagePath);
+  
+      // Set up canvas for A4 size at 300 DPI
+      const canvasWidth = 2480;  // A4 width in pixels at 300 DPI
+      const canvasHeight = 3508; // A4 height in pixels at 300 DPI
+      const qrSize = 700;        // Adjusted QR code size for A4
+      const logoSize = 150;      // Adjusted logo size
+      const borderSize = 60;     // Adjusted border size
+      const textMargin = 100;    // Adjusted text margin
+  
+      const canvas = createCanvas(canvasWidth, canvasHeight);
+      const ctx = canvas.getContext('2d');
+  
+      // Scale the background to fit A4 size
+      const backgroundScaleWidth = canvasWidth / backgroundImage.width;
+      const backgroundScaleHeight = canvasHeight / backgroundImage.height;
+      const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight);
+  
+      const bgX = (canvasWidth - backgroundImage.width * backgroundScale) / 2;
+      const bgY = (canvasHeight - backgroundImage.height * backgroundScale) / 2;
+      ctx.drawImage(
+        backgroundImage,
+        bgX,
+        bgY,
+        backgroundImage.width * backgroundScale,
+        backgroundImage.height * backgroundScale
+      );
+  
+      // Draw white area behind QR code
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(
+        (canvasWidth - (qrSize + borderSize)) / 2,
+        canvasHeight - qrSize - textMargin - 300,
+        qrSize + borderSize,
+        qrSize + textMargin
+      );
+  
+      // Draw QR code centered in white area
+      const qrX = (canvasWidth - qrSize) / 2;
+      const qrY = canvasHeight - qrSize - textMargin - 300;
+      ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
+  
+      // Draw logo centered over QR code
+      const logoX = qrX + (qrSize - logoSize) / 2;
+      const logoY = qrY + (qrSize - logoSize) / 2;
+      ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
+  
+      // Draw text below QR code with larger font
+      registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
+      const text = `Salam Donasi ${newOutlet.id}`;
+      const fontSize = 60;  // Adjusted font size for A4
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${fontSize}px Roboto`;
+      ctx.textAlign = 'center';
+      ctx.fillText(text, canvasWidth / 2, canvasHeight - 100);
+  
+      const qrCodeWithLogoData = canvas.toDataURL('image/png');
+  
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Menambahkan Outlet dengan QR Code",
+        qrCodeUrl,
+        qrCodeWithLogoData,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  
+
+  
+  async updateOutlet(req, res) {
+    const outletId = req.params.id;
+    try {
+      // Validation
+      const schema = z.object({
+        nama_outlet: z.string().optional(),
+        alamat_outlet: z.string().optional(),
+        pic_outlet: z.string().optional(),
+      });
+  
+      const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
+      const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
+      let errorObj = {};
+  
+      if (body.error) {
+        body.error.issues.forEach((issue) => {
+          errorObj[issue.path[0]] = issue.message;
+        });
+        body.error = errorObj;
+      }
+  
+      if (!body.success) {
+        return res.status(400).json({
+          message: "Beberapa Field Harus Diisi",
+          error: errorObj,
+        });
+      }
+  
+      const userId = req.user.user_id;
+      const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
+  
+      if (!cso) {
+        return res.status(404).json({
+          message: "CSO tidak ditemukan untuk user ini",
+        });
+      }
+  
+      // Check if outlet exists
+      const outlet = await prisma.outlet.findFirst({
+        where: { id: Number(outletId), cso_id: cso.id },
+      });
+  
+      if (!outlet) {
+        return res.status(404).json({
+          message: "Outlet tidak ditemukan",
+        });
+      }
+  
+      // Update outlet details
+      const updatedOutlet = await prisma.outlet.update({
+        where: {
+          id: Number(outletId),
+        },
+        data: {
+          ...(body.data.nama_outlet && { nama_outlet: body.data.nama_outlet }),
+          ...(body.data.alamat_outlet && { alamat_outlet: body.data.alamat_outlet }),
+          ...(body.data.pic_outlet && { pic_outlet: body.data.pic_outlet }),
+        },
+      });
+  
+      // Generate QR code URL
+      const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${updatedOutlet.id}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
+  
+      const qrCodeImage = await loadImage(qrCodeDataUrl);
+      const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
+      const logoImage = await loadImage(logoPath);
+  
+      // Load background image
+      const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
+      const backgroundImage = await loadImage(backgroundImagePath);
+  
+      // Set A4 canvas dimensions at 300 DPI (2480x3508 pixels)
+      const canvasWidth = 2480;
+      const canvasHeight = 3508;
+      const qrSize = 1200; // Adjust QR size for A4
+      const reducedBorderSize = 100; // Border around the QR
+      const textMargin = 200;
+  
+      // Create canvas at A4 size
+      const canvas = createCanvas(canvasWidth, canvasHeight);
+      const ctx = canvas.getContext('2d');
+  
+      // Calculate background scale
+      const backgroundScaleWidth = canvasWidth / backgroundImage.width;
+      const backgroundScaleHeight = canvasHeight / backgroundImage.height;
+      const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight);
+  
+      // Draw background image
+      const bgX = (canvasWidth / 2) - (backgroundImage.width * backgroundScale / 2);
+      const bgY = (canvasHeight / 2) - (backgroundImage.height * backgroundScale / 2);
+      ctx.drawImage(
+        backgroundImage,
+        bgX,
+        bgY,
+        backgroundImage.width * backgroundScale,
+        backgroundImage.height * backgroundScale
+      );
+  
+      // Draw white area behind QR code
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(
+        (canvasWidth - (qrSize + reducedBorderSize)) / 2,
+        canvasHeight - qrSize - textMargin - 200,
+        qrSize + reducedBorderSize,
+        qrSize + textMargin
+      );
+  
+      // Draw QR code in center of the white area
+      const qrX = (canvasWidth - qrSize) / 2;
+      const qrY = canvasHeight - qrSize - textMargin - 160;
+      ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
+  
+      // Draw logo centered on QR code
+      const logoSize = 200;
+      const logoX = qrX + (qrSize / 2) - (logoSize / 2);
+      const logoY = qrY + (qrSize / 2) - (logoSize / 2);
+      ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
+  
+      // Draw text with larger font size
+      registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
+      const text = `Salam Donasi ${updatedOutlet.id}`;
+      const fontSize = 100;
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold ${fontSize}px Roboto`;
+  
+      const textWidth = ctx.measureText(text).width;
+      const textX = (canvasWidth - textWidth) / 2;
+      const textY = canvasHeight - 100;
+  
+      ctx.fillText(text, textX, textY);
+  
+      const qrCodeWithLogoData = canvas.toDataURL('image/png');
+  
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Outlet berhasil diperbarui dengan QR Code",
+        qrCodeUrl,
+        qrCodeWithLogoData,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  
+  
+
+
+  async getTransaksiPerOutlet(req, res) {
+    try {
+      const userId = req.user.user_id;
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id_outlet";
+      const sortType = req.query.order || 'asc';
+
+      // Get the CSO ID for the logged-in user
+      const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
+      if (!cso) {
+        return res.status(404).json({ message: "CSO tidak ditemukan untuk user ini" });
+      }
+      const csoId = cso.id;
+
+      // Fetch outlets based on cso_id
+      const outlets = await prisma.outlet.findMany({
+        where: {
+          cso_id: csoId,
+          nama_outlet: { contains: keyword },
+        },
+        select: {
+          id: true,
+          nama_outlet: true,
+          alamat_outlet: true,
+        },
+        skip,
+        take: perPage,
+      });
+
+      const outletIds = outlets.map(outlet => outlet.id);
+
+      // Fetch total count of unique outlets matching the query
+      const count = await prisma.outlet.count({
+        where: {
+          cso_id: csoId,
+          pic_outlet: { contains: keyword },
+        },
+      });
+
+      // Get transactions grouped by outlet, calculating both nominal sum and transaction count
+      const transaksi = await prisma.register_donasi.groupBy({
+        by: ['id_outlet'],
+        _sum: { nominal: true },
+        _count: { id_outlet: true },
+        where: {
+          outlet: { id: { in: outletIds } },
+          transaction_status: 'settlement',
+        },
+        orderBy: { [sortBy]: sortType },
+      });
+
+      const csoData = await prisma.cso.findUnique({
+        where: { id: csoId },
+        select: { nama_cso: true },
+      });
+
+      const formatCurrency = (value) => `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+
+      const result = outlets.map(outlet => {
+        const transaksiItem = transaksi.find(item => item.id_outlet === outlet.id);
+        return {
+          id: outlet.id,
+          nama_outlet: outlet.nama_outlet,
+          alamat_outlet: outlet.alamat_outlet || 'Tidak Diketahui',
+          nama_cso: csoData ? csoData.nama_cso : 'Tidak Diketahui',
+          total: formatCurrency(transaksiItem ? transaksiItem._sum.nominal || 0 : 0),
+          total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
+        };
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Transaksi Per Outlet",
+        data: result,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+
+
+
   async registerDonasi(req, res) {
 
     function generateOrderId(paymentType) {
@@ -1589,6 +2123,7 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+
 
   async checkPay(req, res) {
     const order_id = req.body.order_id;
