@@ -1676,7 +1676,7 @@ ORDER BY aa.created_date DESC
       // Draw text below QR code with larger font
       registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
       const text = `Salam Donasi ${newOutlet.id}`;
-      const fontSize = 60;  // Adjusted font size for A4
+      const fontSize = 100;  // Adjusted font size for A4
       ctx.fillStyle = '#000000';
       ctx.font = `bold ${fontSize}px Roboto`;
       ctx.textAlign = 'center';
