@@ -1631,7 +1631,7 @@ ORDER BY aa.created_date DESC
       // Set up canvas for A4 size at 300 DPI
       const canvasWidth = 2480;  // A4 width in pixels at 300 DPI
       const canvasHeight = 3508; // A4 height in pixels at 300 DPI
-      const qrSize = 700;        // Adjusted QR code size for A4
+      const qrSize = 1200;        // Adjusted QR code size for A4
       const logoSize = 150;      // Adjusted logo size
       const borderSize = 60;     // Adjusted border size
       const textMargin = 100;    // Adjusted text margin
