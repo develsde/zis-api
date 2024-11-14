@@ -39,7 +39,7 @@ router.post("/postQurban", home.postQurban)
 
 //Megakonser Portal
 router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
-router.get("/pemesananMegaKonser/:kode_pemesanan", home.getDetailByKodePemesanan)
+// router.get("/pemesananMegaKonser/:kode_pemesanan", home.getDetailByKodePemesanan)
 router.get("/tiketMegaKonser", home.getAllTiket)
 router.post("/payment-gateway", home.handlePay)
 router.post("/check-payment", home.checkPay)
@@ -47,6 +47,7 @@ router.post("/cancel-payment", home.cancelPay)
 router.get("/tiket-sold", home.getTiketSold)
 
 //Megakonser ERP
+router.get("/tiketMegaKonserErp", home.getAllTiketErp)
 router.get("/pemesanan-megakonser", authentication, home.getPemesananMegakonser)
 router.get("/detail-pemesanan-megakonser/:id", authentication, home.getDetailPemesananMegakonser)
 router.get("/resendEmail/:kode_pemesanan", authentication, home.resendEmail)
@@ -55,6 +56,8 @@ router.get("/getPenjualanMegakonser", authentication, home.getPenjualanMegakonse
 router.get("/getPenjualanAffiliator", authentication, home.getPenjualanAffiliator)
 router.get("/getAffiliator", authentication, home.getAffiliator)
 router.post("/pemesananMegaKonser-erp", authentication, home.postPemesananMegaKonserErp)
+router.get("/updateStatusTiket/:kode_pemesanan",home.getDetailByKodePemesanan)
+router.put("/updateStatusTiket/:kode_pemesanan", authentication,home.getAndUpdateDetailByKodePemesanan)
 
 
 module.exports = router;

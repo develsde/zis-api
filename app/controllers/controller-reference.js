@@ -1700,7 +1700,7 @@ ORDER BY aa.created_date DESC
       // Set up canvas for A4 size at 300 DPI
       const canvasWidth = 2480;  // A4 width in pixels at 300 DPI
       const canvasHeight = 3508; // A4 height in pixels at 300 DPI
-      const qrSize = 700;        // Adjusted QR code size for A4
+      const qrSize = 1500;        // Adjusted QR code size for A4
       const logoSize = 150;      // Adjusted logo size
       const borderSize = 60;     // Adjusted border size
       const textMargin = 100;    // Adjusted text margin
@@ -1745,7 +1745,7 @@ ORDER BY aa.created_date DESC
       // Draw text below QR code with larger font
       registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
       const text = `Salam Donasi ${newOutlet.id}`;
-      const fontSize = 60;  // Adjusted font size for A4
+      const fontSize = 100;  // Adjusted font size for A4
       ctx.fillStyle = '#000000';
       ctx.font = `bold ${fontSize}px Roboto`;
       ctx.textAlign = 'center';
@@ -1843,7 +1843,7 @@ ORDER BY aa.created_date DESC
       // Set A4 canvas dimensions at 300 DPI (2480x3508 pixels)
       const canvasWidth = 2480;
       const canvasHeight = 3508;
-      const qrSize = 1200; // Adjust QR size for A4
+      const qrSize = 1500; // Adjust QR size for A4
       const reducedBorderSize = 100; // Border around the QR
       const textMargin = 200;
   
