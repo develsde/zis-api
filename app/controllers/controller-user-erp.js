@@ -73,6 +73,71 @@ module.exports = {
       });
     }
   },
+  async loginMgt(req, res) {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({
+          message: "Username atau Password Salah",
+        });
+      }
+
+      const user = await prisma.user. findUnique({
+        include: {
+          type: true,
+        },
+        where: {
+          username,
+          user_type: { in: [18,14,20,8] },
+        },
+      });
+
+      if (!user) {
+        return res.status(400).json({
+          message: "Username atau Password Salah",
+        });
+      }
+
+      const passwordMatch = await argon2.verify(user.user_password, password);
+      if (!passwordMatch) {
+        return res.status(400).json({
+          message: "Username atau Password Salah",
+        });
+      }
+
+      if (user.user_status === 0) {
+        return res.status(400).json({
+          message: "Akun belum diverifikasi",
+        });
+      }
+
+      const omit = require("lodash/omit");
+
+      const cleanUser = omit(user, ["user_password", "user_token"]);
+
+      const token = generate(cleanUser);
+
+      await prisma.user.update({
+        where: {
+          username,
+        },
+        data: {
+          user_token: token,
+        },
+      });
+
+      return res.status(200).json({
+        message: "Login Berhasil",
+        data: cleanUser,
+        token,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
   async registerUser(req, res) {
     try {
       const schema = z.object({
