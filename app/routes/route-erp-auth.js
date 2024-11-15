@@ -20,6 +20,7 @@ const loginlimiter = rateLimit({
 
 // GET localhost:8080/home => Ambil data semua dari awal
 router.post("/login", loginlimiter, usererp.loginUser);
+router.post("/login-mgt", loginlimiter, usererp.loginMgt);
 router.post("/register", authentication, usererp.registerUser);
 router.post("/revoked", authentication, usererp.deleteToken);
 router.get("/detail/:id", authentication, usererp.detailUser);
