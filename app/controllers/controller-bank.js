@@ -552,6 +552,7 @@ module.exports = {
     }
   },
 
+
   async listGla(req, res) {
     try {
       //const userId = req.user_id;

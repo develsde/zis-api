@@ -377,6 +377,27 @@ app.post(
       });
 
       // Kirimkan response dalam format Base64
+      const data = await prisma.log_aj.create({
+
+        data:{
+          timestampt:decodedData.PaymentResult.timeStamp,
+          merchantId:decodedData.PaymentResult.merchantID,
+          respCode:decodedData.PaymentResult.respCode,
+          ammount:decodedData.PaymentResult.amt,
+          uniqueCode:decodedData.PaymentResult.uniqueTransactionCode,
+          transRef:decodedData.PaymentResult.tranRef,
+          date_time:decodedData.PaymentResult.dateTime,
+          status:decodedData.PaymentResult.status,
+          fail_resson:decodedData.PaymentResult.failReason,
+          trx_type:decodedData.PaymentResult.trxType,
+          status_notify_sof:decodedData.PaymentResult.statusNotifySOF,
+          status_transaction:decodedData.PaymentResult.statusTransaction
+        },
+
+      });
+      console.log("database:", data)
+
+
       return res.status(200).json({ response: base64Response });
     } catch (error) {
       console.error("Payment Success Error:", {

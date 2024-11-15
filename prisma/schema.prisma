@@ -1301,3 +1301,19 @@ model affiliator {
   status               Int?                   @default(0)
   pemesanan_megakonser pemesanan_megakonser[]
 }
+
+model log_aj {
+  id_aj              Int     @id @default(autoincrement())
+  timestampt         String? @db.VarChar(300)
+  merchantId         String? @db.VarChar(300)
+  respCode           String? @db.VarChar(300)
+  ammount            String? @db.VarChar(300)
+  uniqueCode         String? @db.VarChar(300)
+  transRef           String? @db.VarChar(300)
+  date_time          String? @db.VarChar(300)
+  status             String? @db.VarChar(300)
+  fail_resson        String? @db.VarChar(300)
+  trx_type           String? @db.VarChar(300)
+  status_notify_sof  String? @db.VarChar(300)
+  status_transaction String? @db.VarChar(300)
+}
