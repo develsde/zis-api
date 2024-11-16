@@ -64,5 +64,47 @@ module.exports = {
           });
         }
       },
+
+      async createMutasi(req, res) {
+        try {
+          
+          const {
+            mutasi_bank_code,
+            mutasi_deskripsi,
+            mutasi_currency,
+            mutasi_amount,
+            mutasi_isdebit,
+            mutasi_balance,
+            mutasi_bank_account_id,
+            mutasi_tanggal_transaksi
+          } = req.body;
+    
+          //console.log(JSON.stringify(req.body))
+    
+          const createMutasi = await prisma.mutasi.create({
+            data: {              
+                mutasi_bank_code,
+                mutasi_deskripsi,
+                mutasi_currency : Number(mutasi_currency),
+                mutasi_amount : Number(mutasi_amount),
+                mutasi_isdebit : Number(mutasi_isdebit),
+                mutasi_balance : Number(mutasi_balance),
+                mutasi_bank_account_id : Number(mutasi_bank_account_id),
+                mutasi_tanggal_transaksi
+            },
+          });
+    
+          return res.status(200).json({
+            message: "Sukses membuat Data Mutasi",
+            data: createMutasi,
+          });
+        } catch (error) {
+    
+          return res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message,
+          });
+        }
+      },
   
 }

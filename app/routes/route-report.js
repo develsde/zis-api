@@ -6,5 +6,6 @@ const { upload } = require("../helper/upload");
 
 // GET localhost:8080/home => Ambil data semua dari awal
 router.get("/create-report", authentication, report.createReport);
+router.get("/create-mutasi", authentication, report.createMutasi);
 
 module.exports = router;
