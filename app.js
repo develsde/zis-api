@@ -37,6 +37,7 @@ const mitraRoute = require("./app/routes/route-mitra");
 
 //dashboard
 const dashboardRoute = require("./app/routes/route-dashboard");
+const reportRoute = require("./app/routes/route-report");
 
 
 //payment
@@ -74,6 +75,7 @@ app.use("/mitra", mitraRoute);
 
 //Dashboard-New ERP Purposes
 app.use("/dashboard", dashboardRoute);
+app.use("/report", reportRoute);
 
 //paymentroute
 app.use("/payment", paymentRoute);
