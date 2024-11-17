@@ -365,6 +365,7 @@ model gl_account {
   jurnal            jurnal[]
   jurnal_petty_cash jurnal_petty_cash[]
   program_category  program_category[]
+  report            report[]
 
   @@index([gl_type], map: "gl_account_type_FK")
   @@index([bank_account], map: "gl_account_FK")
@@ -1316,4 +1317,25 @@ model log_aj {
   trx_type           String? @db.VarChar(300)
   status_notify_sof  String? @db.VarChar(300)
   status_transaction String? @db.VarChar(300)
+}
+
+model report {
+  id                                       Int         @id @default(autoincrement())
+  report_type                              Int         @default(0) @db.SmallInt
+  report_gl_account                        Int?
+  report_proposal_id                       Int?
+  report_nominal                           Int?        @default(0)
+  report_description                       String?     @db.Text
+  report_isdebit                           Int?        @default(0) @db.SmallInt
+  report_date                              DateTime?   @db.Date
+  report_mutasi_id                         Int?
+  report_penyaluran_rek_tujuan             String?     @db.VarChar(50)
+  report_penyaluran_rek_nama               String?     @db.VarChar(100)
+  report_penyaluran_bank_account_ziswaf_id Int?
+  report_penerimaan_rek_asal               String?     @db.VarChar(50)
+  report_penerimaan_rek_nama               String?     @db.VarChar(100)
+  report_penerimaan_bank_account_ziswaf_id Int?
+  gl_account                               gl_account? @relation(fields: [report_gl_account], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "report_gl_account_FK")
+
+  @@index([report_gl_account], map: "report_gl_account_FK")
 }
