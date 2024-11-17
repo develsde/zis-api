@@ -3,6 +3,7 @@ const fs = require("fs/promises");
 
 const { customAlphabet } = require("nanoid");
 const { z } = require("zod");
+const readXlsxFile = require('read-excel-file/node')
 
 
 module.exports = {
@@ -106,5 +107,138 @@ module.exports = {
           });
         }
       },
-  
+
+      async uploadMutasi(req, res) {
+        try {
+          const file = req.file;
+    
+          const [duplicateFile] = await prisma.$transaction([
+            prisma.mutasi_file.findFirst({
+              select: {
+                id: true
+              },
+              where: {
+                mutasi_file_name: { contains: file.originalname }
+              },
+            })
+          ])
+    
+          const userId = req.user_id;
+    
+        //   const schema = z.object({
+        //     no_rekening: z.string({ required_error: "No Rekening Harus Diis" }).min(5),
+        //     bank: z.number().optional()
+        //   });
+    
+          if (!file) {
+            return res.status(400).json({
+              message: "File Mutasi Tidak Boleh Kosong",
+            });
+          }
+    
+          if (duplicateFile !== null) {
+            return res.status(400).json({
+              message: "File Mutasi Bank Pernah Diupload Sebelumnya,",
+            });
+          }
+    
+          const maxSize = 512000;
+          if (file.size > maxSize) {
+            await fs.unlink(file.path);
+    
+            return res.status(400).json({
+              message: "Ukuran File terlalu Besar",
+            });
+          }
+    
+          // Array of allowed files
+          const array_of_allowed_files = ['xlsx', 'xls'];
+    
+          // Get the extension of the uploaded file
+          const file_extension = file.originalname.slice(
+            ((file.originalname.lastIndexOf('.') - 1) >>> 0) + 2
+          );
+    
+          // Check if the uploaded file is allowed
+          if (!array_of_allowed_files.includes(file_extension)) {
+            return res.status(400).json({
+              message: "File Tidak Sesuai Format",
+            });
+          }
+    
+    
+          const {
+            mutasi_file_name,
+            mutasi_file_bank_account_id,
+            mutasi_file_bulan            
+          } = req.body;
+    
+          //console.log(JSON.stringify(req.body))
+    
+          const resultUploaded = await prisma.mt_file.create({
+            data: {
+              mutasi_file_name: `${file.filename}`,              
+              mutasi_file_bank_account_id: Number(mutasi_file_bank_account_id),
+              mutasi_file_bulan: Number(mutasi_file_bulan)              
+            },
+          });
+    
+          return res.status(200).json({
+            message: "Sukses Upload",
+            data: resultUploaded
+          });
+        } catch (error) {
+    
+          return res.status(500).json({
+            message: "Internal Server Error",
+            error: error.message,
+          });
+        }
+      },
+      
+      async createMutasiFromBank(req, res) {
+        try {
+    
+          const { mutasi_bank_code } = req.body
+    
+          let dataTrans = [];
+          const dataexcel = await readXlsxFile('uploads/' + filename).then((rows) => {
+    
+            // rows.map((items, i) =>
+            //   dataTrans.push({
+            //     mutasi_bank_code,
+            //     mutasi_deskripsi: rows[i][1],
+            //     mutasi_currency: Number(i)[2],
+            //     mutasi_amount: Number(rows[i][3]),
+            //     mutasi_isdebit: String(rows[i][6]),
+            //     mutasi_balance: rows[i][7],
+            //     mutasi_bank_account_id: Number(rows[i][8]),
+            //     mutasi_tanggal_transaksi: Number(rows[i][10])
+            //   })
+            // )
+            console.log("SEMUA DATA DARI EXCEL", JSON.stringify(rows));
+            //dataTrans.splice(0, 1)
+    
+            return dataTrans;
+    
+          })
+          //console.log("SEMUA DATA GAPSss",JSON.stringify(dataexcel));    
+    
+          await prisma.mutasi.createMany({
+            data: dataexcel,
+          });
+    
+          res.status(200).json({
+            message: "Sukses Generate Data MT940",
+          });
+    
+        } catch (error) {
+          res.status(500).json({
+            message: error?.message,
+          });
+        }
+    
+      },
+
+
 }
