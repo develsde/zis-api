@@ -242,11 +242,12 @@ model transactions {
 }
 
 model bank_account {
-  id          Int       @id @default(autoincrement())
-  bank_name   String    @db.VarChar(255)
-  bank_number String    @db.VarChar(255)
-  isbank      Int?      @default(1) @db.SmallInt
+  id          Int           @id @default(autoincrement())
+  bank_name   String        @db.VarChar(255)
+  bank_number String        @db.VarChar(255)
+  isbank      Int?          @default(1) @db.SmallInt
   mt_file     mt_file[]
+  mutasi_file mutasi_file[]
 }
 
 model ebs_staging {
@@ -1338,4 +1339,28 @@ model report {
   gl_account                               gl_account? @relation(fields: [report_gl_account], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "report_gl_account_FK")
 
   @@index([report_gl_account], map: "report_gl_account_FK")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model mutasi {
+  id                       Int       @id @default(autoincrement())
+  mutasi_bank_code         String?   @db.VarChar(100)
+  mutasi_deskripsi         String?   @db.Text
+  mutasi_currency          Int?      @db.SmallInt
+  mutasi_amount            Int?
+  mutasi_isdebit           Int?      @db.SmallInt
+  mutasi_balance           Int?
+  mutasi_bank_account_id   Int?
+  mutasi_tanggal_transaksi DateTime? @db.Date
+}
+
+model mutasi_file {
+  id                          Int           @id @default(autoincrement())
+  mutasi_file_name            String?       @db.Text
+  mutasi_file_bank_account_id Int?
+  mutasi_file_bulan           Int?
+  mutasi_file_isgenerated     Int?          @default(0) @db.SmallInt
+  bank_account                bank_account? @relation(fields: [mutasi_file_bank_account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mutasi_file_bank_account_FK")
+
+  @@index([mutasi_file_bank_account_id], map: "mutasi_file_bank_account_FK")
 }

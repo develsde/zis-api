@@ -32,11 +32,7 @@ module.exports = {
     
           const createReport = await prisma.report.create({
             data: {
-              report_gl_account: {
-                connect: {
-                  id: Number(report_gl_account),
-                },
-              },
+              report_gl_account: Number(report_gl_account),  
               report_type: Number(report_type),
               report_proposal_id: Number(report_proposal_id),
               report_nominal: Number(report_nominal),
