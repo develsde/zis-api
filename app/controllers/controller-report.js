@@ -165,19 +165,23 @@ module.exports = {
     
           const {
             mutasi_file_name,
-            mutasi_file_bank_account_id,
+            bank,
             mutasi_file_bulan            
           } = req.body;
     
           //console.log(JSON.stringify(req.body))
     
-          const resultUploaded = await prisma.mt_file.create({
+          const resultUploaded = await prisma.mutasi_file.create({
             data: {
               mutasi_file_name: `${file.filename}`,              
-              mutasi_file_bank_account_id: Number(mutasi_file_bank_account_id),
+              mutasi_file_bank_account_id: Number(bank),
               mutasi_file_bulan: Number(mutasi_file_bulan)              
             },
           });
+
+          if (resultUploaded) {
+            //pembuatan fungsi membaca file excel kemudian push many data nya
+          }
     
           return res.status(200).json({
             message: "Sukses Upload",
