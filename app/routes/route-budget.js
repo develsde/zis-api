@@ -5,7 +5,7 @@ const { authentication, authorization } = require("../../config/auth");
 const { upload } = require("../helper/upload");
 
 // GET localhost:8080/home => Ambil data semua dari awal
-router.get("/programlist", authentication, budget.programList);
+router.get("/programlist" , budget.programList);
 router.get("/all", authentication, budget.allBudgetData);
 router.post("/create", authentication, budget.createBudget);
 router.put("/update/:id", authentication, budget.updateBudget);
