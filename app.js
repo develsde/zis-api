@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const CryptoJS = require('crypto-js');
 const bodyParser = require("body-parser");
+const { prisma } = require("./prisma/client");
 
 const app = express();
 const path = require("path");
