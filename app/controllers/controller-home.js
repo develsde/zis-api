@@ -2918,6 +2918,72 @@ module.exports = {
     }
   },
 
+  
+  
+  async exportPemesananToExcel(req, res) {
+    try {
+      const id = req.params.id;
+      
+      // Ambil data detail pemesanan berdasarkan id_pemesanan
+      const detailPemesanan = await prisma.detail_pemesanan_megakonser.findMany({
+        where: {
+          id_pemesanan: Number(id),
+        },
+        select: {
+          kode_tiket: true, // Hanya mengambil kolom kode_tiket
+        },
+      });
+      
+      if (detailPemesanan.length === 0) {
+        return res.status(404).json({ message: 'Data kode tiket tidak ditemukan' });
+      }
+  
+      // Membuat workbook dan worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Kode Tiket');
+  
+      // Menambahkan header ke worksheet
+      worksheet.columns = [
+        { header: 'Kode Tiket', key: 'kode_tiket', width: 30 }, // Hanya header kode_tiket
+      ];
+  
+      // Menambahkan data kode tiket ke worksheet
+      detailPemesanan.forEach((detail) => {
+        worksheet.addRow({
+          kode_tiket: detail.kode_tiket,
+        });
+      });
+  
+      // Membuat path untuk menyimpan file sementara
+      const filename = `Kode_Tiket_MegaKonser_${Date.now()}.xlsx`;
+      const uploadPath = path.join(__dirname, '../../uploads', filename);
+  
+      // Menulis file Excel ke path sementara
+      await workbook.xlsx.writeFile(uploadPath);
+  
+      // Mengirimkan file Excel untuk diunduh
+      res.download(uploadPath, filename, (err) => {
+        if (err) {
+          return res.status(500).json({ message: 'Gagal mengunduh file', error: err.message });
+        }
+  
+        // Setelah pengunduhan selesai, hapus file dari server
+        fs.unlink(uploadPath, (err) => {
+          if (err) {
+            console.error('Gagal menghapus file sementara:', err);
+          }
+        });
+      });
+  
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+  
+  
+
   async getPenjualanMegakonser(req, res) {
     try {
       const start = new Date(req.query.start);
