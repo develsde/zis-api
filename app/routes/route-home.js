@@ -52,6 +52,7 @@ router.get("/pemesanan-megakonser", authentication, home.getPemesananMegakonser)
 router.get("/detail-pemesanan-megakonser/:id", authentication, home.getDetailPemesananMegakonser)
 router.get("/resendEmail/:kode_pemesanan", authentication, home.resendEmail)
 router.get("/exportAllDataPemesanan", authentication, home.exportAllPemesananToExcel)
+router.get("/exporPemesananToExcel/:id",authentication, home.exportPemesananToExcel);
 router.get("/getPenjualanMegakonser", authentication, home.getPenjualanMegakonser)
 router.get("/getPenjualanAffiliator", authentication, home.getPenjualanAffiliator)
 router.get("/getAffiliator", authentication, home.getAffiliator)
