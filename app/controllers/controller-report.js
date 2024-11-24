@@ -358,7 +358,7 @@ module.exports = {
         const sortType = req.query.order || "asc";
   
         const params = {
-          mutasi_deskripsi: {
+          jurnal_deskripsi: {
             contains: keyword,
           },
         };
