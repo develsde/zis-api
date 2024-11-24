@@ -8,7 +8,9 @@ const { upload } = require("../helper/upload");
 router.post("/create-report", authentication, report.createReport);
 router.post("/create-mutasi", authentication, report.createMutasi);
 router.post("/create-mutasibank", authentication, report.createMutasiFromBank);
+router.post("/create-jurnal", authentication, report.createJurnal);
 router.get("/all-mutasi", authentication, report.allDataMutasi);
+router.get("/all-jurnal", authentication, report.allDataJurnal);
 
 router.post("/upload-filemutasi", authentication, upload.single("statement"), report.uploadMutasi);
 module.exports = router;

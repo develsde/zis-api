@@ -1540,6 +1540,127 @@ module.exports = {
     }
   },
 
+  async getAllPenyaluranValidation(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const status = Number(req.query.status || 4);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.nama || "";
+      const user_type = req.query.user_type || "";
+      const category = req.query.category || "";
+      const sortBy = req.query.sortBy || "tgl_bayar";
+      const sortType = req.query.order || "desc";
+
+      const params = {
+        nama: {
+          contains: keyword,
+        },
+        ispaid: 1,
+        tgl_bayar : {
+          lte: new Date("2024-10-31"),
+          gte: new Date("2024-10-01"),
+        }
+      };
+
+      // const sum = await prisma.proposal.groupBy({
+      //   by: ['dana_approval'],        
+      //   where: params,
+      // });
+
+      const [count, summarize, proposals] = await prisma.$transaction([
+        prisma.proposal.count({
+          where: params,
+        }),
+        prisma.proposal.groupBy({
+          by: ['dana_approval'],
+          _sum: {
+            dana_approval: true,
+          },
+          where: params,
+        }),
+        prisma.proposal.findMany({
+          include: {
+            user: {
+              select: {
+                mustahiq: true,
+                user_id: true,
+                user_nama: true,
+                username: true,
+                user_phone: true,
+              },
+            },
+            //program:true,
+            program: {
+              select: {
+                program_title: true,
+                pogram_target_amount: false,
+                kategori_penyaluran: true,
+                program_category: true,
+              },
+              // include: {
+
+              // }
+            },
+            proposal_approval: {
+              include: {
+                user: {
+                  select: {
+                    user_id: true,
+                    user_nama: true,
+                    username: true,
+                    user_phone: true,
+                    user_type: true
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+      // item.program_target_amount = undefined\
+      let danaapp = 0;
+      const propResult = await Promise.all(
+        proposals.map(async (item) => {
+          //item.program_target_amount = undefined
+          //danaapp = danaapp + Number(item.dana_approval)
+          return {
+            ...item,
+            //pogram_target_amount: Number(item.program_target_amount),            
+            //total_donation: total_donation._sum.amount || 0,
+          };
+
+        })
+      );
+
+      // var summarizes =  summarize.length > 0 ? 
+      //       summarize.map(summarize => summarize.dana_approval).reduce((acc, amount) => Number(summarize.dana_approval) + acc + amount):0
+
+      res.status(200).json({
+        // aggregate,
+        message: "Sukses Ambil Data",
+        summarize: danaapp,
+        data: propResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
   async detailProposal(req, res) {
     try {
       const id = req.params.id;
