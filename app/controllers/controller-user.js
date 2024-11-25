@@ -5,6 +5,7 @@ const { nanoid } = require("nanoid");
 const argon2 = require("argon2");
 const { generateTemplate, sendEmail, generateTemplateForgotEmail } = require("../helper/email");
 const crypto = require("node:crypto");
+const md5 = require("md5");
 
 module.exports = {
   // LOGIN USER 
@@ -523,4 +524,71 @@ module.exports = {
       });
     }
   },
+//outlet login
+async loginOutlet(req, res) {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({
+        message: "Username atau Password Salah",
+      });
+    }
+
+    const user = await prisma.outlet.findUnique({
+      include: {
+        type: true
+      },
+      where: {
+        username,        
+        password: md5(password)
+      },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Username atau Password Salah",
+      });
+    }
+
+    //const passwordMatch = await argon2.verify(user.user_password, password);
+    // if (!passwordMatch) {
+    //   return res.status(400).json({
+    //     message: "Username atau Password Salah",
+    //   });
+    // }
+
+    if (user.status === 0) {
+      return res.status(400).json({
+        message: "Akun Anda Tidak Aktif",
+      });
+    }
+
+    const omit = require("lodash/omit");
+
+    const cleanUser = omit(user, ["password", "token"]);
+
+    const token = generate(cleanUser);
+
+    await prisma.outlet.update({
+      where: {
+        username,
+      },
+      data: {
+        token: token,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Login Berhasil",
+      data: cleanUser,
+      token,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: error?.message,
+    });
+  }
+},
+
 };

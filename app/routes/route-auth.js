@@ -28,4 +28,7 @@ router.post("/resetpassword", user.resetPassword);
 router.post("/resetpassERP/:user_id", user.resetPasswordErp);
 router.post("/forgot-password", user.forgotPassword);
 
+//login outlet genks 25 nov 2024
+router.post("/login-outlet", loginlimiter, user.loginOutlet);
+
 module.exports = router;
