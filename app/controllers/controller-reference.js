@@ -51,17 +51,13 @@ module.exports = {
     try {
       //const userId = req.user_id;
 
-      const province = await prisma.provinces.findMany({
-
-      });
+      const province = await prisma.provinces.findMany({});
 
       if (!province) {
         return res.status(404).json({
           message: "Province tidak ditemukan",
         });
       }
-
-
 
       return res.status(200).json({
         message: "Sukses",
@@ -80,7 +76,7 @@ module.exports = {
 
       const cities = await prisma.cities.findMany({
         where: {
-          prov_id: Number(id)
+          prov_id: Number(id),
         },
       });
 
@@ -89,8 +85,6 @@ module.exports = {
           message: "City tidak ditemukan",
         });
       }
-
-
 
       return res.status(200).json({
         message: "Sukses",
@@ -109,7 +103,7 @@ module.exports = {
 
       const district = await prisma.districts.findMany({
         where: {
-          city_id: Number(id)
+          city_id: Number(id),
         },
       });
 
@@ -118,8 +112,6 @@ module.exports = {
           message: "Kecematan tidak ditemukan",
         });
       }
-
-
 
       return res.status(200).json({
         message: "Sukses",
@@ -138,7 +130,7 @@ module.exports = {
 
       const gltype = await prisma.gl_account_type.findMany({
         // where: {
-        //     id: Number(id)               
+        //     id: Number(id)
         //   },
       });
 
@@ -147,8 +139,6 @@ module.exports = {
           message: "Data GL Type tidak ditemukan",
         });
       }
-
-
 
       return res.status(200).json({
         message: "Sukses",
@@ -184,7 +174,7 @@ module.exports = {
         }),
         prisma.gl_account.findMany({
           include: {
-            gl_account_type: true
+            gl_account_type: true,
           },
           orderBy: {
             [sortBy]: sortType,
@@ -197,10 +187,8 @@ module.exports = {
 
       const glResult = await Promise.all(
         gla.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -243,8 +231,8 @@ module.exports = {
           contains: keyword,
         },
         gl_group: {
-          contains: "PENERIMAAN"
-        }
+          contains: "PENERIMAAN",
+        },
       };
 
       const [count, gla] = await prisma.$transaction([
@@ -253,7 +241,7 @@ module.exports = {
         }),
         prisma.gl_account.findMany({
           include: {
-            gl_account_type: true
+            gl_account_type: true,
           },
           orderBy: {
             [sortBy]: sortType,
@@ -266,10 +254,8 @@ module.exports = {
 
       const glResult = await Promise.all(
         gla.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -322,7 +308,7 @@ module.exports = {
         }),
         prisma.gl_account.findMany({
           include: {
-            gl_account_type: true
+            gl_account_type: true,
           },
           orderBy: {
             [sortBy]: sortType,
@@ -335,10 +321,8 @@ module.exports = {
 
       const glResult = await Promise.all(
         gla.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -380,7 +364,9 @@ module.exports = {
         gl_name: {
           contains: keyword,
         },
-        gl_group: { notIn: ["PROG", "BANK", "KAS", "PIUTANG", "ASET", "BLANK"] }
+        gl_group: {
+          notIn: ["PROG", "BANK", "KAS", "PIUTANG", "ASET", "BLANK"],
+        },
       };
 
       const [count, gla] = await prisma.$transaction([
@@ -389,7 +375,7 @@ module.exports = {
         }),
         prisma.gl_account.findMany({
           include: {
-            gl_account_type: true
+            gl_account_type: true,
           },
           orderBy: {
             [sortBy]: sortType,
@@ -402,10 +388,8 @@ module.exports = {
 
       const glResult = await Promise.all(
         gla.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -448,8 +432,7 @@ module.exports = {
         program_title: {
           contains: keyword,
         },
-        program_status: 1
-
+        program_status: 1,
       };
 
       const [count, prog] = await prisma.$transaction([
@@ -459,7 +442,7 @@ module.exports = {
         prisma.program.findMany({
           select: {
             program_id: true,
-            program_title: true
+            program_title: true,
           },
           orderBy: {
             [sortBy]: sortType,
@@ -472,10 +455,8 @@ module.exports = {
 
       const progResult = await Promise.all(
         prog.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -501,7 +482,6 @@ module.exports = {
     }
   },
 
-
   async getAllMuzaki(req, res) {
     try {
       const page = Number(req.query.page || 1);
@@ -519,7 +499,7 @@ module.exports = {
           contains: keyword,
         },
         user_type: 11,
-        user_status: 1
+        user_status: 1,
       };
 
       const [count, muzaki] = await prisma.$transaction([
@@ -529,7 +509,7 @@ module.exports = {
         prisma.user.findMany({
           select: {
             user_id: true,
-            user_nama: true
+            user_nama: true,
           },
           orderBy: {
             [sortBy]: sortType,
@@ -542,10 +522,8 @@ module.exports = {
 
       const muzResult = await Promise.all(
         muzaki.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -582,7 +560,7 @@ module.exports = {
         gl_group,
         gl_name,
         status,
-        gl_type
+        gl_type,
       } = req.body;
 
       //console.log(JSON.stringify(req.body))
@@ -599,7 +577,7 @@ module.exports = {
           gl_account,
           gl_group,
           gl_name,
-          status
+          status,
         },
       });
 
@@ -608,7 +586,6 @@ module.exports = {
         data: glResult,
       });
     } catch (error) {
-
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
@@ -626,7 +603,7 @@ module.exports = {
         gl_group,
         gl_name,
         status,
-        gl_type
+        gl_type,
       } = req.body;
 
       //console.log(JSON.stringify(req.body))
@@ -646,7 +623,7 @@ module.exports = {
           gl_account,
           gl_group,
           gl_name,
-          status
+          status,
         },
       });
 
@@ -655,7 +632,6 @@ module.exports = {
         data: glResult,
       });
     } catch (error) {
-
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
@@ -669,7 +645,7 @@ module.exports = {
       await prisma.gl_account.delete({
         where: {
           id: Number(id),
-        }
+        },
       });
 
       return res.status(200).json({
@@ -682,8 +658,6 @@ module.exports = {
       });
     }
   },
-
-
 
   async masterbank(req, res) {
     try {
@@ -719,10 +693,8 @@ module.exports = {
 
       const bankResult = await Promise.all(
         bank.map(async (item) => {
-
-
           return {
-            ...item
+            ...item,
             //program_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
@@ -750,18 +722,14 @@ module.exports = {
 
   async createMasterBank(req, res) {
     try {
-
-      const {
-        bank_name,
-        bank_number
-      } = req.body;
+      const { bank_name, bank_number } = req.body;
 
       //console.log(JSON.stringify(req.body))
 
       const bankResult = await prisma.bank_account.create({
         data: {
           bank_name,
-          bank_number
+          bank_number,
         },
       });
 
@@ -770,7 +738,6 @@ module.exports = {
         data: bankResult,
       });
     } catch (error) {
-
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
@@ -781,10 +748,7 @@ module.exports = {
     try {
       const id = req.params.id;
 
-      const {
-        bank_name,
-        bank_number
-      } = req.body;
+      const { bank_name, bank_number } = req.body;
 
       //console.log(JSON.stringify(req.body))
 
@@ -794,7 +758,7 @@ module.exports = {
         },
         data: {
           bank_name,
-          bank_number
+          bank_number,
         },
       });
 
@@ -803,7 +767,6 @@ module.exports = {
         data: bankResult,
       });
     } catch (error) {
-
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
@@ -817,7 +780,7 @@ module.exports = {
       await prisma.bank_account.delete({
         where: {
           id: Number(id),
-        }
+        },
       });
 
       return res.status(200).json({
@@ -916,7 +879,10 @@ module.exports = {
   async registerArticle(req, res) {
     try {
       const schema = z.object({
-        title: z.string({ required_error: "Judul Harus Diisi" }).min(3, "Judul Terlalu Pendek").max(255),
+        title: z
+          .string({ required_error: "Judul Harus Diisi" })
+          .min(3, "Judul Terlalu Pendek")
+          .max(255),
         content: z.string({ required_error: "Deskripsi Harus Diis" }).min(3),
       });
 
@@ -939,9 +905,9 @@ module.exports = {
         });
       }
 
-      const array_of_allowed_files = ['png', 'jpg', 'jpeg'];
+      const array_of_allowed_files = ["png", "jpg", "jpeg"];
       const file_extension = file.originalname.slice(
-        ((file.originalname.lastIndexOf('.') - 1) >>> 0) + 2
+        ((file.originalname.lastIndexOf(".") - 1) >>> 0) + 2
       );
 
       // Check if the uploaded file is allowed
@@ -951,13 +917,10 @@ module.exports = {
         });
       }
 
-      const {
-        evidence,
-        path,
-      } = req.body;
+      const { evidence, path } = req.body;
 
       const userId = req.user_id;
-      console.log(userId)
+      console.log(userId);
       const article = await prisma.article.create({
         data: {
           title,
@@ -983,11 +946,13 @@ module.exports = {
     }
   },
 
-
   async updateArticle(req, res) {
     try {
       const schema = z.object({
-        title: z.string({ required_error: "Judul Harus Diisi" }).min(3, "Judul Terlalu Pendek").max(255),
+        title: z
+          .string({ required_error: "Judul Harus Diisi" })
+          .min(3, "Judul Terlalu Pendek")
+          .max(255),
         content: z.string({ required_error: "Deskripsi Harus Diis" }).min(3),
       });
 
@@ -1012,7 +977,7 @@ module.exports = {
       const { evidence, path } = req.body;
 
       const userId = req.user_id;
-      console.log(userId)
+      console.log(userId);
       const articleUpdateData = {
         title,
         content,
@@ -1053,7 +1018,7 @@ module.exports = {
       await prisma.article.delete({
         where: {
           id: Number(id),
-        }
+        },
       });
 
       return res.status(200).json({
@@ -1073,7 +1038,7 @@ module.exports = {
 
       const institusi = await prisma.institusi.findMany({
         where: {
-          institusi_user_id: Number(id)
+          institusi_user_id: Number(id),
         },
       });
 
@@ -1160,7 +1125,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
 
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: result
+        data: result,
       });
     } catch (error) {
       res.status(500).json({
@@ -1212,7 +1177,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
 
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: result
+        data: result,
       });
     } catch (error) {
       res.status(500).json({
@@ -1225,7 +1190,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
     try {
       const start = new Date(req.query.start);
       const end = new Date(req.query.end);
-      const isinternal = Number(req.query.isinternal || 0)
+      const isinternal = Number(req.query.isinternal || 0);
 
       const validStart = !isNaN(start.getTime()) ? start : new Date();
       const validEnd =
@@ -1243,7 +1208,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
           gte: validStart,
           lte: validEnd,
         },
-        isinternal
+        isinternal,
       };
 
       const result = await prisma.$queryRawUnsafe(`
@@ -1266,7 +1231,7 @@ ORDER BY SUM(COALESCE(p.dana_yang_disetujui, 0)) DESC
 
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: result
+        data: result,
       });
     } catch (error) {
       res.status(500).json({
@@ -1317,7 +1282,7 @@ ORDER BY aa.created_date DESC
 
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: result
+        data: result,
       });
     } catch (error) {
       res.status(500).json({
@@ -1384,7 +1349,7 @@ ORDER BY aa.created_date DESC
               mitra_reg_nominal: true,
               referentor: {
                 select: {
-                  referentor_nama: true
+                  referentor_nama: true,
                 },
               },
             },
@@ -1437,8 +1402,8 @@ ORDER BY aa.created_date DESC
               user_nama: true,
               username: true,
               user_phone: true,
-            }
-          }
+            },
+          },
         },
       });
 
@@ -1454,22 +1419,22 @@ ORDER BY aa.created_date DESC
   },
 
   async getOutlet(req, res) {
-    const outlet_id = Number(req.query.outlet_id) || 0
+    const outlet_id = Number(req.query.outlet_id) || 0;
 
     try {
       const outlet = await prisma.outlet.findUnique({
         where: {
-          id: outlet_id
+          id: outlet_id,
         },
         include: {
           cso: {
             include: {
               provinces: true,
               cities: true,
-              districts: true
-            }
-          }
-        }
+              districts: true,
+            },
+          },
+        },
       });
 
       res.status(200).json({
@@ -1495,8 +1460,8 @@ ORDER BY aa.created_date DESC
       const params = {
         nama_cso: {
           contains: keyword,
-        }
-      }
+        },
+      };
 
       const [count, cso] = await prisma.$transaction([
         prisma.cso.count({
@@ -1554,7 +1519,7 @@ ORDER BY aa.created_date DESC
           nama_cso: nama_cso,
           nohp: nohp,
           alamat: alamat,
-          user_id: Number(user_id)
+          user_id: Number(user_id),
         },
       });
 
@@ -1577,22 +1542,24 @@ ORDER BY aa.created_date DESC
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
       const sortBy = req.query.sortBy || "id";
-      const sortType = req.query.order || 'asc';
+      const sortType = req.query.order || "asc";
 
       // Cari CSO ID berdasarkan user_id yang login
       const cso = await prisma.cso.findFirst({
-        where: { user_id: userId }
+        where: { user_id: userId },
       });
 
       if (!cso) {
-        return res.status(404).json({ message: "CSO tidak ditemukan untuk user ini" });
+        return res
+          .status(404)
+          .json({ message: "CSO tidak ditemukan untuk user ini" });
       }
 
       const params = {
         nama_outlet: {
           contains: keyword,
         },
-        cso_id: cso.id // Gunakan `cso.id` sebagai filter untuk `id_cso`
+        cso_id: cso.id, // Gunakan `cso.id` sebagai filter untuk `id_cso`
       };
 
       const [count, outlet] = await prisma.$transaction([
@@ -1622,14 +1589,12 @@ ORDER BY aa.created_date DESC
           totalPage: Math.ceil(count / perPage),
         },
       });
-
     } catch (error) {
       res.status(500).json({
         message: error.message,
       });
     }
   },
-
 
   async createOutlet(req, res) {
     try {
@@ -1639,44 +1604,48 @@ ORDER BY aa.created_date DESC
         alamat_outlet: z.string(),
         pic_outlet: z.string(),
       });
-  
+
       const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
-      const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
+      const body = await schema.safeParseAsync({
+        nama_outlet,
+        alamat_outlet,
+        pic_outlet,
+      });
       let errorObj = {};
-  
+
       if (body.error) {
         body.error.issues.forEach((issue) => {
           errorObj[issue.path[0]] = issue.message;
         });
         body.error = errorObj;
       }
-  
+
       if (!body.success) {
         return res.status(400).json({
           message: "Beberapa Field Harus Diisi",
           error: errorObj,
         });
       }
-  
+
       const userId = req.user.user_id;
       const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
-  
+
       if (!cso) {
         return res.status(404).json({
           message: "CSO tidak ditemukan untuk user ini",
         });
       }
-  
+
       const currentOutlet = await prisma.outlet.findFirst({
         where: { nama_outlet: body.data.nama_outlet },
       });
-  
+
       if (currentOutlet) {
         return res.status(400).json({
           message: "Outlet Sudah Terdaftar",
         });
       }
-  
+
       const newOutlet = await prisma.outlet.create({
         data: {
           nama_outlet: body.data.nama_outlet,
@@ -1686,33 +1655,39 @@ ORDER BY aa.created_date DESC
           register_date: new Date(),
         },
       });
-  
+
       const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${newOutlet.id}`;
       const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl, { width: 800 });
-  
+
       const qrCodeImage = await loadImage(qrCodeDataUrl);
-      const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
+      const logoPath = path.resolve(__dirname, "../../uploads/zis.png");
       const logoImage = await loadImage(logoPath);
-  
-      const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
+
+      const backgroundImagePath = path.resolve(
+        __dirname,
+        "../../uploads/background.png"
+      );
       const backgroundImage = await loadImage(backgroundImagePath);
-  
+
       // Set up canvas for A4 size at 300 DPI
-      const canvasWidth = 2480;  // A4 width in pixels at 300 DPI
+      const canvasWidth = 2480; // A4 width in pixels at 300 DPI
       const canvasHeight = 3508; // A4 height in pixels at 300 DPI
-      const qrSize = 1500;        // Adjusted QR code size for A4
-      const logoSize = 150;      // Adjusted logo size
-      const borderSize = 60;     // Adjusted border size
-      const textMargin = 100;    // Adjusted text margin
-  
+      const qrSize = 1500; // Adjusted QR code size for A4
+      const logoSize = 150; // Adjusted logo size
+      const borderSize = 60; // Adjusted border size
+      const textMargin = 100; // Adjusted text margin
+
       const canvas = createCanvas(canvasWidth, canvasHeight);
-      const ctx = canvas.getContext('2d');
-  
+      const ctx = canvas.getContext("2d");
+
       // Scale the background to fit A4 size
       const backgroundScaleWidth = canvasWidth / backgroundImage.width;
       const backgroundScaleHeight = canvasHeight / backgroundImage.height;
-      const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight);
-  
+      const backgroundScale = Math.max(
+        backgroundScaleWidth,
+        backgroundScaleHeight
+      );
+
       const bgX = (canvasWidth - backgroundImage.width * backgroundScale) / 2;
       const bgY = (canvasHeight - backgroundImage.height * backgroundScale) / 2;
       ctx.drawImage(
@@ -1722,37 +1697,40 @@ ORDER BY aa.created_date DESC
         backgroundImage.width * backgroundScale,
         backgroundImage.height * backgroundScale
       );
-  
+
       // Draw white area behind QR code
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(
         (canvasWidth - (qrSize + borderSize)) / 2,
         canvasHeight - qrSize - textMargin - 300,
         qrSize + borderSize,
         qrSize + textMargin
       );
-  
+
       // Draw QR code centered in white area
       const qrX = (canvasWidth - qrSize) / 2;
       const qrY = canvasHeight - qrSize - textMargin - 300;
       ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
-  
+
       // Draw logo centered over QR code
       const logoX = qrX + (qrSize - logoSize) / 2;
       const logoY = qrY + (qrSize - logoSize) / 2;
       ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
-  
+
       // Draw text below QR code with larger font
-      registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
+      registerFont(
+        path.resolve(__dirname, "../../uploads/fonts/Roboto-Black.ttf"),
+        { family: "Roboto" }
+      );
       const text = `Salam Donasi ${newOutlet.id}`;
-      const fontSize = 100;  // Adjusted font size for A4
-      ctx.fillStyle = '#000000';
+      const fontSize = 100; // Adjusted font size for A4
+      ctx.fillStyle = "#000000";
       ctx.font = `bold ${fontSize}px Roboto`;
-      ctx.textAlign = 'center';
+      ctx.textAlign = "center";
       ctx.fillText(text, canvasWidth / 2, canvasHeight - 100);
-  
-      const qrCodeWithLogoData = canvas.toDataURL('image/png');
-  
+
+      const qrCodeWithLogoData = canvas.toDataURL("image/png");
+
       return res.status(200).json({
         message: "Sukses",
         data: "Berhasil Menambahkan Outlet dengan QR Code",
@@ -1765,9 +1743,7 @@ ORDER BY aa.created_date DESC
       });
     }
   },
-  
 
-  
   async updateOutlet(req, res) {
     const outletId = req.params.id;
     try {
@@ -1777,45 +1753,49 @@ ORDER BY aa.created_date DESC
         alamat_outlet: z.string().optional(),
         pic_outlet: z.string().optional(),
       });
-  
+
       const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
-      const body = await schema.safeParseAsync({ nama_outlet, alamat_outlet, pic_outlet });
+      const body = await schema.safeParseAsync({
+        nama_outlet,
+        alamat_outlet,
+        pic_outlet,
+      });
       let errorObj = {};
-  
+
       if (body.error) {
         body.error.issues.forEach((issue) => {
           errorObj[issue.path[0]] = issue.message;
         });
         body.error = errorObj;
       }
-  
+
       if (!body.success) {
         return res.status(400).json({
           message: "Beberapa Field Harus Diisi",
           error: errorObj,
         });
       }
-  
+
       const userId = req.user.user_id;
       const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
-  
+
       if (!cso) {
         return res.status(404).json({
           message: "CSO tidak ditemukan untuk user ini",
         });
       }
-  
+
       // Check if outlet exists
       const outlet = await prisma.outlet.findFirst({
         where: { id: Number(outletId), cso_id: cso.id },
       });
-  
+
       if (!outlet) {
         return res.status(404).json({
           message: "Outlet tidak ditemukan",
         });
       }
-  
+
       // Update outlet details
       const updatedOutlet = await prisma.outlet.update({
         where: {
@@ -1823,42 +1803,52 @@ ORDER BY aa.created_date DESC
         },
         data: {
           ...(body.data.nama_outlet && { nama_outlet: body.data.nama_outlet }),
-          ...(body.data.alamat_outlet && { alamat_outlet: body.data.alamat_outlet }),
+          ...(body.data.alamat_outlet && {
+            alamat_outlet: body.data.alamat_outlet,
+          }),
           ...(body.data.pic_outlet && { pic_outlet: body.data.pic_outlet }),
         },
       });
-  
+
       // Generate QR code URL
       const qrCodeUrl = `https://portal.zisindosat.id/salam-donasi?outlet=${updatedOutlet.id}`;
       const qrCodeDataUrl = await QRCode.toDataURL(qrCodeUrl);
-  
+
       const qrCodeImage = await loadImage(qrCodeDataUrl);
-      const logoPath = path.resolve(__dirname, '../../uploads/zis.png');
+      const logoPath = path.resolve(__dirname, "../../uploads/zis.png");
       const logoImage = await loadImage(logoPath);
-  
+
       // Load background image
-      const backgroundImagePath = path.resolve(__dirname, '../../uploads/background.png');
+      const backgroundImagePath = path.resolve(
+        __dirname,
+        "../../uploads/background.png"
+      );
       const backgroundImage = await loadImage(backgroundImagePath);
-  
+
       // Set A4 canvas dimensions at 300 DPI (2480x3508 pixels)
       const canvasWidth = 2480;
       const canvasHeight = 3508;
       const qrSize = 1500; // Adjust QR size for A4
       const reducedBorderSize = 100; // Border around the QR
       const textMargin = 200;
-  
+
       // Create canvas at A4 size
       const canvas = createCanvas(canvasWidth, canvasHeight);
-      const ctx = canvas.getContext('2d');
-  
+      const ctx = canvas.getContext("2d");
+
       // Calculate background scale
       const backgroundScaleWidth = canvasWidth / backgroundImage.width;
       const backgroundScaleHeight = canvasHeight / backgroundImage.height;
-      const backgroundScale = Math.max(backgroundScaleWidth, backgroundScaleHeight);
-  
+      const backgroundScale = Math.max(
+        backgroundScaleWidth,
+        backgroundScaleHeight
+      );
+
       // Draw background image
-      const bgX = (canvasWidth / 2) - (backgroundImage.width * backgroundScale / 2);
-      const bgY = (canvasHeight / 2) - (backgroundImage.height * backgroundScale / 2);
+      const bgX =
+        canvasWidth / 2 - (backgroundImage.width * backgroundScale) / 2;
+      const bgY =
+        canvasHeight / 2 - (backgroundImage.height * backgroundScale) / 2;
       ctx.drawImage(
         backgroundImage,
         bgX,
@@ -1866,42 +1856,45 @@ ORDER BY aa.created_date DESC
         backgroundImage.width * backgroundScale,
         backgroundImage.height * backgroundScale
       );
-  
+
       // Draw white area behind QR code
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = "#FFFFFF";
       ctx.fillRect(
         (canvasWidth - (qrSize + reducedBorderSize)) / 2,
         canvasHeight - qrSize - textMargin - 200,
         qrSize + reducedBorderSize,
         qrSize + textMargin
       );
-  
+
       // Draw QR code in center of the white area
       const qrX = (canvasWidth - qrSize) / 2;
       const qrY = canvasHeight - qrSize - textMargin - 160;
       ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
-  
+
       // Draw logo centered on QR code
       const logoSize = 200;
-      const logoX = qrX + (qrSize / 2) - (logoSize / 2);
-      const logoY = qrY + (qrSize / 2) - (logoSize / 2);
+      const logoX = qrX + qrSize / 2 - logoSize / 2;
+      const logoY = qrY + qrSize / 2 - logoSize / 2;
       ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
-  
+
       // Draw text with larger font size
-      registerFont(path.resolve(__dirname, '../../uploads/fonts/Roboto-Black.ttf'), { family: 'Roboto' });
+      registerFont(
+        path.resolve(__dirname, "../../uploads/fonts/Roboto-Black.ttf"),
+        { family: "Roboto" }
+      );
       const text = `Salam Donasi ${updatedOutlet.id}`;
       const fontSize = 100;
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = "#000000";
       ctx.font = `bold ${fontSize}px Roboto`;
-  
+
       const textWidth = ctx.measureText(text).width;
       const textX = (canvasWidth - textWidth) / 2;
       const textY = canvasHeight - 100;
-  
+
       ctx.fillText(text, textX, textY);
-  
-      const qrCodeWithLogoData = canvas.toDataURL('image/png');
-  
+
+      const qrCodeWithLogoData = canvas.toDataURL("image/png");
+
       return res.status(200).json({
         message: "Sukses",
         data: "Outlet berhasil diperbarui dengan QR Code",
@@ -1914,9 +1907,6 @@ ORDER BY aa.created_date DESC
       });
     }
   },
-  
-  
-
 
   async getTransaksiPerOutlet(req, res) {
     try {
@@ -1926,12 +1916,14 @@ ORDER BY aa.created_date DESC
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
       const sortBy = req.query.sortBy || "id_outlet";
-      const sortType = req.query.order || 'asc';
+      const sortType = req.query.order || "asc";
 
       // Get the CSO ID for the logged-in user
       const cso = await prisma.cso.findFirst({ where: { user_id: userId } });
       if (!cso) {
-        return res.status(404).json({ message: "CSO tidak ditemukan untuk user ini" });
+        return res
+          .status(404)
+          .json({ message: "CSO tidak ditemukan untuk user ini" });
       }
       const csoId = cso.id;
 
@@ -1950,7 +1942,7 @@ ORDER BY aa.created_date DESC
         take: perPage,
       });
 
-      const outletIds = outlets.map(outlet => outlet.id);
+      const outletIds = outlets.map((outlet) => outlet.id);
 
       // Fetch total count of unique outlets matching the query
       const count = await prisma.outlet.count({
@@ -1962,12 +1954,12 @@ ORDER BY aa.created_date DESC
 
       // Get transactions grouped by outlet, calculating both nominal sum and transaction count
       const transaksi = await prisma.register_donasi.groupBy({
-        by: ['id_outlet'],
+        by: ["id_outlet"],
         _sum: { nominal: true },
         _count: { id_outlet: true },
         where: {
           outlet: { id: { in: outletIds } },
-          transaction_status: 'settlement',
+          transaction_status: "settlement",
         },
         orderBy: { [sortBy]: sortType },
       });
@@ -1977,16 +1969,21 @@ ORDER BY aa.created_date DESC
         select: { nama_cso: true },
       });
 
-      const formatCurrency = (value) => `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+      const formatCurrency = (value) =>
+        `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 
-      const result = outlets.map(outlet => {
-        const transaksiItem = transaksi.find(item => item.id_outlet === outlet.id);
+      const result = outlets.map((outlet) => {
+        const transaksiItem = transaksi.find(
+          (item) => item.id_outlet === outlet.id
+        );
         return {
           id: outlet.id,
           nama_outlet: outlet.nama_outlet,
-          alamat_outlet: outlet.alamat_outlet || 'Tidak Diketahui',
-          nama_cso: csoData ? csoData.nama_cso : 'Tidak Diketahui',
-          total: formatCurrency(transaksiItem ? transaksiItem._sum.nominal || 0 : 0),
+          alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
+          nama_cso: csoData ? csoData.nama_cso : "Tidak Diketahui",
+          total: formatCurrency(
+            transaksiItem ? transaksiItem._sum.nominal || 0 : 0
+          ),
           total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
         };
       });
@@ -2006,26 +2003,101 @@ ORDER BY aa.created_date DESC
     }
   },
 
+  async getAllTransaksiOutlet(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "id_outlet";
+      const sortType = req.query.order || "asc";
 
+      // Fetch outlets with optional keyword filtering
+      const outlets = await prisma.outlet.findMany({
+        where: {
+          nama_outlet: { contains: keyword },
+        },
+        select: {
+          id: true,
+          nama_outlet: true,
+          alamat_outlet: true,
+        },
+        skip,
+        take: perPage,
+      });
 
+      const outletIds = outlets.map((outlet) => outlet.id);
+
+      // Fetch total count of outlets matching the query
+      const count = await prisma.outlet.count({
+        where: {
+          nama_outlet: { contains: keyword },
+        },
+      });
+
+      // Get transactions grouped by outlet, calculating both nominal sum and transaction count
+      const transaksi = await prisma.register_donasi.groupBy({
+        by: ["id_outlet"],
+        _sum: { nominal: true },
+        _count: { id_outlet: true },
+        where: {
+          outlet: { id: { in: outletIds } },
+          transaction_status: "settlement",
+        },
+        orderBy: { [sortBy]: sortType },
+      });
+
+      // Get all outlets data (no filtering by CSO)
+      const result = outlets.map((outlet) => {
+        const transaksiItem = transaksi.find(
+          (item) => item.id_outlet === outlet.id
+        );
+        // Helper function to format currency values
+        const formatCurrency = (value) => {
+          return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+        };
+        return {
+          id: outlet.id,
+          nama_outlet: outlet.nama_outlet,
+          alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
+          total: formatCurrency(
+            transaksiItem ? transaksiItem._sum.nominal || 0 : 0
+          ),
+          total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
+        };
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Transaksi Per Outlet",
+        data: result,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
 
   async registerDonasi(req, res) {
-
     function generateOrderId(paymentType) {
       const now = new Date();
-      const timestamp = now.toISOString().replace(/[-:.]/g, '').slice(0, 15); // Format YYYYMMDDHHMMSS
+      const timestamp = now.toISOString().replace(/[-:.]/g, "").slice(0, 15); // Format YYYYMMDDHHMMSS
       let prefix;
 
       // Memberikan prefix berdasarkan paymentType
       switch (paymentType) {
-        case 'transfer':
-          prefix = 'TF'; // Prefix untuk QRIS
+        case "transfer":
+          prefix = "TF"; // Prefix untuk QRIS
           break;
-        case 'cash':
-          prefix = 'CS'; // Prefix untuk QRIS
+        case "cash":
+          prefix = "CS"; // Prefix untuk QRIS
           break;
         default:
-          throw new Error('Tipe pembayaran tidak dikenali'); // Buat error jika tipe tidak valid
+          throw new Error("Tipe pembayaran tidak dikenali"); // Buat error jika tipe tidak valid
       }
 
       return `${prefix}${timestamp}`; // Mengembalikan order_id dengan prefix
@@ -2047,7 +2119,7 @@ ORDER BY aa.created_date DESC
       // });
       // console.log("response:", response);
 
-      const isCashPayment = metode_pembayaran === 'cash';
+      const isCashPayment = metode_pembayaran === "cash";
       // const isMandiriPayment = metode_pembayaran === 'mandiri';
 
       // const biller_code = isMandiriPayment ? response?.data?.biller_code : null
@@ -2064,7 +2136,7 @@ ORDER BY aa.created_date DESC
 
       // const transaction_status = isCashPayment ? 'settlement' : response?.data?.transaction_status || '';
 
-      const transaction_code = generateOrderId(metode_pembayaran) // Kosong jika metode pembayaran adalah cash
+      const transaction_code = generateOrderId(metode_pembayaran); // Kosong jika metode pembayaran adalah cash
 
       const transaction_time = new Date();
       const expiry_time = new Date();
@@ -2115,7 +2187,7 @@ ORDER BY aa.created_date DESC
 
       res.status(200).json({
         message: "Sukses Kirim Data",
-        data: { postResult, midtrans }
+        data: { postResult, midtrans },
       });
     } catch (error) {
       res.status(500).json({
@@ -2123,7 +2195,6 @@ ORDER BY aa.created_date DESC
       });
     }
   },
-
 
   async checkPay(req, res) {
     const order_id = req.body.order_id;
@@ -2138,7 +2209,6 @@ ORDER BY aa.created_date DESC
       );
 
       if (stats.data.status_code === "200") {
-
         const log = await prisma.log_vendor.create({
           data: {
             vendor_api: stats?.config?.url,
@@ -2151,7 +2221,7 @@ ORDER BY aa.created_date DESC
         });
 
         // const isCashPayment = 'cash';
-        const isMandiriPayment = 'mandiri';
+        const isMandiriPayment = "mandiri";
 
         // const biller_code = isMandiriPayment ? stats.data?.biller_code : null
 
@@ -2172,8 +2242,13 @@ ORDER BY aa.created_date DESC
           data: {
             transaction_status: stats.data?.transaction_status || "",
             metode_pembayaran: stats.data?.payment_type,
-            bank: stats.data.bank || stats.data?.va_numbers?.[0]?.bank || stats.data?.issuer || isMandiriPayment,
-            va_number: stats.data?.bill_key || stats.data?.va_numbers?.[0]?.va_number,
+            bank:
+              stats.data.bank ||
+              stats.data?.va_numbers?.[0]?.bank ||
+              stats.data?.issuer ||
+              isMandiriPayment,
+            va_number:
+              stats.data?.bill_key || stats.data?.va_numbers?.[0]?.va_number,
             biller_code: stats.data?.biller_code || null,
             settlement_time: new Date(stats.data.settlement_time).toISOString(),
             expiry_time: new Date(stats.data.expiry_time).toISOString(),
@@ -2198,4 +2273,4 @@ ORDER BY aa.created_date DESC
       });
     }
   },
-}
+};

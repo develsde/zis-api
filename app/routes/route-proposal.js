@@ -21,6 +21,7 @@ router.post(
 );
 router.get("/details/:id", authentication, proposal.detailProposal);
 router.get("/all", authentication, proposal.getAllProposal);
+router.get("/allprop", authentication, proposal.getAllProposalsNoPagination);
 router.get("/all-bayar", authentication, proposal.getAllProposalBayar);
 router.get("/all-paid", authentication, proposal.getAllProposalPaid);
 router.get("/all-validation", authentication, proposal.getAllPenyaluranValidation);

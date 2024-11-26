@@ -63,9 +63,9 @@ module.exports = {
       const dana_yang_diajukan = req.body.dana_yang_diajukan;
 
       //console.log(JSON.stringify(req.body))
-      const niks = Number(nik_mustahiq)
-      const validasi = parsenik.parse(niks)
-      console.log(validasi)
+      const niks = Number(nik_mustahiq);
+      const validasi = parsenik.parse(niks);
+      console.log(validasi);
       if (!nik_mustahiq) {
         return res.status(400).json({ message: "NIK wajib diisi" });
       } else if (!nama) {
@@ -75,13 +75,21 @@ module.exports = {
       } else if (!program_id) {
         return res.status(400).json({ message: "Program ID wajib diisi" });
       } else if (!proposal_kategori) {
-        return res.status(400).json({ message: "Kategori Proposal wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Kategori Proposal wajib diisi" });
       } else if (!nama_pemberi_rekomendasi) {
-        return res.status(400).json({ message: "Nama Pemberi Rekomendasi wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Nama Pemberi Rekomendasi wajib diisi" });
       } else if (!alamat_pemberi_rekomendasi) {
-        return res.status(400).json({ message: "Alamat Pemberi Rekomendasi wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Alamat Pemberi Rekomendasi wajib diisi" });
       } else if (!no_telp_pemberi_rekomendasi) {
-        return res.status(400).json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
       } else if (validasi.valid === false) {
         return res.status(400).json({ message: "NIK tidak valid" });
       }
@@ -89,9 +97,9 @@ module.exports = {
       const files = {};
       for (let i = 1; i <= 7; i++) {
         const file = req.files[`lampiran${i}`];
-        console.log(file)
+        console.log(file);
         if (file) {
-          console.log(file?.[0])
+          console.log(file?.[0]);
           files[`lampiran${i}`] = "uploads/" + file?.[0].filename;
         }
       }
@@ -114,14 +122,19 @@ module.exports = {
         },
       });
 
-      const imkas_number = imkas ? imkas.mustahiq.imkas_number : '';
-      const imkas_name = imkas ? imkas.mustahiq.nama_imkas : '';
+      const imkas_number = imkas ? imkas.mustahiq.imkas_number : "";
+      const imkas_name = imkas ? imkas.mustahiq.nama_imkas : "";
 
       const users = await prisma.institusi.findMany();
-      const institute = users.filter((data) => data.institusi_user_id === userId)
+      const institute = users.filter(
+        (data) => data.institusi_user_id === userId
+      );
 
       const currentDate = new Date();
-      const formattedDate = currentDate.toISOString().slice(0, 10).replace(/-/g, '');
+      const formattedDate = currentDate
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, "");
       const empatnik = nik_mustahiq.slice(-4);
       const no_proposal = formattedDate + empatnik;
       const sixMonthsAgo = subMonths(new Date(), 6);
@@ -145,7 +158,8 @@ module.exports = {
         });
         if (existingProposal) {
           return res.status(400).json({
-            message: "Anda telah mengajukan proposal pada program berikut dalam kurun waktu 6 bulan",
+            message:
+              "Anda telah mengajukan proposal pada program berikut dalam kurun waktu 6 bulan",
           });
         }
       } else {
@@ -166,12 +180,15 @@ module.exports = {
         });
         if (existingProposal) {
           return res.status(400).json({
-            message: "Anda telah mengajukan proposal pada program berikut dan baru dapat mengajukan kembali setelah 1 hari",
+            message:
+              "Anda telah mengajukan proposal pada program berikut dan baru dapat mengajukan kembali setelah 1 hari",
           });
         }
       }
 
-      const program_title = program ? program.program_title : 'Program tidak terdaftar';
+      const program_title = program
+        ? program.program_title
+        : "Program tidak terdaftar";
 
       const ProposalResult = await prisma.proposal.create({
         data: {
@@ -235,18 +252,24 @@ module.exports = {
       });
 
       if (ProposalResult) {
-
-        let pn = no_telp_pemberi_rekomendasi
-        pn = pn.replace(/\D/g, '');
-        if (pn.substring(0, 1) == '0') {
-          pn = "0" + pn.substring(1).trim()
-        } else if (pn.substring(0, 3) == '62') {
-          pn = "0" + pn.substring(3).trim()
+        let pn = no_telp_pemberi_rekomendasi;
+        pn = pn.replace(/\D/g, "");
+        if (pn.substring(0, 1) == "0") {
+          pn = "0" + pn.substring(1).trim();
+        } else if (pn.substring(0, 3) == "62") {
+          pn = "0" + pn.substring(3).trim();
         }
 
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text: "Proposal Atas Nama " + nama + " dan NIK " + nik_mustahiq + " pada program " + program_title + " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
+          text:
+            "Proposal Atas Nama " +
+            nama +
+            " dan NIK " +
+            nik_mustahiq +
+            " pada program " +
+            program_title +
+            " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
         });
       }
 
@@ -267,19 +290,19 @@ module.exports = {
       const userId = req.user_id;
       const program_id = req.body.program_id;
       const proposal_kategori = req.body.proposal_kategori;
-      const nik_mustahiq = '1234567812345678';
+      const nik_mustahiq = "1234567812345678";
       const nama = req.body.nama;
       const alamat_rumah = req.body.alamat_rumah;
       const nama_pemberi_rekomendasi = req.body.nama_pemberi_rekomendasi;
       const no_telp_pemberi_rekomendasi = req.body.no_telp_pemberi_rekomendasi;
       const dana_yang_diajukan = req.body.dana_yang_diajukan;
-      const nomor_imkas = req.body.nomor_imkas
-      const nama_imkas = req.body.nama_imkas
+      const nomor_imkas = req.body.nomor_imkas;
+      const nama_imkas = req.body.nama_imkas;
 
       //console.log(JSON.stringify(req.body))
-      const niks = Number(nik_mustahiq)
-      const validasi = parsenik.parse(niks)
-      console.log(validasi)
+      const niks = Number(nik_mustahiq);
+      const validasi = parsenik.parse(niks);
+      console.log(validasi);
       if (!nama) {
         return res.status(400).json({ message: "Nama wajib diisi" });
       } else if (!userId) {
@@ -287,15 +310,17 @@ module.exports = {
       } else if (!program_id) {
         return res.status(400).json({ message: "Program ID wajib diisi" });
       } else if (!no_telp_pemberi_rekomendasi) {
-        return res.status(400).json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
       }
 
       const files = {};
       for (let i = 1; i <= 7; i++) {
         const file = req.files[`lampiran${i}`];
-        console.log(file)
+        console.log(file);
         if (file) {
-          console.log(file?.[0])
+          console.log(file?.[0]);
           files[`lampiran${i}`] = "uploads/" + file?.[0].filename;
         }
       }
@@ -310,11 +335,16 @@ module.exports = {
       });
 
       const users = await prisma.institusi.findMany();
-      const institute = users.filter((data) => data.institusi_user_id === userId)
+      const institute = users.filter(
+        (data) => data.institusi_user_id === userId
+      );
 
       const currentDate = new Date();
-      const formattedDate = currentDate.toISOString().slice(0, 10).replace(/-/g, '');
-      const empatnik = '0104';
+      const formattedDate = currentDate
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, "");
+      const empatnik = "0104";
       const no_proposal = formattedDate + empatnik;
       const sixMonthsAgo = subMonths(new Date(), 6);
       const aDayAgo = subDays(new Date(), 1);
@@ -363,19 +393,21 @@ module.exports = {
       //   }
       // }
 
-      const program_title = program ? program.program_title : 'Program tidak terdaftar';
+      const program_title = program
+        ? program.program_title
+        : "Program tidak terdaftar";
 
-      let pn = nomor_imkas
-      if (pn.substring(0, 1) == '0') {
-        pn = "0" + pn.substring(1).trim()
-      } else if (pn.substring(0, 3) == '+62') {
-        pn = "0" + pn.substring(3).trim()
+      let pn = nomor_imkas;
+      if (pn.substring(0, 1) == "0") {
+        pn = "0" + pn.substring(1).trim();
+      } else if (pn.substring(0, 3) == "+62") {
+        pn = "0" + pn.substring(3).trim();
       }
-      console.log(pn)
-      console.log(pn.replace(/[^0-9\.]+/g, ""))
+      console.log(pn);
+      console.log(pn.replace(/[^0-9\.]+/g, ""));
       const checks = await sendImkas({
         phone: pn.replace(/[^0-9\.]+/g, ""),
-        nom: '50',
+        nom: "50",
         id: `10${userId}${Date.now()}`,
         desc: "Pengecekan Nomor",
       });
@@ -389,14 +421,14 @@ module.exports = {
           payload: JSON.stringify(req.body),
         },
       });
-      const check = checks?.data
+      const check = checks?.data;
       console.log(check);
 
-      if (check.responseCode != '00') {
+      if (check.responseCode != "00") {
         return res.status(400).json({ message: check.responseDescription });
       }
 
-      if (check.responseCode == '00') {
+      if (check.responseCode == "00") {
         const ProposalResult = await prisma.proposal.create({
           data: {
             user: {
@@ -423,20 +455,25 @@ module.exports = {
           },
         });
 
-
         if (ProposalResult) {
-
-          let pn = no_telp_pemberi_rekomendasi
-          pn = pn.replace(/\D/g, '');
-          if (pn.substring(0, 1) == '0') {
-            pn = "0" + pn.substring(1).trim()
-          } else if (pn.substring(0, 3) == '62') {
-            pn = "0" + pn.substring(3).trim()
+          let pn = no_telp_pemberi_rekomendasi;
+          pn = pn.replace(/\D/g, "");
+          if (pn.substring(0, 1) == "0") {
+            pn = "0" + pn.substring(1).trim();
+          } else if (pn.substring(0, 3) == "62") {
+            pn = "0" + pn.substring(3).trim();
           }
 
           const msgId = await sendWhatsapp({
             wa_number: pn.replace(/[^0-9\.]+/g, ""),
-            text: "Proposal Atas Nama " + nama + " dan NIK " + nik_mustahiq + " pada program " + program_title + " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
+            text:
+              "Proposal Atas Nama " +
+              nama +
+              " dan NIK " +
+              nik_mustahiq +
+              " pada program " +
+              program_title +
+              " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
           });
         }
 
@@ -445,8 +482,7 @@ module.exports = {
           data: ProposalResult,
         });
       }
-    }
-    catch (error) {
+    } catch (error) {
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
@@ -456,17 +492,17 @@ module.exports = {
 
   async doneProposal(req, res) {
     try {
-      const id = req.params.id
+      const id = req.params.id;
       const ispaid = req.body.ispaid;
       const nama = req.body.nama;
       const ref = req.body.ref;
-      const tgl_bayar = new Date()
+      const tgl_bayar = new Date();
 
       const proposalss = await prisma.proposal.findUnique({
         where: {
           id: Number(id),
         },
-      })
+      });
       const userss = await prisma.user.findUnique({
         where: {
           user_id: proposalss.user_id,
@@ -474,13 +510,13 @@ module.exports = {
         include: {
           mustahiq: true,
         },
-      })
+      });
 
-      let imkas = proposalss.nomor_imkas
-      if (imkas.substring(0, 1) == '0') {
-        imkas = "0" + imkas.substring(1).trim()
-      } else if (imkas.substring(0, 3) == '+62') {
-        imkas = "0" + imkas.substring(3).trim()
+      let imkas = proposalss.nomor_imkas;
+      if (imkas.substring(0, 1) == "0") {
+        imkas = "0" + imkas.substring(1).trim();
+      } else if (imkas.substring(0, 3) == "+62") {
+        imkas = "0" + imkas.substring(3).trim();
       }
       // const saldo = await checkImkas();
       // console.log(saldo);
@@ -537,19 +573,23 @@ module.exports = {
         },
         data: {
           ispaid,
-          tgl_bayar
+          tgl_bayar,
         },
         include: {
           user: {
             select: {
-              mustahiq: true
-            }
-          }
-        }
+              mustahiq: true,
+            },
+          },
+        },
       });
 
       const currentDate = new Date();
-      const formattedDate = currentDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      const formattedDate = currentDate.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
 
       if (!proposal) {
         return res.status(400).json({
@@ -558,15 +598,17 @@ module.exports = {
       }
 
       if (ispaid == 1) {
-
-        let pn = ref
-        if (pn.substring(0, 1) == '0') {
-          pn = "0" + pn.substring(1).trim()
-        } else if (pn.substring(0, 3) == '+62') {
-          pn = "0" + pn.substring(3).trim()
+        let pn = ref;
+        if (pn.substring(0, 1) == "0") {
+          pn = "0" + pn.substring(1).trim();
+        } else if (pn.substring(0, 3) == "+62") {
+          pn = "0" + pn.substring(3).trim();
         }
 
-        const formattedDana = proposal.dana_yang_disetujui.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+        const formattedDana = proposal.dana_yang_disetujui.toLocaleString(
+          "id-ID",
+          { style: "currency", currency: "IDR" }
+        );
 
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
@@ -587,11 +629,11 @@ module.exports = {
 
   async sudahBayar(req, res) {
     try {
-      const id = req.params.id
+      const id = req.params.id;
       const ispaid = req.body.ispaid;
       const nama = req.body.nama;
       const ref = req.body.ref;
-      const tgl_bayar = new Date()
+      const tgl_bayar = new Date();
 
       const proposal = await prisma.proposal.update({
         where: {
@@ -599,19 +641,23 @@ module.exports = {
         },
         data: {
           ispaid,
-          tgl_bayar
+          tgl_bayar,
         },
         include: {
           user: {
             select: {
-              mustahiq: true
-            }
-          }
-        }
+              mustahiq: true,
+            },
+          },
+        },
       });
 
       const currentDate = new Date();
-      const formattedDate = currentDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      const formattedDate = currentDate.toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
 
       if (!proposal) {
         return res.status(400).json({
@@ -620,15 +666,17 @@ module.exports = {
       }
 
       if (ispaid == 1) {
-
-        let pn = ref
-        if (pn.substring(0, 1) == '0') {
-          pn = "0" + pn.substring(1).trim()
-        } else if (pn.substring(0, 3) == '+62') {
-          pn = "0" + pn.substring(3).trim()
+        let pn = ref;
+        if (pn.substring(0, 1) == "0") {
+          pn = "0" + pn.substring(1).trim();
+        } else if (pn.substring(0, 3) == "+62") {
+          pn = "0" + pn.substring(3).trim();
         }
 
-        const formattedDana = proposal.dana_yang_disetujui.toLocaleString('id-ID', { style: 'currency', currency: 'IDR' });
+        const formattedDana = proposal.dana_yang_disetujui.toLocaleString(
+          "id-ID",
+          { style: "currency", currency: "IDR" }
+        );
 
         const msgId = await sendWhatsapp({
           wa_number: pn.replace(/[^0-9\.]+/g, ""),
@@ -699,7 +747,7 @@ module.exports = {
         dana_approval,
         approved,
         status_bayar,
-        all_notes
+        all_notes,
       } = req.body;
 
       //console.log(JSON.stringify(req.body))
@@ -735,9 +783,9 @@ module.exports = {
         });
       }
 
-      let updatedNotes = ""
+      let updatedNotes = "";
       if (existingProposal.all_notes === null) {
-        updatedNotes = all_notes
+        updatedNotes = all_notes;
       } else {
         updatedNotes = `${existingProposal.all_notes}; ${all_notes}`;
       }
@@ -788,7 +836,9 @@ module.exports = {
           nama_pemberi_rekomendasi,
           alamat_pemberi_rekomendasi,
           no_telp_pemberi_rekomendasi,
-          dana_yang_disetujui: dana_yang_disetujui ? Number(dana_yang_disetujui) : undefined,
+          dana_yang_disetujui: dana_yang_disetujui
+            ? Number(dana_yang_disetujui)
+            : undefined,
           dana_approval: dana_approval ? Number(dana_approval) : undefined,
           approved: approved ? Number(approved) : undefined,
           status_bayar,
@@ -839,9 +889,9 @@ module.exports = {
             id: Number(proposal_id),
           },
           data: {
-            approved: 2
+            approved: 2,
           },
-        })
+        });
       }
 
       return res.status(200).json({
@@ -904,7 +954,7 @@ module.exports = {
           contains: keyword,
         },
         status_bayar: 0,
-        approved: 1
+        approved: 1,
       };
 
       const params_siapbayar = {
@@ -913,7 +963,7 @@ module.exports = {
         },
         status_bayar: 1,
         approved: 1,
-        ispaid: 0
+        ispaid: 0,
       };
 
       const params_paid = {
@@ -922,7 +972,7 @@ module.exports = {
         },
         status_bayar: 1,
         approved: 1,
-        ispaid: 1
+        ispaid: 1,
       };
 
       const params_tolak = {
@@ -930,68 +980,113 @@ module.exports = {
           contains: keyword,
         },
         status_bayar: 0,
-        approved: 2
+        approved: 2,
       };
 
       if (bulan == 0 && tahun !== 0) {
         params.create_date = {
           gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          lte: format(
+            endOfMonth(new Date(tahun, 11)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_waitpayment.create_date = {
           gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          lte: format(
+            endOfMonth(new Date(tahun, 11)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_tolak.create_date = {
           gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          lte: format(
+            endOfMonth(new Date(tahun, 11)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_siapbayar.create_date = {
           gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          lte: format(
+            endOfMonth(new Date(tahun, 11)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_paid.create_date = {
           gte: format(new Date(tahun, 0, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, 11)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          lte: format(
+            endOfMonth(new Date(tahun, 11)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
       }
 
       if (bulan !== 0) {
         params.create_date = {
-          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          gte: format(
+            new Date(tahun, bulan - 1, 1),
+            "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
+          ),
+          lte: format(
+            endOfMonth(new Date(tahun, bulan - 1)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_waitpayment.create_date = {
-          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          gte: format(
+            new Date(tahun, bulan - 1, 1),
+            "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
+          ),
+          lte: format(
+            endOfMonth(new Date(tahun, bulan - 1)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_tolak.create_date = {
-          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          gte: format(
+            new Date(tahun, bulan - 1, 1),
+            "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
+          ),
+          lte: format(
+            endOfMonth(new Date(tahun, bulan - 1)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_siapbayar.create_date = {
-          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          gte: format(
+            new Date(tahun, bulan - 1, 1),
+            "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
+          ),
+          lte: format(
+            endOfMonth(new Date(tahun, bulan - 1)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
         params_paid.create_date = {
-          gte: format(new Date(tahun, bulan - 1, 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
-          lte: format(endOfMonth(new Date(tahun, bulan - 1)), "yyyy-MM-dd'T'23:59:59.999xxx"),
+          gte: format(
+            new Date(tahun, bulan - 1, 1),
+            "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"
+          ),
+          lte: format(
+            endOfMonth(new Date(tahun, bulan - 1)),
+            "yyyy-MM-dd'T'23:59:59.999xxx"
+          ),
         };
       }
 
       let whereclaus = "";
       if (status === 0) {
-        whereclaus = params
+        whereclaus = params;
       } else if (status === 1) {
-        whereclaus = params
+        whereclaus = params;
       } else if (status === 2) {
-        whereclaus = params_waitpayment
+        whereclaus = params_waitpayment;
       } else if (status === 3) {
-        whereclaus = params_tolak
+        whereclaus = params_tolak;
       } else if (status === 4) {
-        whereclaus = params_siapbayar
+        whereclaus = params_siapbayar;
       } else if (status === 5) {
-        whereclaus = params_paid
+        whereclaus = params_paid;
       }
 
       const [count, proposals] = await prisma.$transaction([
@@ -1013,7 +1108,7 @@ module.exports = {
             program: {
               select: {
                 pogram_target_amount: false,
-                kategori_penyaluran: true
+                kategori_penyaluran: true,
               },
               // include: {
 
@@ -1027,7 +1122,7 @@ module.exports = {
                     user_nama: true,
                     username: true,
                     user_phone: true,
-                    user_type: true
+                    user_type: true,
                   },
                 },
               },
@@ -1074,8 +1169,8 @@ module.exports = {
 
   async getAllProcessProposal(req, res) {
     try {
-      const userId = Number(req.user.user_id || 0)
-      const userType = Number(req.user.user_type || 0)
+      const userId = Number(req.user.user_id || 0);
+      const userType = Number(req.user.user_type || 0);
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const status = Number(req.query.status || 0);
@@ -1085,27 +1180,28 @@ module.exports = {
       const category = req.query.category || "";
       const sortBy = req.query.sortBy || "create_date";
       const sortType = req.query.order || "desc";
-      let arrId = []
+      let arrId = [];
 
+      cekdata =
+        await prisma.$queryRaw`select pa.proposal_id as id from proposal_approval pa JOIN user u on pa.user_id = u.user_id where u.user_type in (14) and pa.proposal_id is not NULL GROUP BY pa.proposal_id`;
 
-      cekdata = await prisma.$queryRaw`select pa.proposal_id as id from proposal_approval pa JOIN user u on pa.user_id = u.user_id where u.user_type in (14) and pa.proposal_id is not NULL GROUP BY pa.proposal_id`
+      //const cekdata = await prisma.$queryRaw`select pa.proposal_id as id from proposal_approval pa JOIN user u on pa.user_id = u.user_id where u.user_type in (14) and pa.proposal_id is not NULL GROUP BY pa.proposal_id`
 
-      //const cekdata = await prisma.$queryRaw`select pa.proposal_id as id from proposal_approval pa JOIN user u on pa.user_id = u.user_id where u.user_type in (14) and pa.proposal_id is not NULL GROUP BY pa.proposal_id` 
-
-      cekdata.map(item => {
-        arrId.push(item.id)
-      })
+      cekdata.map((item) => {
+        arrId.push(item.id);
+      });
 
       //console.log("LOG TYPESSXX", JSON.stringify(arrId));
 
-
       const params = {
-        AND: [{
-          nama: { contains: keyword },
-          approved: 0,
-          status_bayar: 0,
-          id: { notIn: arrId }
-        }]
+        AND: [
+          {
+            nama: { contains: keyword },
+            approved: 0,
+            status_bayar: 0,
+            id: { notIn: arrId },
+          },
+        ],
       };
 
       const [count, proposals] = await prisma.$transaction([
@@ -1127,7 +1223,7 @@ module.exports = {
             program: {
               select: {
                 pogram_target_amount: false,
-                kategori_penyaluran: true
+                kategori_penyaluran: true,
               },
               // include: {
 
@@ -1141,7 +1237,7 @@ module.exports = {
                     user_nama: true,
                     username: true,
                     user_phone: true,
-                    user_type: true
+                    user_type: true,
                   },
                 },
               },
@@ -1162,7 +1258,7 @@ module.exports = {
           //item.program_target_amount = undefined
           return {
             ...item,
-            //pogram_target_amount: Number(item.program_target_amount),            
+            //pogram_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
         })
@@ -1189,8 +1285,8 @@ module.exports = {
 
   async getAllApproverProposal(req, res) {
     try {
-      const userId = Number(req.user.user_id || 0)
-      const userType = Number(req.user.user_type || 0)
+      const userId = Number(req.user.user_id || 0);
+      const userType = Number(req.user.user_type || 0);
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const status = Number(req.query.status || 0);
@@ -1200,28 +1296,31 @@ module.exports = {
       const category = req.query.category || "";
       const sortBy = req.query.sortBy || "create_date";
       const sortType = req.query.order || "desc";
-      let arrId = []
+      let arrId = [];
 
       //const cekdata = await prisma.$queryRaw`select pa.proposal_id as id from proposal_approval pa where (select count(b.id) from proposal_approval b where pa.proposal_id = b.proposal_id) < 5 and pa.user_id in (${userId}) GROUP BY pa.proposal_id`
-      const cekdata = await prisma.$queryRaw`select p.id as id, count(pa.id) as jumlah  FROM proposal p
+      const cekdata =
+        await prisma.$queryRaw`select p.id as id, count(pa.id) as jumlah  FROM proposal p
       JOIN  proposal_approval pa ON pa.proposal_id = p.id 
       JOIN user u ON pa.user_id = u.user_id 
-      WHERE (pa.user_id = ${userId} OR u.user_type = 14)  GROUP by pa.id HAVING COUNT(p.id) < 4`
+      WHERE (pa.user_id = ${userId} OR u.user_type = 14)  GROUP by pa.id HAVING COUNT(p.id) < 4`;
 
       //const cekdata = await prisma.$queryRaw`select p.proposal_id as id, p.user_id  from proposal_approval p where p.proposal_id is not null having p.user_id != ${userId} order by p.proposal_id`
 
       //console.log("WABARR", JSON.stringify(cekdata));
-      cekdata.map(item => {
-        arrId.push(item.id)
-      })
+      cekdata.map((item) => {
+        arrId.push(item.id);
+      });
 
       const params = {
-        AND: [{
-          nama: { contains: keyword },
-          approved: 0,
-          status_bayar: 0,
-          id: { in: arrId }
-        }]
+        AND: [
+          {
+            nama: { contains: keyword },
+            approved: 0,
+            status_bayar: 0,
+            id: { in: arrId },
+          },
+        ],
       };
 
       const [count, proposals] = await prisma.$transaction([
@@ -1243,7 +1342,7 @@ module.exports = {
             program: {
               select: {
                 pogram_target_amount: false,
-                kategori_penyaluran: true
+                kategori_penyaluran: true,
               },
               // include: {
 
@@ -1257,7 +1356,7 @@ module.exports = {
                     user_nama: true,
                     username: true,
                     user_phone: true,
-                    user_type: true
+                    user_type: true,
                   },
                 },
               },
@@ -1278,7 +1377,7 @@ module.exports = {
           //item.program_target_amount = undefined
           return {
             ...item,
-            //pogram_target_amount: Number(item.program_target_amount),            
+            //pogram_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
         })
@@ -1295,6 +1394,61 @@ module.exports = {
           hasNext: count > page * perPage,
           totalPage: Math.ceil(count / perPage),
         },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getAllProposalsNoPagination(req, res) {
+    try {
+      // Mengambil semua data dari tabel proposal tanpa filter
+      const proposals = await prisma.proposal.findMany({
+        include: {
+          user: {
+            select: {
+              mustahiq: true,
+              user_id: true,
+              user_nama: true,
+              username: true,
+              user_phone: true,
+            },
+          },
+          program: {
+            select: {
+              kategori_penyaluran: true,
+            },
+          },
+          proposal_approval: {
+            include: {
+              user: {
+                select: {
+                  user_id: true,
+                  user_nama: true,
+                  username: true,
+                  user_phone: true,
+                  user_type: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          create_date: "desc", // Sorting default berdasarkan create_date secara descending
+        },
+      });
+
+      // Menyusun data yang diambil
+      const propResult = proposals.map((item) => ({
+        ...item,
+        pogram_target_amount: Number(item.program_target_amount), // Pastikan konversi jika diperlukan
+      }));
+
+      res.status(200).json({
+        message: "Sukses Ambil Semua Data Proposal",
+        data: propResult,
       });
     } catch (error) {
       res.status(500).json({
@@ -1320,12 +1474,12 @@ module.exports = {
           contains: keyword,
         },
         status_bayar: 1,
-        ispaid: 0
+        ispaid: 0,
         //approved: 1,
       };
 
       // const sum = await prisma.proposal.groupBy({
-      //   by: ['dana_approval'],        
+      //   by: ['dana_approval'],
       //   where: params,
       // });
 
@@ -1334,7 +1488,7 @@ module.exports = {
           where: params,
         }),
         prisma.proposal.groupBy({
-          by: ['dana_approval'],
+          by: ["dana_approval"],
           _sum: {
             dana_approval: true,
           },
@@ -1371,7 +1525,7 @@ module.exports = {
                     user_nama: true,
                     username: true,
                     user_phone: true,
-                    user_type: true
+                    user_type: true,
                   },
                 },
               },
@@ -1390,17 +1544,16 @@ module.exports = {
       const propResult = await Promise.all(
         proposals.map(async (item) => {
           //item.program_target_amount = undefined
-          danaapp = danaapp + Number(item.dana_approval)
+          danaapp = danaapp + Number(item.dana_approval);
           return {
             ...item,
-            //pogram_target_amount: Number(item.program_target_amount),            
+            //pogram_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
-
         })
       );
 
-      // var summarizes =  summarize.length > 0 ? 
+      // var summarizes =  summarize.length > 0 ?
       //       summarize.map(summarize => summarize.dana_approval).reduce((acc, amount) => Number(summarize.dana_approval) + acc + amount):0
 
       res.status(200).json({
@@ -1443,7 +1596,7 @@ module.exports = {
       };
 
       // const sum = await prisma.proposal.groupBy({
-      //   by: ['dana_approval'],        
+      //   by: ['dana_approval'],
       //   where: params,
       // });
 
@@ -1452,7 +1605,7 @@ module.exports = {
           where: params,
         }),
         prisma.proposal.groupBy({
-          by: ['dana_approval'],
+          by: ["dana_approval"],
           _sum: {
             dana_approval: true,
           },
@@ -1489,7 +1642,7 @@ module.exports = {
                     user_nama: true,
                     username: true,
                     user_phone: true,
-                    user_type: true
+                    user_type: true,
                   },
                 },
               },
@@ -1511,14 +1664,13 @@ module.exports = {
           //danaapp = danaapp + Number(item.dana_approval)
           return {
             ...item,
-            //pogram_target_amount: Number(item.program_target_amount),            
+            //pogram_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
-
         })
       );
 
-      // var summarizes =  summarize.length > 0 ? 
+      // var summarizes =  summarize.length > 0 ?
       //       summarize.map(summarize => summarize.dana_approval).reduce((acc, amount) => Number(summarize.dana_approval) + acc + amount):0
 
       res.status(200).json({
@@ -1557,14 +1709,14 @@ module.exports = {
           contains: keyword,
         },
         ispaid: 1,
-        tgl_bayar : {
+        tgl_bayar: {
           lte: new Date("2024-10-31"),
           gte: new Date("2024-10-01"),
-        }
+        },
       };
 
       // const sum = await prisma.proposal.groupBy({
-      //   by: ['dana_approval'],        
+      //   by: ['dana_approval'],
       //   where: params,
       // });
 
@@ -1573,7 +1725,7 @@ module.exports = {
           where: params,
         }),
         prisma.proposal.groupBy({
-          by: ['dana_approval'],
+          by: ["dana_approval"],
           _sum: {
             dana_approval: true,
           },
@@ -1610,7 +1762,7 @@ module.exports = {
                     user_nama: true,
                     username: true,
                     user_phone: true,
-                    user_type: true
+                    user_type: true,
                   },
                 },
               },
@@ -1632,14 +1784,13 @@ module.exports = {
           //danaapp = danaapp + Number(item.dana_approval)
           return {
             ...item,
-            //pogram_target_amount: Number(item.program_target_amount),            
+            //pogram_target_amount: Number(item.program_target_amount),
             //total_donation: total_donation._sum.amount || 0,
           };
-
         })
       );
 
-      // var summarizes =  summarize.length > 0 ? 
+      // var summarizes =  summarize.length > 0 ?
       //       summarize.map(summarize => summarize.dana_approval).reduce((acc, amount) => Number(summarize.dana_approval) + acc + amount):0
 
       res.status(200).json({
@@ -1702,7 +1853,7 @@ module.exports = {
 
       const proposal = await prisma.kategori_penyaluran.findMany({
         include: {
-          asnaf_type: true
+          asnaf_type: true,
         },
       });
 
@@ -1711,7 +1862,6 @@ module.exports = {
           message: "Proposal tidak ditemukan",
         });
       }
-
 
       return res.status(200).json({
         message: "Sukses",
@@ -1727,9 +1877,7 @@ module.exports = {
     try {
       const id = req.params.id;
 
-      const {
-        kategori_penyaluran
-      } = req.body;
+      const { kategori_penyaluran } = req.body;
 
       //console.log(JSON.stringify(req.body))
 
@@ -1738,7 +1886,7 @@ module.exports = {
           id: Number(id),
         },
         data: {
-          kategori_penyaluran_id: Number(kategori_penyaluran)
+          kategori_penyaluran_id: Number(kategori_penyaluran),
         },
       });
 
@@ -1747,7 +1895,6 @@ module.exports = {
         data: glResult,
       });
     } catch (error) {
-
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
@@ -1758,9 +1905,7 @@ module.exports = {
     try {
       const id = req.params.id;
 
-      const {
-        kategori_penyaluran
-      } = req.body;
+      const { kategori_penyaluran } = req.body;
 
       //console.log(JSON.stringify(req.body))
 
@@ -1769,7 +1914,7 @@ module.exports = {
           id: Number(id),
         },
         data: {
-          kategori_penyaluran_id: Number(kategori_penyaluran)
+          kategori_penyaluran_id: Number(kategori_penyaluran),
         },
       });
 
@@ -1778,7 +1923,6 @@ module.exports = {
         data: glResult,
       });
     } catch (error) {
-
       return res.status(500).json({
         message: "Internal Server Error",
         error: error.message,
