@@ -1257,6 +1257,11 @@ model outlet {
   cso_id          Int?
   register_date   DateTime?         @default(now()) @db.Timestamp(0)
   code_outlet     String?           @db.VarChar(25)
+  username        String?           @unique(map: "outlet_unique") @db.VarChar(100)
+  password        String?           @db.VarChar(100)
+  status          Int?              @default(1) @db.SmallInt
+  token           String?           @db.Text
+  telepon         String?           @db.VarChar(100)
   cso             cso?              @relation(fields: [cso_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_outlet_cso")
   register_donasi register_donasi[]
 

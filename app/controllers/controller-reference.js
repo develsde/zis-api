@@ -1603,13 +1603,17 @@ ORDER BY aa.created_date DESC
         nama_outlet: z.string(),
         alamat_outlet: z.string(),
         pic_outlet: z.string(),
+        telepon: z
+          .string()
+          .regex(/^\+?[0-9]{10,15}$/, "Nomor telepon tidak valid"), // Validasi nomor telepon
       });
 
-      const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
+      const { nama_outlet, alamat_outlet, pic_outlet, telepon } = req.body;
       const body = await schema.safeParseAsync({
         nama_outlet,
         alamat_outlet,
         pic_outlet,
+        telepon,
       });
       let errorObj = {};
 
@@ -1651,6 +1655,7 @@ ORDER BY aa.created_date DESC
           nama_outlet: body.data.nama_outlet,
           alamat_outlet: body.data.alamat_outlet,
           pic_outlet: body.data.pic_outlet,
+          telepon: body.data.telepon, // Tambahkan nomor telepon ke database
           cso_id: cso.id,
           register_date: new Date(),
         },
@@ -1752,14 +1757,20 @@ ORDER BY aa.created_date DESC
         nama_outlet: z.string().optional(),
         alamat_outlet: z.string().optional(),
         pic_outlet: z.string().optional(),
+        telepon: z
+          .string()
+          .regex(/^\+?\d{10,15}$/) // Validate phone number format
+          .optional(),
       });
 
-      const { nama_outlet, alamat_outlet, pic_outlet } = req.body;
+      const { nama_outlet, alamat_outlet, pic_outlet, telepon } = req.body;
       const body = await schema.safeParseAsync({
         nama_outlet,
         alamat_outlet,
         pic_outlet,
+        telepon,
       });
+
       let errorObj = {};
 
       if (body.error) {
@@ -1807,6 +1818,7 @@ ORDER BY aa.created_date DESC
             alamat_outlet: body.data.alamat_outlet,
           }),
           ...(body.data.pic_outlet && { pic_outlet: body.data.pic_outlet }),
+          ...(body.data.telepon && { telepon: body.data.telepon }),
         },
       });
 
