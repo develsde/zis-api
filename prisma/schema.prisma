@@ -364,6 +364,7 @@ model gl_account {
   document_number   document_number?    @relation(fields: [doc_number], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gl_account_FK_1")
   gl_account_type   gl_account_type?    @relation(fields: [gl_type], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gl_account_type_FK")
   jurnal            jurnal[]
+  jurnal_lk         jurnal_lk[]
   jurnal_petty_cash jurnal_petty_cash[]
   program_category  program_category[]
   report            report[]
@@ -609,6 +610,7 @@ model jurnal_category {
   id                Int                 @id @default(autoincrement())
   category          String?             @db.Text
   jurnal            jurnal[]
+  jurnal_lk         jurnal_lk[]
   jurnal_petty_cash jurnal_petty_cash[]
 }
 
@@ -1252,9 +1254,14 @@ model outlet {
   nama_outlet     String?           @db.VarChar(255)
   alamat_outlet   String?           @db.Text
   pic_outlet      String?           @db.VarChar(255)
+  telepon         String?           @db.VarChar(100)
   cso_id          Int?
   register_date   DateTime?         @default(now()) @db.Timestamp(0)
   code_outlet     String?           @db.VarChar(25)
+  username        String?           @unique(map: "outlet_unique") @db.VarChar(100)
+  password        String?           @db.VarChar(100)
+  status          Int?              @default(1) @db.SmallInt
+  token           String?           @db.Text
   cso             cso?              @relation(fields: [cso_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_outlet_cso")
   register_donasi register_donasi[]
 
@@ -1363,4 +1370,20 @@ model mutasi_file {
   bank_account                bank_account? @relation(fields: [mutasi_file_bank_account_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mutasi_file_bank_account_FK")
 
   @@index([mutasi_file_bank_account_id], map: "mutasi_file_bank_account_FK")
+}
+
+model jurnal_lk {
+  id                Int              @id @default(autoincrement())
+  jurnal_tanggal    DateTime?        @db.Date
+  jurnal_deskripsi  String?          @db.Text
+  jurnal_isdebit    Int?             @default(0) @db.SmallInt
+  jurnal_gl_account Int?
+  jurnal_nominal    Int?
+  jurnal_status     Int?             @default(1) @db.SmallInt
+  jurnal_kategori   Int?
+  gl_account        gl_account?      @relation(fields: [jurnal_gl_account], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_gl_account_FK")
+  jurnal_category   jurnal_category? @relation(fields: [jurnal_kategori], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_jurnal_category_FK")
+
+  @@index([jurnal_gl_account], map: "jurnal_lk_gl_account_FK")
+  @@index([jurnal_kategori], map: "jurnal_lk_jurnal_category_FK")
 }
