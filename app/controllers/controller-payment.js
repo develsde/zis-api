@@ -131,16 +131,26 @@ module.exports = {
           "utf-8"
         );
         console.log("Decoded Response:", decodedResult);
-
+        const dataku = JSON.parse(decodedResult);
+        console.log(dataku);
+        await prisma.log_aj.create({
+          data: {
+            uniqueCode: dataku.SendPaymentResp.uniqueTransactionCode,
+          },
+        });
         // Parse decoded response to JSON and send
         return res.status(200).json({
           success: true,
           message: "Payment processed successfully",
-          data: JSON.parse(decodedResult), // Convert decoded result to JSON
+          data: dataku, // Convert decoded result to JSON
         });
       } else {
         console.log("Response is not a Base64-encoded string:", response.data);
-
+        await prisma.log_aj.create({
+          data: {
+            uniqueCode: response.data.SendPaymentResp.uniqueTransactionCode,
+          },
+        });
         // Send raw JSON response
         return res.status(200).json({
           success: true,
@@ -210,23 +220,32 @@ module.exports = {
   },
 
   async infoPay(req, res) {
-    const now = new Date();
-    const rfc7231Date = now.toUTCString();
+    const date = new Date().toString();
+    const timesg = moment().format("DDMMYYHHmmss");
     const username = "zisindosat";
     const { uniqueID } = req.body;
-    const data = {
+    const datas = {
       checkStatus: {
         uniqueTransactionCode: uniqueID,
       },
     };
-    const hashedData = CryptoJS.SHA256(data);
-    const digested = CryptoJS.enc.Base64.stringify(hashedData);
+    const str_data = JSON.stringify(datas);
+    const hashedData = CryptoJS.SHA256(str_data);
+    const digested = CryptoJS.enc.Hex.stringify(hashedData);
+    const digestUTF = CryptoJS.enc.Utf8.parse(digested);
+    let base64 = CryptoJS.enc.Base64.stringify(digestUTF)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
     const check = await poPost({
-      date: rfc7231Date,
-      digest: digested,
+      date: date,
+      digest: base64,
       url: "/rest/api/checkStatusTrx",
     });
     const auth = await Auth();
+    const data = CryptoJS.enc.Base64.stringify(
+      CryptoJS.enc.Utf8.parse(str_data)
+    );
     try {
       const response = await axios.post(
         "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
@@ -234,14 +253,35 @@ module.exports = {
         {
           headers: {
             "Content-Type": "application/json",
-            Date: rfc7231Date,
+            Date: date,
             Authorization: `${auth}:${check}`,
             Username: username,
           },
         }
       );
 
-      return response;
+      if (response.data && typeof response.data === "string") {
+        const decodedResult = Buffer.from(response.data, "base64").toString(
+          "utf-8"
+        );
+        console.log("Decoded Response:", decodedResult);
+
+        // Parse decoded response to JSON and send
+        return res.status(200).json({
+          success: true,
+          message: "Payment processed successfully",
+          data: JSON.parse(decodedResult), // Convert decoded result to JSON
+        });
+      } else {
+        console.log("Response is not a Base64-encoded string:", response.data);
+
+        // Send raw JSON response
+        return res.status(200).json({
+          success: true,
+          message: "Payment processed successfully",
+          data: response.data,
+        });
+      }
     } catch (error) {
       console.error(
         "Error:",

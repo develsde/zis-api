@@ -379,24 +379,37 @@ app.post(
         responseData: responseData,
       });
 
-      // Kirimkan response dalam format Base64
-      const data = await prisma.log_aj.create({
-
-        data:{
-          timestampt:decodedData.PaymentResult.timeStamp,
-          merchantId:decodedData.PaymentResult.merchantID,
-          respCode:decodedData.PaymentResult.respCode,
-          ammount:decodedData.PaymentResult.amt,
-          uniqueCode:decodedData.PaymentResult.uniqueTransactionCode,
-          transRef:decodedData.PaymentResult.tranRef,
-          date_time:decodedData.PaymentResult.dateTime,
-          status:decodedData.PaymentResult.status,
-          fail_resson:decodedData.PaymentResult.failReason,
-          trx_type:decodedData.PaymentResult.trxType,
-          status_notify_sof:decodedData.PaymentResult.statusNotifySOF,
-          status_transaction:decodedData.PaymentResult.statusTransaction
+      const aj = await prisma.log_aj.findFirst({
+        where: {
+          uniqueCode: decodedData.PaymentResult.uniqueTransactionCode,
         },
+      });
 
+      if (!aj) {
+        return res
+          .status(404)
+          .json({ message: "Transaction Code tidak ditemukan" });
+      }
+
+      // Kirimkan response dalam format Base64
+      const data = await prisma.log_aj.update({
+        where: {
+          id_aj: aj.id_aj,
+        },
+        data: {
+          timestampt: decodedData.PaymentResult.timeStamp,
+          merchantId: decodedData.PaymentResult.merchantID,
+          respCode: decodedData.PaymentResult.respCode,
+          ammount: decodedData.PaymentResult.amt,
+          uniqueCode: decodedData.PaymentResult.uniqueTransactionCode,
+          transRef: decodedData.PaymentResult.tranRef,
+          date_time: decodedData.PaymentResult.dateTime,
+          status: decodedData.PaymentResult.status,
+          fail_resson: decodedData.PaymentResult.failReason,
+          trx_type: decodedData.PaymentResult.trxType,
+          status_notify_sof: decodedData.PaymentResult.statusNotifySOF,
+          status_transaction: decodedData.PaymentResult.statusTransaction,
+        },
       });
       console.log("database:", data)
 

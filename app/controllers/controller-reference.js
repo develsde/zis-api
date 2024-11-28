@@ -6,19 +6,15 @@ const { z } = require("zod");
 const { checkImkas } = require("../helper/imkas");
 const QRCode = require("qrcode");
 const path = require('path');
-const { createCanvas, loadImage, registerFont } = require('canvas');
+const md5 = require("md5");
+const { createCanvas, loadImage, registerFont } = require("canvas");
 
 // Load font
-
 
 var serverkeys = process.env.SERVER_KEY;
 var clientkeys = process.env.CLIENT_KEY;
 
-const {
-  handlePayment,
-  cekStatus,
-  midtransfer,
-} = require("../helper/midtrans");
+const { handlePayment, cekStatus, midtransfer } = require("../helper/midtrans");
 const { error } = require("console");
 
 module.exports = {
@@ -1596,6 +1592,22 @@ ORDER BY aa.created_date DESC
     }
   },
 
+  async getAllOutlets(req, res) {
+    try {
+      // Get all outlets without any filtering, pagination, or sorting
+      const outlets = await prisma.outlet.findMany({});
+
+      res.status(200).json({
+        message: "Sukses Ambil Semua Data Outlet",
+        data: outlets,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+
   async createOutlet(req, res) {
     try {
       // Validasi input
@@ -1919,6 +1931,71 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+  async updateOutletCredentials(req, res) {
+    const outletId = req.params.id;
+    try {
+      // Validation
+      const schema = z.object({
+        username: z.string().optional(),
+        password: z.string().min(8).optional(), // Ensure password is at least 8 characters
+      });
+      console.log("cok");
+      console.log(req);
+      const { username, password } = req.body;
+      const body = await schema.safeParseAsync({
+        username,
+        password,
+      });
+
+      let errorObj = {};
+      console.log(body);
+
+      if (body.error) {
+        body.error.issues.forEach((issue) => {
+          errorObj[issue.path[0]] = issue.message;
+        });
+        body.error = errorObj;
+      }
+
+      if (!body.success) {
+        return res.status(400).json({
+          message: "Beberapa Field Harus Diisi",
+          error: errorObj,
+        });
+      }
+      // Check if outlet exists
+      const outlet = await prisma.outlet.findFirst({
+        where: { id: Number(outletId) },
+      });
+
+      if (!outlet) {
+        return res.status(404).json({
+          message: "Outlet tidak ditemukan",
+        });
+      }
+      const updatedData = {};
+      if (username) updatedData.username = username;
+      if (password) updatedData.password = md5(password);
+      console.log(updatedData);
+
+      // Update outlet credentials (username and password only)
+      await prisma.outlet.update({
+        where: {
+          id: Number(outletId),
+        },
+        data: updatedData,
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Outlet username dan password berhasil diperbarui",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
 
   async getTransaksiPerOutlet(req, res) {
     try {
@@ -2021,10 +2098,8 @@ ORDER BY aa.created_date DESC
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
-      const sortBy = req.query.sortBy || "id_outlet";
-      const sortType = req.query.order || "asc";
 
-      // Fetch outlets with optional keyword filtering
+      // Fetch outlets with optional keyword filtering, including CSO name
       const outlets = await prisma.outlet.findMany({
         where: {
           nama_outlet: { contains: keyword },
@@ -2033,9 +2108,13 @@ ORDER BY aa.created_date DESC
           id: true,
           nama_outlet: true,
           alamat_outlet: true,
+          pic_outlet: true,
+          cso: {
+            select: {
+              nama_cso: true, // Adjust this to the correct field name
+            },
+          },
         },
-        skip,
-        take: perPage,
       });
 
       const outletIds = outlets.map((outlet) => outlet.id);
@@ -2056,32 +2135,41 @@ ORDER BY aa.created_date DESC
           outlet: { id: { in: outletIds } },
           transaction_status: "settlement",
         },
-        orderBy: { [sortBy]: sortType },
       });
 
-      // Get all outlets data (no filtering by CSO)
-      const result = outlets.map((outlet) => {
-        const transaksiItem = transaksi.find(
-          (item) => item.id_outlet === outlet.id
-        );
-        // Helper function to format currency values
-        const formatCurrency = (value) => {
-          return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
-        };
-        return {
-          id: outlet.id,
-          nama_outlet: outlet.nama_outlet,
-          alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
-          total: formatCurrency(
-            transaksiItem ? transaksiItem._sum.nominal || 0 : 0
-          ),
-          total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
-        };
-      });
+      // Helper function to format currency values
+      const formatCurrency = (value) => {
+        return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+      };
+
+      // Map and sort the result by total in descending order
+      const result = outlets
+        .map((outlet) => {
+          const transaksiItem = transaksi.find(
+            (item) => item.id_outlet === outlet.id
+          );
+          const totalNominal = transaksiItem
+            ? transaksiItem._sum.nominal || 0
+            : 0;
+          return {
+            id: outlet.id,
+            nama_outlet: outlet.nama_outlet,
+            alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
+            pic_outlet: outlet.pic_outlet,
+            nama_cso: outlet.cso?.nama_cso || "Tidak Diketahui", // Include CSO name
+            total: totalNominal, // Keep raw value for sorting
+            formatted_total: formatCurrency(totalNominal), // Format total for display
+            total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
+          };
+        })
+        .sort((a, b) => b.total - a.total); // Sort by raw total in descending order
+
+      // Paginate the sorted result
+      const paginatedResult = result.slice(skip, skip + perPage);
 
       res.status(200).json({
         message: "Sukses Ambil Data Transaksi Per Outlet",
-        data: result,
+        data: paginatedResult,
         pagination: {
           total: count,
           page,
