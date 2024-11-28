@@ -297,6 +297,71 @@ module.exports = {
         }
       },
 
+      async allDataMutasiFile(req, res) {
+        try {
+          const page = Number(req.query.page || 1);
+          const perPage = Number(req.query.perPage || 10);          
+          const skip = (page - 1) * perPage;
+          const keyword = req.query.keyword || "";
+          const deskripsi = req.query.mutasi_file_name || "";          
+          const sortBy = req.query.sortBy || "id";
+          const sortType = req.query.order || "asc";
+    
+          const params = {
+            mutasi_file_name: {
+              contains: keyword,
+            },
+          };
+    
+          const [count, dataMutasiFile] = await prisma.$transaction([
+            prisma.mutasi_file.count({
+              where: params,
+            }),
+            prisma.mutasi_file.findMany({
+              include: {
+                bank_account: {
+                  select: {                  
+                    bank_name: true,
+                    bank_number: true
+                  },
+                },                
+              },
+              orderBy: {
+                [sortBy]: sortType,
+              },
+              where: params,
+              skip,
+              take: perPage,
+            }),
+          ]);
+    
+          const AllResult = await Promise.all(
+            dataMutasiFile.map(async (item) => {
+              return {
+                ...item                
+              };
+            })
+          );
+    
+          res.status(200).json({
+            // aggregate,
+            message: "Sukses Ambil Data Mutasi File",
+    
+            data: AllResult,
+            pagination: {
+              total: count,
+              page,
+              hasNext: count > page * perPage,
+              totalPage: Math.ceil(count / perPage),
+            },
+          });
+        } catch (error) {
+          res.status(500).json({
+            message: error?.message,
+          });
+        }
+      },
+
       async createJurnal(req, res) {
         try {
           
