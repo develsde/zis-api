@@ -381,19 +381,19 @@ module.exports = {
             data: {
               jurnal_tanggal,
               jurnal_deskripsi,
-              jurnal_isdebit : Number(jurnal_isdebit),
+              jurnal_isdebit: Number(jurnal_isdebit),
               //jurnal_gl_account : Number(jurnal_gl_account),
               gl_account: {
                 connect: {
-                  jurnal_gl_account: Number(jurnal_gl_account),
+                  id: Number(jurnal_gl_account),
                 },
               },
-              jurnal_nominal : Number(jurnal_nominal),
+              jurnal_nominal: Number(jurnal_nominal),
               jurnal_status,
-              //jurnal_kategori : Number(jurnal_kategori)      
+              //jurnal_kategori : Number(jurnal_kategori)
               jurnal_category: {
                 connect: {
-                  jurnal_kategori: Number(jurnal_kategori),
+                  id: Number(jurnal_kategori),
                 },
               },
             },
@@ -417,7 +417,7 @@ module.exports = {
         const page = Number(req.query.page || 1);
         const perPage = Number(req.query.perPage || 10);          
         const skip = (page - 1) * perPage;
-        const keyword = req.query.keyword || "";
+        const keyword = req.query.jurnal_deskripsi || "";
         const deskripsi = req.query.mutasi_deskripsi || "";          
         const sortBy = req.query.sortBy || "id";
         const sortType = req.query.order || "asc";
