@@ -305,12 +305,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -1892,7 +1892,6 @@ module.exports = {
     }
   },
 
-
   async postPemesananMegaKonser(req, res) {
     try {
       const {
@@ -1907,7 +1906,9 @@ module.exports = {
       } = req.body;
 
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
-        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Detail pemesanan wajib diisi" });
       }
 
       if (kode_affiliator) {
@@ -1916,7 +1917,9 @@ module.exports = {
         });
 
         if (!affiliator) {
-          return res.status(400).json({ message: "Kode Affiliator tidak tersedia" });
+          return res
+            .status(400)
+            .json({ message: "Kode Affiliator tidak tersedia" });
         }
       }
 
@@ -1932,13 +1935,17 @@ module.exports = {
 
       const baseId = 686; // Nilai dasar jika data kosong
       const nextId = lastOrder ? lastOrder.id + 1 : baseId;
-      const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
-        detail_pemesanan[0].id_tiket === 3 ? 'B' :
-          'C';
+      const hurufAwal =
+        detail_pemesanan[0].id_tiket === 1
+          ? "A"
+          : detail_pemesanan[0].id_tiket === 3
+          ? "B"
+          : "C";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
 
-
-      console.log(`Processing new order: ${kode_pemesanan} for email: ${email}`);
+      console.log(
+        `Processing new order: ${kode_pemesanan} for email: ${email}`
+      );
 
       // Menggunakan midtransfer untuk pembayaran Snap
       const response = await midtransfer({
@@ -1959,7 +1966,7 @@ module.exports = {
       expiry_time.setMinutes(expiry_time.getMinutes() + 15);
 
       const statusId = response.data.transaction_status;
-      const displayStatus = statusId === '200' ? 'Berhasil' : 'gagal';
+      const displayStatus = statusId === "200" ? "Berhasil" : "gagal";
 
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
@@ -1977,7 +1984,9 @@ module.exports = {
         },
       });
 
-      console.log(`Order created in DB: ${kode_pemesanan}, ID: ${postResult.id}`);
+      console.log(
+        `Order created in DB: ${kode_pemesanan}, ID: ${postResult.id}`
+      );
 
       const tiketDetails = detail_pemesanan.map((detail) => ({
         id_tiket: detail.id_tiket,
@@ -1987,7 +1996,6 @@ module.exports = {
 
       const transformedDetails = detail_pemesanan.map((detail, index) => {
         const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
-
 
         return {
           id_pemesanan: postResult.id,
@@ -2021,7 +2029,9 @@ module.exports = {
 
       try {
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
-        console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
+        console.log(
+          `PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`
+        );
 
         scheduleCekStatus({
           order: kode_pemesanan,
@@ -2030,11 +2040,16 @@ module.exports = {
           filePath: pdfLink,
         });
       } catch (error) {
-        console.error(`Failed to generate PDF for order: ${kode_pemesanan}, error:`, error);
+        console.error(
+          `Failed to generate PDF for order: ${kode_pemesanan}, error:`,
+          error
+        );
       }
 
       // Log before generating the email template
-      console.log(`Generating email template for order: ${kode_pemesanan}, email: ${email}`);
+      console.log(
+        `Generating email template for order: ${kode_pemesanan}, email: ${email}`
+      );
       const templateEmail = await generateTemplatePembayaran({
         email,
         postResult,
@@ -2042,10 +2057,14 @@ module.exports = {
         tiket: pemesanan,
       });
 
-      console.log(`Email template generated for order: ${kode_pemesanan}, email: ${email}`);
+      console.log(
+        `Email template generated for order: ${kode_pemesanan}, email: ${email}`
+      );
 
       // Log before sending the email
-      console.log(`Sending email for order: ${kode_pemesanan}, email: ${email}`);
+      console.log(
+        `Sending email for order: ${kode_pemesanan}, email: ${email}`
+      );
       await sendEmail({
         email: email,
         html: templateEmail,
@@ -2071,21 +2090,19 @@ module.exports = {
     }
   },
 
-
-
   async getDetailByKodePemesanan(req, res) {
     try {
       console.log("Seluruh Params:", req.params); // Tambahkan log ini untuk melihat seluruh params
-  
+
       const kodePemesanan = req.params.kode_pemesanan;
       console.log("Kode Pemesanan:", kodePemesanan); // Log kode_pemesanan yang diterima
-  
+
       if (!kodePemesanan) {
         return res.status(400).json({
           message: "Kode pemesanan tidak diberikan dalam URL",
         });
       }
-  
+
       const pemesanan = await prisma.pemesanan_megakonser.findMany({
         where: {
           kode_pemesanan: kodePemesanan,
@@ -2093,19 +2110,19 @@ module.exports = {
         include: {
           detail_pemesanan_megakonser: {
             include: {
-              tiket_konser: true,
+              // tiket_konser: true,
               tiket_konser_detail: true,
             },
           },
         },
       });
-  
+
       if (pemesanan.length === 0) {
         return res.status(404).json({
           message: "Data tidak ditemukan untuk kode_pemesanan yang diberikan",
         });
       }
-  
+
       res.status(200).json({
         message: "Sukses mengambil data berdasarkan kode_pemesanan",
         data: pemesanan,
@@ -2116,13 +2133,12 @@ module.exports = {
       });
     }
   },
-  
-  
+
   async getAndUpdateDetailByKodePemesanan(req, res) {
     try {
       const kodePemesanan = req.params.kode_pemesanan;
-      const { newStatus } = req.body; // New status from the request body
-  
+      const { status } = req.body; // New status from the request body
+
       // Find the `id_pemesanan` based on `kode_pemesanan`
       const pemesanan = await prisma.pemesanan_megakonser.findUnique({
         where: {
@@ -2132,55 +2148,57 @@ module.exports = {
           id: true, // Get the `id_pemesanan`
         },
       });
-  
+
       // If the `pemesanan` is not found, send an error response
       if (!pemesanan) {
         return res.status(404).json({
           message: "Pemesanan tidak ditemukan berdasarkan kode_pemesanan",
         });
       }
-  
+
       const idPemesanan = pemesanan.id;
-  
-      // Start a transaction to fetch data and update each status individually
-      const [count, ActUser] = await prisma.$transaction([
-        // Count the number of `detail_pemesanan` records with the given `id_pemesanan`
-        prisma.detail_pemesanan_megakonser.count({
+
+      // Fetch `detail_pemesanan` records for the given `id_pemesanan`
+      const detailsToUpdate = await prisma.detail_pemesanan_megakonser.findMany(
+        {
           where: {
             id_pemesanan: idPemesanan,
           },
-        }),
-        // Fetch the detail of the `pemesanan` with necessary relations
-        prisma.detail_pemesanan_megakonser.findMany({
-          where: {
-            id_pemesanan: idPemesanan,
-          },
-          include: {
-            tiket_konser: true,
-            tiket_konser_detail: true,
-            pemesanan_megakonser: true,
-          },
-        }),
-      ]);
-  
-      // Update each `detail_pemesanan` status one by one if `newStatus` is provided
-      if (newStatus) {
-        for (const detail of ActUser) {
-          await prisma.detail_pemesanan_megakonser.update({
-            where: {
-              id: detail.id, // Update based on individual `id`
-            },
-            data: {
-              status: newStatus,
-            },
-          });
+        }
+      );
+
+      // If no details are found, return an appropriate message
+      if (!detailsToUpdate.length) {
+        return res.status(404).json({
+          message: "Tidak ada detail pemesanan untuk kode_pemesanan ini",
+        });
+      }
+
+      // Update each `detail_pemesanan` status one by one if `status` is provided
+      let updatedDetails = [];
+      if (status) {
+        for (const detail of detailsToUpdate) {
+          const updatedDetail = await prisma.detail_pemesanan_megakonser.update(
+            {
+              where: {
+                id: detail.id, // Update based on individual `id`
+              },
+              data: {
+                status: parseInt(status, 10),
+              },
+              include: {
+                tiket_konser_detail: true,
+              },
+            }
+          );
+          updatedDetails.push(updatedDetail); // Collect updated details
         }
       }
-  
+
+      // Return only the updated details
       res.status(200).json({
-        message: "Sukses Ambil Data dan Update Status Berdasarkan Kode Pemesanan",
-        count: count,
-        data: ActUser,
+        message: "Update success",
+        data: updatedDetails,
       });
     } catch (error) {
       res.status(500).json({
@@ -2188,9 +2206,6 @@ module.exports = {
       });
     }
   },
-  
-  
-
 
   async getAllTiket(req, res) {
     try {
@@ -2228,7 +2243,7 @@ module.exports = {
           // Gabungkan tiket dengan detail
           tiketWithDetails.push({
             ...item, // Data tiket
-            detail,  // Detail tiket
+            detail, // Detail tiket
           });
 
           // Log detail tiket yang diambil
@@ -2270,7 +2285,7 @@ module.exports = {
           tiket_nama: true,
         },
       });
-  
+
       // Cek apakah tiket ditemukan
       if (tiket.length === 0) {
         return res.status(404).json({
@@ -2278,27 +2293,27 @@ module.exports = {
           message: "Tiket dengan ID tersebut tidak ditemukan",
         });
       }
-  
+
       // Ambil detail tiket yang sesuai dengan tiket_id
       const tiketWithDetails = [];
-  
+
       for (let item of tiket) {
         const detail = await prisma.tiket_konser_detail.findMany({
           where: {
             tiket_konser_id: item.tiket_id, // Sesuaikan dengan tiket yang sedang diiterasi
           },
         });
-  
+
         // Gabungkan tiket dengan detail
         tiketWithDetails.push({
           ...item, // Data tiket
-          detail,  // Detail tiket
+          detail, // Detail tiket
         });
-  
+
         // Log detail tiket yang diambil
         console.log(`Tiket ID: ${item.tiket_id}, Detail:`, detail);
       }
-  
+
       return res.status(200).json({
         success: true,
         message: "Data tiket berhasil diambil",
@@ -2313,8 +2328,6 @@ module.exports = {
       });
     }
   },
-  
-
 
   async handlePay(req, res) {
     const paymentType = req.body.payment_type;
@@ -2361,15 +2374,18 @@ module.exports = {
           detail_pemesanan_megakonser: {
             include: {
               tiket_konser: true,
-              tiket_konser_detail: true
+              tiket_konser_detail: true,
             },
           },
         },
       });
-      const filePath = path.join(__dirname, `../../uploads/output${order_id}.pdf`);
+      const filePath = path.join(
+        __dirname,
+        `../../uploads/output${order_id}.pdf`
+      );
       // const writeStream = fs.createWriteStream(filePath);
 
-      const email = pemesanan?.email
+      const email = pemesanan?.email;
       // Periksa status code dan transaction status
       if (stats.data.status_code === "200") {
         // Data tiket (sesuaikan dengan data yang sebenarnya)
@@ -2382,7 +2398,7 @@ module.exports = {
           email,
           html: templateEmail,
           subject: "Pembelian Tiket Sound of Freedom",
-          pdfPath: filePath
+          pdfPath: filePath,
         });
 
         fs.unlink(filePath, (err) => {
@@ -2505,10 +2521,8 @@ module.exports = {
           detail_pemesanan_megakonser: {
             where: {
               pemesanan_megakonser: {
-                OR: [
-                  { status: 'settlement' }
-                ]
-              }
+                OR: [{ status: "settlement" }],
+              },
             },
             select: {
               id_tiket: true, // Field yang dibutuhkan untuk menghitung total pemesanan
@@ -2543,7 +2557,7 @@ module.exports = {
     try {
       const keyword = req.query.keyword || "";
       const status = req.query.status || "";
-      const kode_affiliator = req.query.kode_affiliator || ""
+      const kode_affiliator = req.query.kode_affiliator || "";
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
@@ -2574,7 +2588,7 @@ module.exports = {
           },
         ],
         ...(status && { status }),
-        ...(kode_affiliator && { kode_affiliator })
+        ...(kode_affiliator && { kode_affiliator }),
       };
 
       // const [count, pemesanan] = await prisma.$transaction([
@@ -2603,7 +2617,6 @@ module.exports = {
       //     }),
       // ]);
 
-
       const [count, pemesanan] = await prisma.$transaction([
         prisma.pemesanan_megakonser.count({
           where: params,
@@ -2627,7 +2640,6 @@ module.exports = {
         }),
       ]);
 
-
       // Memformat data agar lebih mudah diakses
       // const formattedData = pemesanan.map(pesan => ({
       //     ...pesan,
@@ -2637,9 +2649,9 @@ module.exports = {
       //     })),
       // }));
 
-      const formattedData = pemesanan.map(pesan => ({
+      const formattedData = pemesanan.map((pesan) => ({
         ...pesan,
-        detail_pemesanan: pesan.detail_pemesanan_megakonser.map(detail => ({
+        detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
           ...detail,
           tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
         })),
@@ -2676,7 +2688,6 @@ module.exports = {
 
   //     // Tambahkan parameter pencarian untuk no_hp dan email
 
-
   //     const [count, pemesanan] = await prisma.$transaction([
   //       prisma.pemesanan_megakonser.count({
   //         where: params,
@@ -2707,7 +2718,6 @@ module.exports = {
   //     });
   //   }
   // },
-
 
   async getDetailPemesananMegakonser(req, res) {
     try {
@@ -2774,7 +2784,9 @@ module.exports = {
       try {
         // Buat file PDF berdasarkan detail pemesanan
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
-        console.log(`PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`);
+        console.log(
+          `PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`
+        );
 
         // Buat template email menggunakan detail pemesanan
         const templateEmail = await generateTemplateMegaKonser({
@@ -2803,9 +2815,11 @@ module.exports = {
           message: `Email berhasil dikirim ulang untuk order ${kode_pemesanan}`,
           msgId: msgId,
         });
-
       } catch (error) {
-        console.error(`Gagal membuat atau mengirim email untuk order ${kode_pemesanan}, error:`, error);
+        console.error(
+          `Gagal membuat atau mengirim email untuk order ${kode_pemesanan}, error:`,
+          error
+        );
         return res.status(500).json({
           success: false,
           message: `Gagal mengirim email untuk order ${kode_pemesanan}`,
@@ -2821,8 +2835,6 @@ module.exports = {
       });
     }
   },
-
-
 
   async exportAllPemesananToExcel(req, res) {
     try {
@@ -2840,24 +2852,24 @@ module.exports = {
 
       // Membuat workbook dan worksheet
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Data Semua Pemesanan');
+      const worksheet = workbook.addWorksheet("Data Semua Pemesanan");
 
       // Menambahkan header ke worksheet
       worksheet.columns = [
-        { header: 'ID Pemesanan', key: 'id', width: 15 },
-        { header: 'Nama', key: 'nama', width: 20 },
-        { header: 'Telepon', key: 'telepon', width: 15 },
-        { header: 'Email', key: 'email', width: 25 },
-        { header: 'Gender', key: 'gender', width: 10 },
-        { header: 'Total Harga', key: 'total_harga', width: 15 },
-        { header: 'Kode Affiliator', key: 'kode_affiliator', width: 15 },
-        { header: 'Kode Pemesanan', key: 'kode_pemesanan', width: 20 },
-        { header: 'Metode Pembayaran', key: 'metode_pembayaran', width: 20 },
-        { header: 'Status', key: 'status', width: 15 },
-        { header: 'Transaction Time', key: 'transaction_time', width: 25 },
-        { header: 'Expiry Time', key: 'expiry_time', width: 25 },
-        { header: 'Detail Tiket Nama', key: 'detail_tiket_nama', width: 25 },
-        { header: 'Detail Tiket Harga', key: 'detail_tiket_harga', width: 15 },
+        { header: "ID Pemesanan", key: "id", width: 15 },
+        { header: "Nama", key: "nama", width: 20 },
+        { header: "Telepon", key: "telepon", width: 15 },
+        { header: "Email", key: "email", width: 25 },
+        { header: "Gender", key: "gender", width: 10 },
+        { header: "Total Harga", key: "total_harga", width: 15 },
+        { header: "Kode Affiliator", key: "kode_affiliator", width: 15 },
+        { header: "Kode Pemesanan", key: "kode_pemesanan", width: 20 },
+        { header: "Metode Pembayaran", key: "metode_pembayaran", width: 20 },
+        { header: "Status", key: "status", width: 15 },
+        { header: "Transaction Time", key: "transaction_time", width: 25 },
+        { header: "Expiry Time", key: "expiry_time", width: 25 },
+        { header: "Detail Tiket Nama", key: "detail_tiket_nama", width: 25 },
+        { header: "Detail Tiket Harga", key: "detail_tiket_harga", width: 15 },
       ];
 
       // Menambahkan semua data pemesanan ke worksheet
@@ -2876,26 +2888,27 @@ module.exports = {
           status: order.status,
           transaction_time: order.transaction_time,
           expiry_time: order.expiry_time,
-          detail_tiket_nama: '', // Kosong untuk menambah detail di bawahnya
-          detail_tiket_harga: '',
+          detail_tiket_nama: "", // Kosong untuk menambah detail di bawahnya
+          detail_tiket_harga: "",
         });
 
         // Menambahkan detail pemesanan di baris berikutnya
         order.detail_pemesanan_megakonser.forEach((detail) => {
           worksheet.addRow({
-            id: '',
-            nama: '',
-            telepon: '',
-            email: '',
-            gender: '',
-            total_harga: '',
-            kode_affiliator: '',
-            kode_pemesanan: '',
-            metode_pembayaran: '',
-            status: '',
-            transaction_time: '',
-            expiry_time: '',
-            detail_tiket_nama: detail.tiket_konser_detail?.tiket_konser_detail_nama,
+            id: "",
+            nama: "",
+            telepon: "",
+            email: "",
+            gender: "",
+            total_harga: "",
+            kode_affiliator: "",
+            kode_pemesanan: "",
+            metode_pembayaran: "",
+            status: "",
+            transaction_time: "",
+            expiry_time: "",
+            detail_tiket_nama:
+              detail.tiket_konser_detail?.tiket_konser_detail_nama,
             detail_tiket_harga: detail.harga_tiket,
           });
         });
@@ -2903,12 +2916,12 @@ module.exports = {
 
       // Simpan file Excel ke folder uploads
       const filename = `Semua_Pemesanan_MegaKonser_${Date.now()}.xlsx`;
-      const uploadPath = path.join(__dirname, '../../uploads', filename); // Set the path to uploads directory
+      const uploadPath = path.join(__dirname, "../../uploads", filename); // Set the path to uploads directory
       await workbook.xlsx.writeFile(uploadPath);
 
       // Memberikan respons file yang dapat diunduh
       res.status(200).json({
-        message: 'Data semua pemesanan berhasil diekspor ke Excel',
+        message: "Data semua pemesanan berhasil diekspor ke Excel",
         file: filename,
       });
     } catch (error) {
@@ -2918,71 +2931,72 @@ module.exports = {
     }
   },
 
-  
-  
   async exportPemesananToExcel(req, res) {
     try {
       const id = req.params.id;
-      
+
       // Ambil data detail pemesanan berdasarkan id_pemesanan
-      const detailPemesanan = await prisma.detail_pemesanan_megakonser.findMany({
-        where: {
-          id_pemesanan: Number(id),
-        },
-        select: {
-          kode_tiket: true, // Hanya mengambil kolom kode_tiket
-        },
-      });
-      
+      const detailPemesanan = await prisma.detail_pemesanan_megakonser.findMany(
+        {
+          where: {
+            id_pemesanan: Number(id),
+          },
+          select: {
+            kode_tiket: true, // Hanya mengambil kolom kode_tiket
+          },
+        }
+      );
+
       if (detailPemesanan.length === 0) {
-        return res.status(404).json({ message: 'Data kode tiket tidak ditemukan' });
+        return res
+          .status(404)
+          .json({ message: "Data kode tiket tidak ditemukan" });
       }
-  
+
       // Membuat workbook dan worksheet
       const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Kode Tiket');
-  
+      const worksheet = workbook.addWorksheet("Kode Tiket");
+
       // Menambahkan header ke worksheet
       worksheet.columns = [
-        { header: 'Kode Tiket', key: 'kode_tiket', width: 30 }, // Hanya header kode_tiket
+        { header: "Kode Tiket", key: "kode_tiket", width: 30 }, // Hanya header kode_tiket
       ];
-  
+
       // Menambahkan data kode tiket ke worksheet
       detailPemesanan.forEach((detail) => {
         worksheet.addRow({
           kode_tiket: detail.kode_tiket,
         });
       });
-  
+
       // Membuat path untuk menyimpan file sementara
       const filename = `Kode_Tiket_MegaKonser_${Date.now()}.xlsx`;
-      const uploadPath = path.join(__dirname, '../../uploads', filename);
-  
+      const uploadPath = path.join(__dirname, "../../uploads", filename);
+
       // Menulis file Excel ke path sementara
       await workbook.xlsx.writeFile(uploadPath);
-  
+
       // Mengirimkan file Excel untuk diunduh
       res.download(uploadPath, filename, (err) => {
         if (err) {
-          return res.status(500).json({ message: 'Gagal mengunduh file', error: err.message });
+          return res
+            .status(500)
+            .json({ message: "Gagal mengunduh file", error: err.message });
         }
-  
+
         // Setelah pengunduhan selesai, hapus file dari server
         fs.unlink(uploadPath, (err) => {
           if (err) {
-            console.error('Gagal menghapus file sementara:', err);
+            console.error("Gagal menghapus file sementara:", err);
           }
         });
       });
-  
     } catch (error) {
       res.status(500).json({
         message: error.message,
       });
     }
   },
-  
-  
 
   async getPenjualanMegakonser(req, res) {
     try {
@@ -3012,14 +3026,14 @@ module.exports = {
           total_harga: true,
         },
         where: {
-          status: 'settlement',
+          status: "settlement",
         },
       });
 
       const pemesanan = await prisma.detail_pemesanan_megakonser.findMany({
         where: {
           pemesanan_megakonser: {
-            status: 'settlement',
+            status: "settlement",
           },
         },
         select: {
@@ -3061,7 +3075,8 @@ module.exports = {
         if (!acc[tiketKey].detail_tiket[detailKey]) {
           acc[tiketKey].detail_tiket[detailKey] = {
             detail_tiket_id: detailKey,
-            tiket_konser_detail_nama: item.tiket_konser_detail.tiket_konser_detail_nama,
+            tiket_konser_detail_nama:
+              item.tiket_konser_detail.tiket_konser_detail_nama,
             jumlah_dipesan: 0,
           };
         }
@@ -3071,7 +3086,7 @@ module.exports = {
         return acc;
       }, {});
 
-      const penjualan = Object.values(groupedData).map(tiket => ({
+      const penjualan = Object.values(groupedData).map((tiket) => ({
         tiket_id: tiket.tiket_id,
         tiket_nama: tiket.tiket_nama,
         tiket_harga: tiket.tiket_harga,
@@ -3097,22 +3112,22 @@ module.exports = {
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
-  
+
       const params = {
         OR: [
           {
             nama: {
               contains: keyword,
-            }
+            },
           },
           {
             kode: {
               contains: keyword,
-            }
+            },
           },
-        ]
+        ],
       };
-  
+
       const [count, result] = await prisma.$transaction([
         prisma.affiliator.count({
           where: params,
@@ -3123,7 +3138,7 @@ module.exports = {
             nama: true,
             kode: true,
             pemesanan_megakonser: {
-              where: { status: 'settlement' },
+              where: { status: "settlement" },
               select: {
                 total_harga: true,
               },
@@ -3131,7 +3146,7 @@ module.exports = {
           },
         }),
       ]);
-  
+
       // Hitung totalHarga dan urutkan dari terbesar ke terkecil berdasarkan totalHarga
       const affiliatorsWithTotalHarga = result
         .map((affiliator) => {
@@ -3139,7 +3154,7 @@ module.exports = {
             (sum, order) => sum + order.total_harga,
             0
           );
-  
+
           return {
             nama: affiliator.nama,
             kode: affiliator.kode,
@@ -3148,7 +3163,7 @@ module.exports = {
         })
         .sort((a, b) => b.total_harga - a.total_harga) // Urutkan berdasarkan total_harga dari terbesar ke terkecil
         .slice(skip, skip + perPage); // Paginate setelah sorting
-  
+
       res.status(200).json({
         message: "Sukses Ambil Data",
         data: affiliatorsWithTotalHarga,
@@ -3165,7 +3180,6 @@ module.exports = {
       });
     }
   },
-  
 
   async getAffiliator(req, res) {
     try {
@@ -3200,7 +3214,9 @@ module.exports = {
       } = req.body;
 
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
-        return res.status(400).json({ message: "Detail pemesanan wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Detail pemesanan wajib diisi" });
       }
 
       // if (kode_affiliator) {
@@ -3224,9 +3240,12 @@ module.exports = {
 
       const baseId = 686;
       const nextId = lastOrder ? lastOrder.id + 1 : baseId;
-      const hurufAwal = detail_pemesanan[0].id_tiket === 1 ? 'A' :
-        detail_pemesanan[0].id_tiket === 3 ? 'B' :
-          'C';
+      const hurufAwal =
+        detail_pemesanan[0].id_tiket === 1
+          ? "A"
+          : detail_pemesanan[0].id_tiket === 3
+          ? "B"
+          : "C";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
 
       const postResult = await prisma.pemesanan_megakonser.create({
@@ -3239,7 +3258,7 @@ module.exports = {
           // kode_affiliator,
           kode_pemesanan: kode_pemesanan,
           metode_pembayaran: "B2B",
-          status: 'settlement',
+          status: "settlement",
           // transaction_time: transaction_time,
           // expiry_time: expiry_time,
         },
@@ -3296,7 +3315,10 @@ module.exports = {
           pdfPath: pdfLink,
         });
       } catch (error) {
-        console.error(`Failed to generate PDF for order: ${kode_pemesanan}, error:`, error);
+        console.error(
+          `Failed to generate PDF for order: ${kode_pemesanan}, error:`,
+          error
+        );
       }
 
       res.status(200).json({
