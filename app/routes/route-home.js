@@ -58,7 +58,10 @@ router.get("/getPenjualanAffiliator", authentication, home.getPenjualanAffiliato
 router.get("/getAffiliator", authentication, home.getAffiliator)
 router.post("/pemesananMegaKonser-erp", authentication, home.postPemesananMegaKonserErp)
 router.get("/updateStatusTiket/:kode_pemesanan",home.getDetailByKodePemesanan)
-router.put("/updateStatusTiket/:kode_pemesanan", authentication,home.getAndUpdateDetailByKodePemesanan)
+router.put(
+  "/updateStatusTiket/:kode_pemesanan",
+  home.getAndUpdateDetailByKodePemesanan
+);
 
 
 module.exports = router;
