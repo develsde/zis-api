@@ -482,4 +482,36 @@ module.exports = {
       }
     },
 
+    async createJurnalHeader(req, res) {
+      try {
+        
+        const {
+          doc_number,
+          doc_number_id,
+          period
+        } = req.body;
+  
+        //console.log(JSON.stringify(req.body))
+  
+        const createJurnalHeader = await prisma.jurnal_lk_header.create({
+          data: {
+            doc_number,
+            doc_number_id : Number(doc_number_id),
+            period : Number(period)
+          },
+        });
+  
+        return res.status(200).json({
+          message: "Sukses membuat jurnal header",
+          data: createJurnalHeader,
+        });
+      } catch (error) {
+  
+        return res.status(500).json({
+          message: "Internal Server Error saat create jurnal header",
+          error: error.message,
+        });
+      }
+  },  
+
 }
