@@ -526,110 +526,96 @@ module.exports = {
       });
     }
   },
-};
-    async createJurnalHeader(req, res) {
-      try {
-        
-        const {
-          doc_number,
-          doc_number_id,
-          period
-        } = req.body;
-  
-        //console.log(JSON.stringify(req.body))
-  
-        const createJurnalHeader = await prisma.jurnal_lk_header.create({
-          data: {
-            doc_number,
-            doc_number_id : Number(doc_number_id),
-            period : Number(period)
-          },
-        });
-  
-        return res.status(200).json({
-          message: "Sukses membuat jurnal header",
-          data: createJurnalHeader,
-        });
-      } catch (error) {
-  
-        return res.status(500).json({
-          message: "Internal Server Error saat create jurnal header",
-          error: error.message,
-        });
-      }
-  },  
+
   async allItemPerHeader(req, res) {
     try {
       const page = Number(req.query.page || 1);
-      const perPage = Number(req.query.perPage || 10);          
+      const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
       const keyword = req.query.jurnal_deskripsi || "";
-      const deskripsi = req.query.mutasi_deskripsi || "";          
       const sortBy = req.query.sortBy || "id";
       const sortType = req.query.order || "asc";
-      const header_id = req.query.header_id;
+      const header_id = req.params.id;
 
-      const params = {
-        jurnal_deskripsi: {
-          contains: keyword          
+      if (!header_id) {
+        return res.status(400).json({ message: "Header ID is required" });
+      }
+
+      // Step 1: Ambil jurnal_lk_header berdasarkan ID
+      const jurnalHeader = await prisma.jurnal_lk_header.findUnique({
+        where: { id: Number(header_id) },
+        select: {
+          id: true,
+          document_number: true,
+          // deskripsi: true,
+          // document_type: true,
         },
-        jurnal_head_id: header_id
-      };
+      });
 
+      if (!jurnalHeader) {
+        return res.status(404).json({ message: "Jurnal Header not found" });
+      }
+
+      // Step 2: Ambil data jurnal_lk berdasarkan jurnal_head_id
       const [count, dataJurnalLk] = await prisma.$transaction([
         prisma.jurnal_lk.count({
-          where: params,
+          where: {
+            jurnal_head_id: Number(header_id),
+            jurnal_deskripsi: {
+              contains: keyword,
+            },
+          },
         }),
         prisma.jurnal_lk.findMany({
+          where: {
+            jurnal_head_id: Number(header_id),
+            jurnal_deskripsi: {
+              contains: keyword,
+            },
+          },
           include: {
             gl_account: {
-              select: {                  
+              select: {
                 gl_name: true,
-                gl_account: true
+                gl_account: true,
               },
-            },            
+            },
             jurnal_category: {
-              select: {                  
-                category: true                  
-              }, 
-            },     
+              select: {
+                category: true,
+              },
+            },
             jurnal_lk_header: {
-                select: {
-                    document_number: {                        
-                        select: {
-                            id: true,
-                            number: true,
-                            deskripsi: true,
-                            document_type: true
-                        }                      
-                    }
-                }
-            }
-          },  
-          // document_number: true,
-          // document_type: true,
+              select: {
+                document_number: {
+                  select: {
+                    id: true,
+                    number: true,
+                    deskripsi: true,
+                    document_type: true,
+                  },
+                },
+              },
+            },
+          },
           orderBy: {
             [sortBy]: sortType,
           },
-          where: params,
           skip,
           take: perPage,
         }),
       ]);
 
-      const AllResult = await Promise.all(
-        dataJurnalLk.map(async (item) => {
-          return {
-            ...item                
-          };
-        })
-      );
+      // Step 3: Mapping data jika ada transformasi tambahan
+      const AllResult = dataJurnalLk.map((item) => ({
+        ...item,
+      }));
 
+      // Step 4: Response JSON
       res.status(200).json({
-        // aggregate,
         message: "Sukses Ambil Data Mutasi",
-
-        data: AllResult,
+        header: jurnalHeader, // Data jurnal_lk_header
+        data: AllResult, // Data jurnal_lk
         pagination: {
           total: count,
           page,
@@ -643,5 +629,4 @@ module.exports = {
       });
     }
   },
-
-}
+};
