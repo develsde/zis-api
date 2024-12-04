@@ -2,8 +2,9 @@ const { prisma } = require("../../prisma/client");
 const fs = require("fs/promises");
 
 const { customAlphabet } = require("nanoid");
-const { z } = require("zod");
-const readXlsxFile = require('read-excel-file/node')
+const { z, number } = require("zod");
+const readXlsxFile = require('read-excel-file/node');
+const { id, tr } = require("date-fns/locale");
 
 
 module.exports = {
@@ -526,3 +527,121 @@ module.exports = {
     }
   },
 };
+    async createJurnalHeader(req, res) {
+      try {
+        
+        const {
+          doc_number,
+          doc_number_id,
+          period
+        } = req.body;
+  
+        //console.log(JSON.stringify(req.body))
+  
+        const createJurnalHeader = await prisma.jurnal_lk_header.create({
+          data: {
+            doc_number,
+            doc_number_id : Number(doc_number_id),
+            period : Number(period)
+          },
+        });
+  
+        return res.status(200).json({
+          message: "Sukses membuat jurnal header",
+          data: createJurnalHeader,
+        });
+      } catch (error) {
+  
+        return res.status(500).json({
+          message: "Internal Server Error saat create jurnal header",
+          error: error.message,
+        });
+      }
+  },  
+  async allItemPerHeader(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);          
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.jurnal_deskripsi || "";
+      const deskripsi = req.query.mutasi_deskripsi || "";          
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+      const header_id = req.query.header_id;
+
+      const params = {
+        jurnal_deskripsi: {
+          contains: keyword          
+        },
+        jurnal_head_id: header_id
+      };
+
+      const [count, dataJurnalLk] = await prisma.$transaction([
+        prisma.jurnal_lk.count({
+          where: params,
+        }),
+        prisma.jurnal_lk.findMany({
+          include: {
+            gl_account: {
+              select: {                  
+                gl_name: true,
+                gl_account: true
+              },
+            },            
+            jurnal_category: {
+              select: {                  
+                category: true                  
+              }, 
+            },     
+            jurnal_lk_header: {
+                select: {
+                    document_number: {                        
+                        select: {
+                            id: true,
+                            number: true,
+                            deskripsi: true,
+                            document_type: true
+                        }                      
+                    }
+                }
+            }
+          },  
+          // document_number: true,
+          // document_type: true,
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      const AllResult = await Promise.all(
+        dataJurnalLk.map(async (item) => {
+          return {
+            ...item                
+          };
+        })
+      );
+
+      res.status(200).json({
+        // aggregate,
+        message: "Sukses Ambil Data Mutasi",
+
+        data: AllResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+}
