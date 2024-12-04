@@ -5,6 +5,7 @@ const { customAlphabet } = require("nanoid");
 const { z, number } = require("zod");
 const readXlsxFile = require('read-excel-file/node');
 const { id, tr } = require("date-fns/locale");
+const { includes } = require("lodash");
 
 
 module.exports = {
@@ -629,4 +630,101 @@ module.exports = {
       });
     }
   },
+
+  async allDataJurnalHeader(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      //const keyword = req.query.jurnal_deskripsi || "";
+      //const deskripsi = req.query.mutasi_deskripsi || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+
+      const params = {
+        // jurnal_deskripsi: {
+        //   contains: keyword,
+        // },
+      };
+
+      const [count, dataJurnaHead] = await prisma.$transaction([
+        prisma.jurnal_lk_header.count({
+          //where: params,
+        }),
+        prisma.jurnal_lk_header.findMany({          
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      const AllResult = await Promise.all(
+        dataJurnaHead.map(async (item) => {
+          return {
+            ...item,
+          };
+        })
+      );
+
+      res.status(200).json({
+        // aggregate,
+        message: "Sukses Ambil Data Jurnal Header",
+
+        data: AllResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  async deleteJurnalHeader(req, res) {
+    try {
+      const id = req.body.id;
+
+      await prisma.jurnal_lk_header.delete({
+        where: {
+          id: Number(id),
+        }        
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Delete Data Jurnal Header",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },   
+  async deleteJurnalItem(req, res) {
+    try {
+      const id = req.body.id;
+
+      await prisma.jurnal_lk.delete({
+        where: {
+          id: Number(id),
+        }        
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Delete Data Jurnal Item",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },   
 };

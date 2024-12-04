@@ -13,7 +13,11 @@ router.post("/create-jurnal-header", authentication, report.createJurnalHeader);
 router.get("/document-number", authentication, report.listDocumentNumber);
 router.get("/all-mutasi", authentication, report.allDataMutasi);
 router.get("/all-jurnal", authentication, report.allDataJurnal);
+router.get("/all-jurnal-header", authentication, report.allDataJurnalHeader);
 router.get("/all-item-perheader/:id", authentication, report.allItemPerHeader);
+router.delete("/delete-header", authentication, report.deleteJurnalHeader);
+router.delete("/delete-item", authentication, report.deleteJurnalItem);
+
 
 
 router.post("/upload-filemutasi", authentication, upload.single("statement"), report.uploadMutasi);
