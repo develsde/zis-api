@@ -18,13 +18,15 @@ module.exports = {
         });
       }
 
-      const user = await prisma.user. findUnique({
+      const user = await prisma.user.findUnique({
         include: {
           type: true,
         },
         where: {
           username,
-          user_type: { in: [1, 7, 8, 9, 12, 13, 14,17,18,20,21,22,23] },
+          user_type: {
+            in: [1, 7, 8, 9, 12, 13, 14, 17, 18, 20, 21, 22, 23, 24],
+          },
         },
       });
 

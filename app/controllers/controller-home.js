@@ -31,7 +31,7 @@ const ExcelJS = require("exceljs");
 const axios = require("axios");
 const qs = require("qs");
 const { password } = require("../../config/config.db");
-const generatePdf = require("../helper/pdf")
+const generatePdf = require("../helper/pdf");
 const path = require("path");
 const { error } = require("console");
 const { schedule } = require("node-cron");
@@ -2092,117 +2092,161 @@ module.exports = {
 
   async getDetailByKodePemesanan(req, res) {
     try {
-      console.log("Seluruh Params:", req.params); // Tambahkan log ini untuk melihat seluruh params
+      console.log("Seluruh Params:", req.params); // Log seluruh params untuk debug
+      console.log("Request Body:", req.body); // Log body request untuk debug
 
-      const kodePemesanan = req.params.kode_pemesanan;
-      console.log("Kode Pemesanan:", kodePemesanan); // Log kode_pemesanan yang diterima
+      const kode_pemesanan = req.params.kode_pemesanan; // Ambil kode_pemesanan dari req.params
+      const keyword = req.query.keyword || ""; // Ambil keyword dari query untuk pencarian kode_tiket
 
-      if (!kodePemesanan) {
+      console.log("Kode Pemesanan:", kode_pemesanan); // Log kode_pemesanan yang diterima
+      console.log("Keyword:", keyword); // Log keyword untuk pencarian kode_tiket
+
+      if (!kode_pemesanan) {
         return res.status(400).json({
           message: "Kode pemesanan tidak diberikan dalam URL",
         });
       }
 
-      const pemesanan = await prisma.pemesanan_megakonser.findMany({
-        where: {
-          kode_pemesanan: kodePemesanan,
+      const params = {
+        kode_pemesanan: {
+          contains: kode_pemesanan,
         },
-        include: {
-          detail_pemesanan_megakonser: {
-            include: {
-              // tiket_konser: true,
-              tiket_konser_detail: true,
+        detail_pemesanan_megakonser: {
+          some: {
+            kode_tiket: {
+              contains: keyword, // Gunakan keyword untuk pencarian kode_tiket
             },
           },
         },
+      };
+
+      // Ambil data pemesanan berdasarkan kode_pemesanan dan pencarian kode_tiket (jika disediakan)
+      const pemesanan = await prisma.pemesanan_megakonser.findMany({
+        where: params,
+        // include: {
+        //   detail_pemesanan_megakonser: {
+        //     include: {
+        //       tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
+        //     },
+        //   },
+        // },
       });
 
-      if (pemesanan.length === 0) {
-        return res.status(404).json({
-          message: "Data tidak ditemukan untuk kode_pemesanan yang diberikan",
-        });
-      }
+      const result = await Promise.all(
+        pemesanan.map(async (pemes) => {
+          const detail = await prisma.detail_pemesanan_megakonser.findMany({
+            where: {
+              id_pemesanan: Number(pemes.id),
+              ...(keyword ? { kode_tiket: keyword } : {}),
+            },
+            include: {
+              tiket_konser_detail: true,
+            },
+          });
+          return { pemesanan, detail_pemesanan: detail };
+        })
+      );
+
+      // if (pemesanan.length === 0) {
+      //   return res.status(404).json({
+      //     message:
+      //       "Data tidak ditemukan untuk kode_pemesanan atau kode_tiket yang diberikan",
+      //   });
+      // }
+
+      // // Format data agar lebih terstruktur
+      // const formattedData = pemesanan.map((pesan) => ({
+      //   ...pesan,
+      //   detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
+      //     ...detail,
+      //     tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
+      //   })),
+      // }));
 
       res.status(200).json({
         message: "Sukses mengambil data berdasarkan kode_pemesanan",
-        data: pemesanan,
+        data: result,
       });
     } catch (error) {
+      console.error(error); // Tambahkan log untuk error yang lebih jelas
       res.status(500).json({
-        message: error?.message,
+        message: error?.message || "Terjadi kesalahan pada server",
       });
     }
   },
 
-  async getAndUpdateDetailByKodePemesanan(req, res) {
+  async updateDetailStatusById(req, res) {
     try {
-      const kodePemesanan = req.params.kode_pemesanan;
-      const { status } = req.body; // New status from the request body
+      // Ambil `id` dan `status` dari request
+      const { id, status } = req.body;
 
-      // Find the `id_pemesanan` based on `kode_pemesanan`
-      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
+      // Validasi input
+      if (!id || status === undefined) {
+        return res.status(400).json({
+          message: "Parameter 'id' dan 'status' harus disediakan.",
+        });
+      }
+
+      // Update status detail berdasarkan `id`
+      const updatedDetail = await prisma.detail_pemesanan_megakonser.update({
         where: {
-          kode_pemesanan: kodePemesanan,
+          id: parseInt(id, 10),
         },
-        select: {
-          id: true, // Get the `id_pemesanan`
+        data: {
+          status: parseInt(status, 10),
         },
       });
 
-      // If the `pemesanan` is not found, send an error response
-      if (!pemesanan) {
-        return res.status(404).json({
-          message: "Pemesanan tidak ditemukan berdasarkan kode_pemesanan",
-        });
-      }
-
-      const idPemesanan = pemesanan.id;
-
-      // Fetch `detail_pemesanan` records for the given `id_pemesanan`
-      const detailsToUpdate = await prisma.detail_pemesanan_megakonser.findMany(
-        {
-          where: {
-            id_pemesanan: idPemesanan,
-          },
-        }
-      );
-
-      // If no details are found, return an appropriate message
-      if (!detailsToUpdate.length) {
-        return res.status(404).json({
-          message: "Tidak ada detail pemesanan untuk kode_pemesanan ini",
-        });
-      }
-
-      // Update each `detail_pemesanan` status one by one if `status` is provided
-      let updatedDetails = [];
-      if (status) {
-        for (const detail of detailsToUpdate) {
-          const updatedDetail = await prisma.detail_pemesanan_megakonser.update(
-            {
-              where: {
-                id: detail.id, // Update based on individual `id`
-              },
-              data: {
-                status: parseInt(status, 10),
-              },
-              include: {
-                tiket_konser_detail: true,
-              },
-            }
-          );
-          updatedDetails.push(updatedDetail); // Collect updated details
-        }
-      }
-
-      // Return only the updated details
+      // Berikan respon sukses
       res.status(200).json({
-        message: "Update success",
-        data: updatedDetails,
+        message: "Status berhasil diperbarui.",
+        data: updatedDetail,
       });
     } catch (error) {
       res.status(500).json({
-        message: error?.message,
+        message: error?.message || "Terjadi kesalahan saat memperbarui status.",
+      });
+    }
+  },
+
+  async updateDetailStatusByIdPemesanan(req, res) {
+    try {
+      // Ambil `id_pemesanan` dan `status` dari request
+      const { id_pemesanan, status } = req.body;
+
+      // Validasi input
+      if (!id_pemesanan || status === undefined) {
+        return res.status(400).json({
+          message: "Parameter 'id_pemesanan' dan 'status' harus disediakan.",
+        });
+      }
+
+      // Update status detail berdasarkan `id_pemesanan`
+      const updatedDetails =
+        await prisma.detail_pemesanan_megakonser.updateMany({
+          where: {
+            id_pemesanan: parseInt(id_pemesanan, 10),
+          },
+          data: {
+            status: parseInt(status, 10),
+          },
+        });
+
+      // Berikan respon sukses
+      if (updatedDetails.count > 0) {
+        res.status(200).json({
+          message: "Status berhasil diperbarui.",
+          updatedCount: updatedDetails.count,
+        });
+      } else {
+        res.status(404).json({
+          message:
+            "Tidak ada data yang ditemukan dengan id_pemesanan tersebut.",
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message || "Terjadi kesalahan saat memperbarui status.",
       });
     }
   },
@@ -2668,6 +2712,85 @@ module.exports = {
           hasNext: count > page * perPage,
           totalPage: Math.ceil(count / perPage),
         },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getPemesananMegakonserWithoutPagination(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const status = req.query.status || "";
+      const kode_affiliator = req.query.kode_affiliator || "";
+      const sortBy = req.query.sortBy || "transaction_time";
+      const sortType = req.query.order || "desc";
+
+      const params = {
+        OR: [
+          {
+            nama: {
+              contains: keyword,
+            },
+          },
+          {
+            telepon: {
+              contains: keyword,
+            },
+          },
+          {
+            email: {
+              contains: keyword,
+            },
+          },
+          {
+            kode_pemesanan: {
+              contains: keyword,
+            },
+          },
+        ],
+        ...(status && { status }),
+        ...(kode_affiliator && { kode_affiliator }),
+      };
+
+      const [count, pemesanan] = await prisma.$transaction([
+        prisma.pemesanan_megakonser.count({
+          where: params,
+        }),
+        prisma.pemesanan_megakonser.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          include: {
+            detail_pemesanan_megakonser: {
+              include: {
+                tiket_konser: true, // Mengambil semua field dari tiket_konser
+                tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
+              },
+            },
+            affiliator: true,
+          },
+        }),
+      ]);
+
+      // Memformat data agar lebih mudah diakses
+      const formattedData = pemesanan.map((pesan) => ({
+        ...pesan,
+        detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
+          ...detail,
+          tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
+        })),
+      }));
+
+      console.log(JSON.stringify(formattedData, null, 2)); // Cek hasil
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: formattedData,
+        totalData: count, // Total data without pagination
       });
     } catch (error) {
       res.status(500).json({

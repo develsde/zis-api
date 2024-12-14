@@ -49,19 +49,42 @@ router.get("/tiket-sold", home.getTiketSold)
 //Megakonser ERP
 router.get("/tiketMegaKonserErp", home.getAllTiketErp)
 router.get("/pemesanan-megakonser", authentication, home.getPemesananMegakonser)
-router.get("/detail-pemesanan-megakonser/:id", authentication, home.getDetailPemesananMegakonser)
-router.get("/resendEmail/:kode_pemesanan", authentication, home.resendEmail)
-router.get("/exportAllDataPemesanan", authentication, home.exportAllPemesananToExcel)
-router.get("/exporPemesananToExcel/:id",authentication, home.exportPemesananToExcel);
-router.get("/getPenjualanMegakonser", authentication, home.getPenjualanMegakonser)
-router.get("/getPenjualanAffiliator", authentication, home.getPenjualanAffiliator)
-router.get("/getAffiliator", authentication, home.getAffiliator)
-router.post("/pemesananMegaKonser-erp", authentication, home.postPemesananMegaKonserErp)
-router.get("/updateStatusTiket/:kode_pemesanan",home.getDetailByKodePemesanan)
-router.put(
-  "/updateStatusTiket/:kode_pemesanan",
-  home.getAndUpdateDetailByKodePemesanan
+router.get("/allPemesanan", home.getPemesananMegakonserWithoutPagination),
+  router.get(
+    "/detail-pemesanan-megakonser/:id",
+    authentication,
+    home.getDetailPemesananMegakonser
+  );
+router.get("/resendEmail/:kode_pemesanan", authentication, home.resendEmail);
+router.get(
+  "/exportAllDataPemesanan",
+  authentication,
+  home.exportAllPemesananToExcel
 );
+router.get(
+  "/exporPemesananToExcel/:id",
+  authentication,
+  home.exportPemesananToExcel
+);
+router.get(
+  "/getPenjualanMegakonser",
+  authentication,
+  home.getPenjualanMegakonser
+);
+router.get(
+  "/getPenjualanAffiliator",
+  authentication,
+  home.getPenjualanAffiliator
+);
+router.get("/getAffiliator", authentication, home.getAffiliator);
+router.post(
+  "/pemesananMegaKonser-erp",
+  authentication,
+  home.postPemesananMegaKonserErp
+);
+router.get("/getTiket/:kode_pemesanan", home.getDetailByKodePemesanan);
+router.put("/updateStatusTiket/:id", home.updateDetailStatusById);
+router.put("/updateAllStatusTiket", home.updateDetailStatusByIdPemesanan);
 
 
 module.exports = router;
