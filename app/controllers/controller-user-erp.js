@@ -557,4 +557,87 @@ module.exports = {
       });
     }
   },
+
+  //register user outlet
+  // async registerUserOutlet(req, res) {
+  //   try {
+  //     const schema = z.object({        
+  //       username: z.string()
+  //     });
+
+      
+  //     const { username, password } = req.body;
+
+  //     const body = await schema.safeParseAsync({
+  //       username
+  //     });
+
+  //     let errorObj = {};
+
+  //     if (body.error) {
+  //       body.error.issues.forEach((issue) => {
+  //         errorObj[issue.path[0]] = issue.message;
+  //       });
+  //       body.error = errorObj;
+  //     }
+
+  //     if (!body.success) {
+  //       return res.status(400).json({
+  //         message: "Beberapa Field Harus Diisi",
+  //         error: errorObj,
+  //       });
+  //     }
+
+  //     const currentUser = await prisma.outlet.findFirst({
+  //       where: {
+  //         username: body.data.username
+  //       },
+  //     });
+
+  //     if (currentUser) {
+  //       return res.status(400).json({
+  //         message: "User sudah terdaftar",
+  //       });
+  //     }
+
+  //     // const password = nanoid(10);
+  //     // const hashedPassword = await argon2.hash(password);
+
+  //     //console.log({ password });
+
+  //     await prisma.user.create({
+  //       data: {
+  //         password: 
+  //         username: body.data.email,
+  //         user_nama: body.data.nama,
+  //         user_type: Number(body.data.type),
+  //         user_status: 1,
+  //         user_phone: body.data.phone,
+  //       },
+  //     });
+
+  //     const templateEmail = generateTemplate({ email: body.data.email, password });
+  //     const msgId = await sendEmail({
+  //       email: body.data.email,
+  //       html: templateEmail,
+  //       subject: "Pendaftaran Ziswaf INDOSAT",
+  //     });
+
+  //     if (!msgId) {
+  //       return res.status(400).json({
+  //         message: "Gagal mengirim email",
+  //       });
+  //     }
+
+  //     return res.status(200).json({
+  //       message: "Sukses",
+  //       data: "Berhasil Daftar, silahkan cek email",
+  //     });
+  //   } catch (error) {
+  //     return res.status(500).json({
+  //       message: error?.message,
+  //     });
+  //   }
+  // },
+
 };
