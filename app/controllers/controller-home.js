@@ -2175,6 +2175,48 @@ module.exports = {
     }
   },
 
+  async getAllDetails(req, res) {
+    try {
+      console.log("Request Query:", req.query); // Log query params untuk debug
+
+      const keyword = req.query.keyword || ""; // Ambil keyword untuk pencarian kode_tiket
+
+      console.log("Keyword:", keyword); // Log keyword untuk pencarian kode_tiket
+
+      // Ambil semua data pemesanan
+      const pemesanan = await prisma.pemesanan_megakonser.findMany({
+        // Tidak ada filter pada kode_pemesanan
+        include: {
+          detail_pemesanan_megakonser: {
+            where: keyword ? { kode_tiket: { contains: keyword } } : {}, // Filter berdasarkan kode_tiket jika ada keyword
+            include: {
+              tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
+            },
+          },
+        },
+      });
+
+      // Format data agar lebih terstruktur
+      // const formattedData = pemesanan.map((pesan) => ({
+      //   ...pesan,
+      //   detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
+      //     ...detail,
+      //     tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
+      //   })),
+      // }));
+
+      res.status(200).json({
+        message: "Sukses mengambil semua data",
+        data: pemesanan,
+      });
+    } catch (error) {
+      console.error(error); // Tambahkan log untuk error yang lebih jelas
+      res.status(500).json({
+        message: error?.message || "Terjadi kesalahan pada server",
+      });
+    }
+  },
+
   async updateDetailStatusById(req, res) {
     try {
       // Ambil `id` dan `status` dari request
