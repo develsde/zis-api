@@ -83,6 +83,7 @@ router.post(
   home.postPemesananMegaKonserErp
 );
 router.get("/getTiket/:kode_pemesanan", home.getDetailByKodePemesanan);
+router.get("/getAllTiket", home.getAllDetails);
 router.put("/updateStatusTiket/:id", home.updateDetailStatusById);
 router.put("/updateAllStatusTiket", home.updateDetailStatusByIdPemesanan);
 
