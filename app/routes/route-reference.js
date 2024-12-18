@@ -68,6 +68,7 @@ router.get("/AllOutlet", authentication, refData.getAllOutlet);
 router.get("/AllOutlets", authentication, refData.getAllOutlets);
 router.get("/TransOutlet", authentication, refData.getTransaksiPerOutlet);
 router.get("/transAllOutlet", refData.getAllTransaksiOutlet);
+router.get("/outlet", refData.getOutletByUsername);
 router.put("/updateUserOutlet/:id", refData.updateOutletCredentials);
 router.post("/create", authentication,refData.createOutlet);
 router.put("/updateOutlet/:id", authentication,refData.updateOutlet);
