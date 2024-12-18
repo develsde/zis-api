@@ -1617,16 +1617,28 @@ ORDER BY aa.created_date DESC
         pic_outlet: z.string(),
         telepon: z
           .string()
-          .regex(/^\+?[0-9]{10,15}$/, "Nomor telepon tidak valid"), // Validasi nomor telepon
+          .regex(/^\+?[0-9]{10,15}$/, "Nomor telepon tidak valid"),
+        username: z.string(),
+        password: z.string().min(8, "Password harus minimal 8 karakter"),
       });
 
-      const { nama_outlet, alamat_outlet, pic_outlet, telepon } = req.body;
+      const {
+        nama_outlet,
+        alamat_outlet,
+        pic_outlet,
+        telepon,
+        username,
+        password,
+      } = req.body;
       const body = await schema.safeParseAsync({
         nama_outlet,
         alamat_outlet,
         pic_outlet,
         telepon,
+        username,
+        password,
       });
+
       let errorObj = {};
 
       if (body.error) {
@@ -1662,12 +1674,24 @@ ORDER BY aa.created_date DESC
         });
       }
 
+      const currentUsername = await prisma.outlet.findFirst({
+        where: { username: body.data.username },
+      });
+
+      if (currentUsername) {
+        return res.status(400).json({
+          message: "Username sudah digunakan",
+        });
+      }
+
       const newOutlet = await prisma.outlet.create({
         data: {
           nama_outlet: body.data.nama_outlet,
           alamat_outlet: body.data.alamat_outlet,
           pic_outlet: body.data.pic_outlet,
-          telepon: body.data.telepon, // Tambahkan nomor telepon ke database
+          telepon: body.data.telepon,
+          username: body.data.username,
+          password: md5(body.data.password),
           cso_id: cso.id,
           register_date: new Date(),
         },
@@ -1687,17 +1711,16 @@ ORDER BY aa.created_date DESC
       const backgroundImage = await loadImage(backgroundImagePath);
 
       // Set up canvas for A4 size at 300 DPI
-      const canvasWidth = 2480; // A4 width in pixels at 300 DPI
-      const canvasHeight = 3508; // A4 height in pixels at 300 DPI
-      const qrSize = 1500; // Adjusted QR code size for A4
-      const logoSize = 150; // Adjusted logo size
-      const borderSize = 60; // Adjusted border size
-      const textMargin = 100; // Adjusted text margin
+      const canvasWidth = 2480;
+      const canvasHeight = 3508;
+      const qrSize = 1500;
+      const logoSize = 150;
+      const borderSize = 60;
+      const textMargin = 100;
 
       const canvas = createCanvas(canvasWidth, canvasHeight);
       const ctx = canvas.getContext("2d");
 
-      // Scale the background to fit A4 size
       const backgroundScaleWidth = canvasWidth / backgroundImage.width;
       const backgroundScaleHeight = canvasHeight / backgroundImage.height;
       const backgroundScale = Math.max(
@@ -1724,23 +1747,20 @@ ORDER BY aa.created_date DESC
         qrSize + textMargin
       );
 
-      // Draw QR code centered in white area
       const qrX = (canvasWidth - qrSize) / 2;
       const qrY = canvasHeight - qrSize - textMargin - 300;
       ctx.drawImage(qrCodeImage, qrX, qrY, qrSize, qrSize);
 
-      // Draw logo centered over QR code
       const logoX = qrX + (qrSize - logoSize) / 2;
       const logoY = qrY + (qrSize - logoSize) / 2;
       ctx.drawImage(logoImage, logoX, logoY, logoSize, logoSize);
 
-      // Draw text below QR code with larger font
       registerFont(
         path.resolve(__dirname, "../../uploads/fonts/Roboto-Black.ttf"),
         { family: "Roboto" }
       );
       const text = `Salam Donasi ${newOutlet.id}`;
-      const fontSize = 100; // Adjusted font size for A4
+      const fontSize = 100;
       ctx.fillStyle = "#000000";
       ctx.font = `bold ${fontSize}px Roboto`;
       ctx.textAlign = "center";
@@ -1773,14 +1793,25 @@ ORDER BY aa.created_date DESC
           .string()
           .regex(/^\+?\d{10,15}$/) // Validate phone number format
           .optional(),
+        username: z.string().min(1, "Username harus diisi").optional(),
+        password: z.string().min(6, "Password minimal 6 karakter").optional(),
       });
 
-      const { nama_outlet, alamat_outlet, pic_outlet, telepon } = req.body;
+      const {
+        nama_outlet,
+        alamat_outlet,
+        pic_outlet,
+        telepon,
+        username,
+        password,
+      } = req.body;
       const body = await schema.safeParseAsync({
         nama_outlet,
         alamat_outlet,
         pic_outlet,
         telepon,
+        username,
+        password,
       });
 
       let errorObj = {};
@@ -1820,18 +1851,30 @@ ORDER BY aa.created_date DESC
       }
 
       // Update outlet details
+      const updatedOutletData = {
+        ...(body.data.nama_outlet && { nama_outlet: body.data.nama_outlet }),
+        ...(body.data.alamat_outlet && {
+          alamat_outlet: body.data.alamat_outlet,
+        }),
+        ...(body.data.pic_outlet && { pic_outlet: body.data.pic_outlet }),
+        ...(body.data.telepon && { telepon: body.data.telepon }),
+      };
+
+      // Check if username or password should be updated
+      if (username) {
+        updatedOutletData.username = username; // Add username to the update data
+      }
+
+      if (password) {
+        updatedOutletData.password = password; // Add password to the update data
+      }
+
+      // Perform the update query
       const updatedOutlet = await prisma.outlet.update({
         where: {
           id: Number(outletId),
         },
-        data: {
-          ...(body.data.nama_outlet && { nama_outlet: body.data.nama_outlet }),
-          ...(body.data.alamat_outlet && {
-            alamat_outlet: body.data.alamat_outlet,
-          }),
-          ...(body.data.pic_outlet && { pic_outlet: body.data.pic_outlet }),
-          ...(body.data.telepon && { telepon: body.data.telepon }),
-        },
+        data: updatedOutletData,
       });
 
       // Generate QR code URL
@@ -1931,6 +1974,7 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+
   async updateOutletCredentials(req, res) {
     const outletId = req.params.id;
     try {
@@ -2093,92 +2137,176 @@ ORDER BY aa.created_date DESC
   },
 
   async getAllTransaksiOutlet(req, res) {
-    try {
-      const keyword = req.query.keyword || "";
-      const page = Number(req.query.page || 1);
-      const perPage = Number(req.query.perPage || 10);
-      const skip = (page - 1) * perPage;
+  try {
+    const keyword = req.query.keyword || "";
+    const page = Number(req.query.page || 1);
+    const perPage = Number(req.query.perPage || 10);
+    const skip = (page - 1) * perPage;
 
-      // Fetch outlets with optional keyword filtering, including CSO name
-      const outlets = await prisma.outlet.findMany({
+    // Fetch outlets with optional keyword filtering, including CSO name
+    const outlets = await prisma.outlet.findMany({
+      where: {
+        nama_outlet: { contains: keyword },
+      },
+      select: {
+        id: true,
+        nama_outlet: true,
+        alamat_outlet: true,
+        pic_outlet: true,
+        cso: {
+          select: {
+            nama_cso: true,
+          },
+        },
+      },
+    });
+
+    const outletIds = outlets.map((outlet) => outlet.id);
+
+    // Fetch total count of outlets matching the query
+    const count = await prisma.outlet.count({
+      where: {
+        nama_outlet: { contains: keyword },
+      },
+    });
+
+    // Group transactions by outlet and jenis_donasi
+    const transaksi = await prisma.register_donasi.groupBy({
+      by: ["id_outlet", "jenis_donasi"],
+      _sum: { nominal: true },
+      where: {
+        outlet: { id: { in: outletIds } },
+      
+      },
+    });
+
+    // Helper function to format currency values
+    const formatCurrency = (value) => {
+      return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+    };
+
+    // Map and sort the result by total in descending order
+    const result = outlets
+      .map((outlet) => {
+        // Get transaksi data for this outlet
+        const outletTransaksi = transaksi.filter(
+          (item) => item.id_outlet === outlet.id
+        );
+
+        // Calculate totals for each jenis_donasi
+        const totalInfaq = outletTransaksi
+          .filter((item) => item.jenis_donasi === 1)
+          .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
+
+        const totalZakat = outletTransaksi
+          .filter((item) => item.jenis_donasi === 2)
+          .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
+
+        const totalWakaf = outletTransaksi
+          .filter((item) => item.jenis_donasi === 3)
+          .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
+
+        const totalNominal = totalInfaq + totalZakat + totalWakaf;
+
+        // Calculate zakat, infaq, and wakaf shares
+        const infaq = totalInfaq;
+        const zakat = totalZakat;
+        const wakaf = totalWakaf;
+        const zisInfaq = Math.round(totalInfaq * 0.08); // 8% for zis infaq
+        const zisZakat = Math.round(totalZakat * 0.04); // 4% for zis zakat
+        const zisWakaf = Math.round(totalWakaf * 0.03); // 3% for zis wakaf
+
+        // Calculate outlet shares
+        const outletInfaq = Math.round(totalInfaq * 0.05);
+        const outletZakat = Math.round(totalZakat * 0.03);
+        const outletWakaf = Math.round(totalWakaf * 0.03);
+
+        return {
+          id: outlet.id,
+          nama_outlet: outlet.nama_outlet,
+          alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
+          pic_outlet: outlet.pic_outlet,
+          nama_cso: outlet.cso?.nama_cso || "Tidak Diketahui", // Include CSO name
+          total: totalNominal, // Keep raw value for sorting
+          formatted_total: formatCurrency(totalNominal), // Format total for display
+          // total_transaksi: outletTransaksi.length,
+          infaq: formatCurrency(infaq),
+          zakat: formatCurrency(zakat),
+          wakaf: formatCurrency(wakaf),
+          zis_infaq: formatCurrency(zisInfaq),
+          zis_zakat: formatCurrency(zisZakat),
+          zis_wakaf: formatCurrency(zisWakaf),
+          outlet_infaq: formatCurrency(outletInfaq),
+          outlet_zakat: formatCurrency(outletZakat),
+          outlet_wakaf: formatCurrency(outletWakaf),
+        };
+      })
+      .sort((a, b) => b.total - a.total); // Sort by raw total in descending order
+
+    // Paginate the sorted result
+    const paginatedResult = result.slice(skip, skip + perPage);
+
+    res.status(200).json({
+      message: "Sukses Ambil Data Transaksi Per Outlet",
+      data: paginatedResult,
+      pagination: {
+        total: count,
+        page,
+        hasNext: count > page * perPage,
+        totalPage: Math.ceil(count / perPage),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+},
+
+
+  async getOutletByUsername(req, res) {
+    try {
+      const { username } = req.query; // Ambil username dari query string
+      console.log("Request query:", req.query); // Log seluruh query object
+
+      // Periksa apakah username ada dalam query string
+      if (!username) {
+        return res.status(400).json({
+          message: "Username tidak ditemukan dalam permintaan",
+        });
+      }
+
+      console.log("Username from query:", username); // Log username yang diterima
+
+      // Query ke Prisma untuk mencari outlet berdasarkan username
+      const outletData = await prisma.outlet.findUnique({
         where: {
-          nama_outlet: { contains: keyword },
+          username: username, // Pastikan field 'username' ada dalam skema Prisma
         },
         select: {
           id: true,
           nama_outlet: true,
           alamat_outlet: true,
-          pic_outlet: true,
-          cso: {
-            select: {
-              nama_cso: true, // Adjust this to the correct field name
-            },
-          },
+          status: true,
         },
       });
 
-      const outletIds = outlets.map((outlet) => outlet.id);
+      console.log("Found outlet data:", outletData); // Log data outlet yang ditemukan
 
-      // Fetch total count of outlets matching the query
-      const count = await prisma.outlet.count({
-        where: {
-          nama_outlet: { contains: keyword },
-        },
-      });
+      if (!outletData) {
+        return res.status(404).json({
+          message: "Data outlet tidak ditemukan",
+        });
+      }
 
-      // Get transactions grouped by outlet, calculating both nominal sum and transaction count
-      const transaksi = await prisma.register_donasi.groupBy({
-        by: ["id_outlet"],
-        _sum: { nominal: true },
-        _count: { id_outlet: true },
-        where: {
-          outlet: { id: { in: outletIds } },
-          transaction_status: "settlement",
-        },
-      });
-
-      // Helper function to format currency values
-      const formatCurrency = (value) => {
-        return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
-      };
-
-      // Map and sort the result by total in descending order
-      const result = outlets
-        .map((outlet) => {
-          const transaksiItem = transaksi.find(
-            (item) => item.id_outlet === outlet.id
-          );
-          const totalNominal = transaksiItem
-            ? transaksiItem._sum.nominal || 0
-            : 0;
-          return {
-            id: outlet.id,
-            nama_outlet: outlet.nama_outlet,
-            alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
-            pic_outlet: outlet.pic_outlet,
-            nama_cso: outlet.cso?.nama_cso || "Tidak Diketahui", // Include CSO name
-            total: totalNominal, // Keep raw value for sorting
-            formatted_total: formatCurrency(totalNominal), // Format total for display
-            total_transaksi: transaksiItem ? transaksiItem._count.id_outlet : 0,
-          };
-        })
-        .sort((a, b) => b.total - a.total); // Sort by raw total in descending order
-
-      // Paginate the sorted result
-      const paginatedResult = result.slice(skip, skip + perPage);
-
-      res.status(200).json({
-        message: "Sukses Ambil Data Transaksi Per Outlet",
-        data: paginatedResult,
-        pagination: {
-          total: count,
-          page,
-          hasNext: count > page * perPage,
-          totalPage: Math.ceil(count / perPage),
-        },
+      return res.status(200).json({
+        message: "Data outlet berhasil ditemukan",
+        data: outletData,
       });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      console.error("Error fetching outlet:", error); // Log jika ada error
+      return res.status(500).json({
+        message:
+          error?.message || "Terjadi kesalahan saat mengambil data outlet",
+      });
     }
   },
 
