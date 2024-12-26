@@ -2137,130 +2137,136 @@ ORDER BY aa.created_date DESC
   },
 
   async getAllTransaksiOutlet(req, res) {
-  try {
-    const keyword = req.query.keyword || "";
-    const page = Number(req.query.page || 1);
-    const perPage = Number(req.query.perPage || 10);
-    const skip = (page - 1) * perPage;
+    try {
+      const keyword = req.query.keyword || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
 
-    // Fetch outlets with optional keyword filtering, including CSO name
-    const outlets = await prisma.outlet.findMany({
-      where: {
-        nama_outlet: { contains: keyword },
-      },
-      select: {
-        id: true,
-        nama_outlet: true,
-        alamat_outlet: true,
-        pic_outlet: true,
-        cso: {
-          select: {
-            nama_cso: true,
+      // Fetch outlets with optional keyword filtering, including CSO name
+      const outlets = await prisma.outlet.findMany({
+        where: {
+          nama_outlet: { contains: keyword },
+        },
+        select: {
+          id: true,
+          nama_outlet: true,
+          alamat_outlet: true,
+          pic_outlet: true,
+          cso: {
+            select: {
+              nama_cso: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    const outletIds = outlets.map((outlet) => outlet.id);
+      const outletIds = outlets.map((outlet) => outlet.id);
 
-    // Fetch total count of outlets matching the query
-    const count = await prisma.outlet.count({
-      where: {
-        nama_outlet: { contains: keyword },
-      },
-    });
+      // Fetch total count of outlets matching the query
+      const count = await prisma.outlet.count({
+        where: {
+          nama_outlet: { contains: keyword },
+        },
+      });
 
-    // Group transactions by outlet and jenis_donasi
-    const transaksi = await prisma.register_donasi.groupBy({
-      by: ["id_outlet", "jenis_donasi"],
-      _sum: { nominal: true },
-      where: {
-        outlet: { id: { in: outletIds } },
-      
-      },
-    });
+      // Group transactions by outlet and jenis_donasi, including count of transactions
+      const transaksi = await prisma.register_donasi.groupBy({
+        by: ["id_outlet", "jenis_donasi"],
+        _sum: { nominal: true },
+        _count: { _all: true },
+        where: {
+          outlet: { id: { in: outletIds } },
+          isTest: 0,
+        },
+      });
 
-    // Helper function to format currency values
-    const formatCurrency = (value) => {
-      return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
-    };
+      // Helper function to format currency values
+      const formatCurrency = (value) => {
+        return `Rp ${value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+      };
 
-    // Map and sort the result by total in descending order
-    const result = outlets
-      .map((outlet) => {
-        // Get transaksi data for this outlet
-        const outletTransaksi = transaksi.filter(
-          (item) => item.id_outlet === outlet.id
-        );
+      // Map and sort the result by total in descending order
+      const result = outlets
+        .map((outlet) => {
+          // Get transaksi data for this outlet
+          const outletTransaksi = transaksi.filter(
+            (item) => item.id_outlet === outlet.id
+          );
 
-        // Calculate totals for each jenis_donasi
-        const totalInfaq = outletTransaksi
-          .filter((item) => item.jenis_donasi === 1)
-          .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
+          // Calculate totals for each jenis_donasi
+          const totalInfaq = outletTransaksi
+            .filter((item) => item.jenis_donasi === 1)
+            .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
 
-        const totalZakat = outletTransaksi
-          .filter((item) => item.jenis_donasi === 2)
-          .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
+          const totalZakat = outletTransaksi
+            .filter((item) => item.jenis_donasi === 2)
+            .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
 
-        const totalWakaf = outletTransaksi
-          .filter((item) => item.jenis_donasi === 3)
-          .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
+          const totalWakaf = outletTransaksi
+            .filter((item) => item.jenis_donasi === 3)
+            .reduce((sum, item) => sum + (item._sum.nominal || 0), 0);
 
-        const totalNominal = totalInfaq + totalZakat + totalWakaf;
+          const totalNominal = totalInfaq + totalZakat + totalWakaf;
 
-        // Calculate zakat, infaq, and wakaf shares
-        const infaq = totalInfaq;
-        const zakat = totalZakat;
-        const wakaf = totalWakaf;
-        const zisInfaq = Math.round(totalInfaq * 0.08); // 8% for zis infaq
-        const zisZakat = Math.round(totalZakat * 0.04); // 4% for zis zakat
-        const zisWakaf = Math.round(totalWakaf * 0.03); // 3% for zis wakaf
+          // Calculate zakat, infaq, and wakaf shares
+          const infaq = totalInfaq;
+          const zakat = totalZakat;
+          const wakaf = totalWakaf;
+          const zisInfaq = Math.round(totalInfaq * 0.08); // 8% for zis infaq
+          const zisZakat = Math.round(totalZakat * 0.04); // 4% for zis zakat
+          const zisWakaf = Math.round(totalWakaf * 0.03); // 3% for zis wakaf
 
-        // Calculate outlet shares
-        const outletInfaq = Math.round(totalInfaq * 0.05);
-        const outletZakat = Math.round(totalZakat * 0.03);
-        const outletWakaf = Math.round(totalWakaf * 0.03);
+          // Calculate outlet shares
+          const outletInfaq = Math.round(totalInfaq * 0.05);
+          const outletZakat = Math.round(totalZakat * 0.03);
+          const outletWakaf = Math.round(totalWakaf * 0.03);
 
-        return {
-          id: outlet.id,
-          nama_outlet: outlet.nama_outlet,
-          alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
-          pic_outlet: outlet.pic_outlet,
-          nama_cso: outlet.cso?.nama_cso || "Tidak Diketahui", // Include CSO name
-          total: totalNominal, // Keep raw value for sorting
-          formatted_total: formatCurrency(totalNominal), // Format total for display
-          // total_transaksi: outletTransaksi.length,
-          infaq: formatCurrency(infaq),
-          zakat: formatCurrency(zakat),
-          wakaf: formatCurrency(wakaf),
-          zis_infaq: formatCurrency(zisInfaq),
-          zis_zakat: formatCurrency(zisZakat),
-          zis_wakaf: formatCurrency(zisWakaf),
-          outlet_infaq: formatCurrency(outletInfaq),
-          outlet_zakat: formatCurrency(outletZakat),
-          outlet_wakaf: formatCurrency(outletWakaf),
-        };
-      })
-      .sort((a, b) => b.total - a.total); // Sort by raw total in descending order
+          // Calculate total transactions count for this outlet
+          const totalTransaksi = outletTransaksi.reduce(
+            (count, item) => count + (item._count._all || 0),
+            0
+          );
 
-    // Paginate the sorted result
-    const paginatedResult = result.slice(skip, skip + perPage);
+          return {
+            id: outlet.id,
+            nama_outlet: outlet.nama_outlet,
+            alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
+            pic_outlet: outlet.pic_outlet,
+            nama_cso: outlet.cso?.nama_cso || "Tidak Diketahui", // Include CSO name
+            total: totalNominal, // Keep raw value for sorting
+            formatted_total: formatCurrency(totalNominal), // Format total for display
+            total_transaksi: totalTransaksi, // Total transaksi per outlet
+            infaq: formatCurrency(infaq),
+            zakat: formatCurrency(zakat),
+            wakaf: formatCurrency(wakaf),
+            zis_infaq: formatCurrency(zisInfaq),
+            zis_zakat: formatCurrency(zisZakat),
+            zis_wakaf: formatCurrency(zisWakaf),
+            outlet_infaq: formatCurrency(outletInfaq),
+            outlet_zakat: formatCurrency(outletZakat),
+            outlet_wakaf: formatCurrency(outletWakaf),
+          };
+        })
+        .sort((a, b) => b.total - a.total); // Sort by raw total in descending order
 
-    res.status(200).json({
-      message: "Sukses Ambil Data Transaksi Per Outlet",
-      data: paginatedResult,
-      pagination: {
-        total: count,
-        page,
-        hasNext: count > page * perPage,
-        totalPage: Math.ceil(count / perPage),
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-},
+      // Paginate the sorted result
+      const paginatedResult = result.slice(skip, skip + perPage);
 
+      res.status(200).json({
+        message: "Sukses Ambil Data Transaksi Per Outlet",
+        data: paginatedResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
 
   async getOutletByUsername(req, res) {
     try {
