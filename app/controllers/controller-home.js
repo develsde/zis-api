@@ -1925,12 +1925,8 @@ module.exports = {
 
       // Generate kode_pemesanan A00001 dst
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
-        orderBy: {
-          id: "desc",
-        },
-        select: {
-          id: true,
-        },
+        orderBy: { id: "desc" },
+        select: { id: true },
       });
 
       const baseId = 686; // Nilai dasar jika data kosong
@@ -1988,13 +1984,7 @@ module.exports = {
         `Order created in DB: ${kode_pemesanan}, ID: ${postResult.id}`
       );
 
-      const tiketDetails = detail_pemesanan.map((detail) => ({
-        id_tiket: detail.id_tiket,
-        id_detail_tiket: detail.id_tiket_detail,
-        harga_tiket: detail.harga_tiket,
-      }));
-
-      const transformedDetails = detail_pemesanan.map((detail, index) => {
+      const transformedDetails = detail_pemesanan.map((detail) => {
         const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
 
         return {
@@ -2011,73 +2001,11 @@ module.exports = {
 
       console.log(`Details inserted for order: ${kode_pemesanan}`);
 
-      const pemesanan = await prisma.pemesanan_megakonser.findUnique({
-        where: {
-          kode_pemesanan: kode_pemesanan,
-        },
-        include: {
-          detail_pemesanan_megakonser: {
-            include: {
-              tiket_konser: true,
-              tiket_konser_detail: true,
-            },
-          },
-        },
-      });
-
-      console.log(`Retrieved full order details for: ${kode_pemesanan}`);
-
-      try {
-        const pdfLink = await generatePdf({ orderDetails: pemesanan });
-        console.log(
-          `PDF generated for order: ${kode_pemesanan}, filePath: ${pdfLink}`
-        );
-
-        scheduleCekStatus({
-          order: kode_pemesanan,
-          email,
-          pemesanan,
-          filePath: pdfLink,
-        });
-      } catch (error) {
-        console.error(
-          `Failed to generate PDF for order: ${kode_pemesanan}, error:`,
-          error
-        );
-      }
-
-      // Log before generating the email template
-      console.log(
-        `Generating email template for order: ${kode_pemesanan}, email: ${email}`
-      );
-      const templateEmail = await generateTemplatePembayaran({
-        email,
-        postResult,
-        detail: transformedDetails,
-        tiket: pemesanan,
-      });
-
-      console.log(
-        `Email template generated for order: ${kode_pemesanan}, email: ${email}`
-      );
-
-      // Log before sending the email
-      console.log(
-        `Sending email for order: ${kode_pemesanan}, email: ${email}`
-      );
-      await sendEmail({
-        email: email,
-        html: templateEmail,
-        subject: "Lakukan Pembayaran Tiket Megakonser",
-      });
-
-      console.log(`Email sent for order: ${kode_pemesanan}, email: ${email}`);
-
       res.status(200).json({
         message: "Sukses Kirim Data",
         data: {
           postResult,
-          tiketDetails,
+          transformedDetails,
           transactionToken: response.data.transaction_token,
           redirectUrl: response.data.redirect_url,
         },
@@ -3396,7 +3324,7 @@ module.exports = {
 
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: {
-          id: "desc",
+          id: "desc", //dibalikasi
         },
         select: {
           id: true,
