@@ -16,9 +16,9 @@ const sendWhatsapp = async ({ wa_number, text }) => {
     },
     httpsAgent: agent,
     data: {
-      "client_id": "5f041725942955101",
+      "client_id": "68ef1733923116875",
       "number": wa_number,
-      "message": text,
+      "message": text, 
     }
   };
 

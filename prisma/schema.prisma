@@ -332,17 +332,18 @@ model recurring_transaction {
 }
 
 model document_type {
-  id              Int               @id @default(autoincrement())
-  indicator       String?
-  account_type    String?
-  user_id         Int
-  created_at      DateTime          @default(now()) @db.Timestamp(0)
-  description1    String?
-  description2    String?
-  description3    String?
-  posting_key     String?
-  document_number document_number[]
-  user            user              @relation(fields: [user_id], references: [user_id])
+  id               Int                @id @default(autoincrement())
+  indicator        String?
+  account_type     String?
+  user_id          Int
+  created_at       DateTime           @default(now()) @db.Timestamp(0)
+  description1     String?
+  description2     String?
+  description3     String?
+  posting_key      String?
+  document_number  document_number[]
+  user             user               @relation(fields: [user_id], references: [user_id])
+  jurnal_lk_header jurnal_lk_header[]
 
   @@index([user_id], map: "document_type_user_id_fkey")
 }
@@ -1285,6 +1286,7 @@ model register_donasi {
   settlement_time    DateTime? @db.DateTime(0)
   expiry_time        DateTime? @db.DateTime(0)
   transaction_code   String?   @unique(map: "Index 3") @db.VarChar(50)
+  isTest             Int?      @default(0) @db.SmallInt
   outlet             outlet?   @relation(fields: [id_outlet], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_register_donasi_outlet")
 
   @@index([id_outlet], map: "Index 2")
@@ -1351,14 +1353,15 @@ model report {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model mutasi {
   id                       Int       @id @default(autoincrement())
+  mutasi_tanggal_transaksi DateTime? @db.DateTime(0)
   mutasi_bank_code         String?   @db.VarChar(100)
   mutasi_deskripsi         String?   @db.Text
-  mutasi_currency          Int?      @db.SmallInt
+  mutasi_currency          String?   @db.VarChar(5)
   mutasi_amount            Int?
-  mutasi_isdebit           Int?      @db.SmallInt
+  mutasi_isdebit           String?   @db.VarChar(5)
+  mutasi_iscredit          String?   @db.VarChar(5)
   mutasi_balance           Int?
   mutasi_bank_account_id   Int?
-  mutasi_tanggal_transaksi DateTime? @db.Date
 }
 
 model mutasi_file {
@@ -1373,17 +1376,36 @@ model mutasi_file {
 }
 
 model jurnal_lk {
-  id                Int              @id @default(autoincrement())
-  jurnal_tanggal    DateTime?        @db.Date
-  jurnal_deskripsi  String?          @db.Text
-  jurnal_isdebit    Int?             @default(0) @db.SmallInt
+  id                Int               @id @default(autoincrement())
+  jurnal_tanggal    DateTime?         @db.Date
+  jurnal_deskripsi  String?           @db.Text
+  jurnal_isdebit    Int?              @default(0) @db.SmallInt
   jurnal_gl_account Int?
   jurnal_nominal    Int?
-  jurnal_status     Int?             @default(1) @db.SmallInt
+  jurnal_status     Int?              @default(1) @db.SmallInt
   jurnal_kategori   Int?
-  gl_account        gl_account?      @relation(fields: [jurnal_gl_account], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_gl_account_FK")
-  jurnal_category   jurnal_category? @relation(fields: [jurnal_kategori], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_jurnal_category_FK")
+  jurnal_head_id    Int?
+  gl_account        gl_account?       @relation(fields: [jurnal_gl_account], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_gl_account_FK")
+  jurnal_category   jurnal_category?  @relation(fields: [jurnal_kategori], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_jurnal_category_FK")
+  jurnal_lk_header  jurnal_lk_header? @relation(fields: [jurnal_head_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_jurnal_lk_header_FK")
 
   @@index([jurnal_gl_account], map: "jurnal_lk_gl_account_FK")
   @@index([jurnal_kategori], map: "jurnal_lk_jurnal_category_FK")
+  @@index([jurnal_head_id], map: "jurnal_lk_jurnal_lk_header_FK")
+}
+
+model jurnal_lk_header {
+  id            Int            @id @default(autoincrement())
+  doc_number    String?        @db.VarChar(100)
+  create_date   DateTime?      @default(now()) @db.Timestamp(0)
+  period        Int?           @default(2024)
+  currency      String?        @db.VarChar(5)
+  doc_type      Int?
+  iswakaf       Int?           @default(0) @db.SmallInt
+  proposal_id   Int?
+  istransformed Int?           @default(0) @db.SmallInt
+  jurnal_lk     jurnal_lk[]
+  document_type document_type? @relation(fields: [doc_type], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_header_document_type_FK")
+
+  @@index([doc_type], map: "jurnal_lk_header_document_type_FK")
 }

@@ -20,6 +20,7 @@ const sendEmailWithPdf = async ({ email, html, subject, pdfPath }) => {
   console.log("Apa Path nya? ", pdfPath);
   const transporter = nodemailer.createTransport({
     service: "gmail",
+    pool: true,
     auth: {
       user: "admin@zisindosat.id",
       pass: "ziswaf2019",
@@ -41,6 +42,8 @@ const sendEmailWithPdf = async ({ email, html, subject, pdfPath }) => {
       }
     ]
   });
+
+  transporter.close();
 
   console.log("Message sent: %s", info.messageId);
 

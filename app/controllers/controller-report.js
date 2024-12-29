@@ -5,7 +5,8 @@ const { customAlphabet } = require("nanoid");
 const { z, number } = require("zod");
 const readXlsxFile = require('read-excel-file/node');
 const { id, tr } = require("date-fns/locale");
-const { includes } = require("lodash");
+const { includes, gt } = require("lodash");
+const moment = require ('moment');
 
 
 module.exports = {
@@ -727,4 +728,242 @@ module.exports = {
       });
     }
   },   
+
+  async getAllJurnalProposal(req, res) {
+    try {
+      
+      const doc = await prisma.jurnal.findMany({
+          where: {
+              jurnal_category_id : Number(6),
+              amount_debit : { gt : 25 },
+              datetime : {
+                lte: new Date('2024-10-31'),
+                gte: new Date('2024-10-01')
+              } 
+          },
+          // skip: 0,
+          // take: 10
+      });
+
+      //doc.map((items) => {
+       
+      for(let sdata of doc) {  
+
+        const lastJurnalHeader =  await prisma.jurnal_lk_header.findFirst({
+          orderBy: {
+            doc_number: "desc", // Mengurutkan dari terbesar ke terkecil
+          },
+        });
+  
+        // Tentukan nilai doc_number yang baru
+        const lastDocNumber = lastJurnalHeader
+          ? lastJurnalHeader.doc_number
+          : "10000000";
+  
+        // Pastikan doc_number adalah angka yang valid
+        const newDocNumber = isNaN(parseInt(lastDocNumber))
+          ? 10000001 // Nilai default jika parseInt menghasilkan NaN
+          : parseInt(lastDocNumber) + 1; // Increment dari nilai terakhir
+  
+        const period = 2024;
+  
+        const createJurnalHeader =  await prisma.jurnal_lk_header.create({
+          data: {
+            doc_number : String(newDocNumber),            
+            doc_type: 1,
+            currency: "IDR",
+            period: Number(period),
+            proposal_id: Number(sdata.transaction_proposal_id),
+            istransformed: 1
+          },
+        });
+
+        //console.log(createJurnalHeader)
+        const jurnalKategori = 1;
+        const createJurnalItem =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.datetime,
+              jurnal_deskripsi: String(sdata.deskripsi),
+              jurnal_isdebit: 1,
+              //jurnal_gl_account: Number(sdata.glaccount),
+              gl_account: {
+                connect: {
+                  id: Number(sdata.glaccount),
+                },
+              },
+              jurnal_nominal: Number(sdata.amount_debit),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },              
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+        const glaccountkredit = 363
+        const createJurnalItem2 =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.datetime,
+              jurnal_deskripsi: "Bank Transfer",
+              jurnal_isdebit: 0,
+              gl_account: {
+                connect: {
+                  id: Number(glaccountkredit),
+                },
+              },
+              jurnal_nominal: -Number(sdata.amount_debit),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },       
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+      }
+
+      if (!doc) {
+        return res.status(404).json({
+          message: "Document tidak ditemukan",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: doc,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+
+  async getAllMutasi(req, res) {
+    try {
+      
+      const mutasi = await prisma.mutasi.findMany({          
+          // skip: 0,
+          // take: 10
+      });
+
+      //doc.map((items) => {
+       
+      for(let sdata of mutasi) {  
+
+        const lastJurnalHeader =  await prisma.jurnal_lk_header.findFirst({
+          orderBy: {
+            doc_number: "desc", // Mengurutkan dari terbesar ke terkecil
+          },
+        });
+  
+        // Tentukan nilai doc_number yang baru
+        const lastDocNumber = lastJurnalHeader
+          ? lastJurnalHeader.doc_number
+          : "10000000";
+  
+        // Pastikan doc_number adalah angka yang valid
+        const newDocNumber = isNaN(parseInt(lastDocNumber))
+          ? 10000001 // Nilai default jika parseInt menghasilkan NaN
+          : parseInt(lastDocNumber) + 1; // Increment dari nilai terakhir
+  
+        const period = 2024;
+  
+        const createJurnalHeader =  await prisma.jurnal_lk_header.create({
+          data: {
+            doc_number : String(newDocNumber),            
+            doc_type: 1,
+            currency: String(sdata.mutasi_currency),
+            period: Number(period),            
+            istransformed: 1
+          },
+        });
+
+        //console.log(createJurnalHeader)
+        const glaccountkredit = 363
+        const jurnalKategori = 1;
+        const createJurnalItem =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.mutasi_tanggal_transaksi,
+              jurnal_deskripsi: String(sdata.mutasi_deskripsi),
+              jurnal_isdebit: sdata.mutasi_isdebit != null ? 1 : 0,
+              //jurnal_gl_account: Number(sdata.glaccount),
+              gl_account: {
+                connect: {
+                  id: Number(glaccountkredit),
+                },
+              },
+              jurnal_nominal: Number(sdata.mutasi_amount),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },              
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+        const glaccountbank = 179 //tandain
+        const createJurnalItem2 =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.mutasi_tanggal_transaksi,
+              jurnal_deskripsi: "Bank",
+              jurnal_isdebit: sdata.mutasi_iscredit != null ? 1 : 0,
+              gl_account: {
+                connect: {
+                  id: Number(glaccountbank),
+                },
+              },
+              jurnal_nominal: -Number(sdata.mutasi_amount),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },       
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+      }
+
+      if (!mutasi) {
+        return res.status(404).json({
+          message: "Document tidak ditemukan",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: mutasi,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  
 };
