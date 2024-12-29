@@ -3324,7 +3324,7 @@ module.exports = {
 
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: {
-          id: "desc",
+          id: "desc", //dibalikasi
         },
         select: {
           id: true,
