@@ -20,6 +20,7 @@ const sendEmailWithPdf = async ({ email, html, subject, pdfPath }) => {
   console.log("Apa Path nya? ", pdfPath);
   const transporter = nodemailer.createTransport({
     service: "gmail",
+    pool: true, // Aktifkan mode pool
     auth: {
       user: "admin@zisindosat.id",
       pass: "ziswaf2019",
@@ -28,28 +29,36 @@ const sendEmailWithPdf = async ({ email, html, subject, pdfPath }) => {
     attachDataUrls: true,
   });
 
-  const info = await transporter.sendMail({
-    from: "admin@zisindosat.id",
-    to: email,
-    subject,
-    html: html,
-    attachments: [
-      {
-        filename: 'document.pdf',
-        path: pdfPath,
-        contentType: 'application/pdf'
-      }
-    ]
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: "admin@zisindosat.id",
+      to: email,
+      subject,
+      html: html,
+      attachments: [
+        {
+          filename: "document.pdf",
+          path: pdfPath,
+          contentType: "application/pdf",
+        },
+      ],
+    });
 
-  console.log("Message sent: %s", info.messageId);
-
-  return info.messageId;
+    console.log("Message sent: %s", info.messageId);
+    return info.messageId;
+  } catch (error) {
+    console.error("Error sending email: ", error.message);
+    throw error;
+  } finally {
+    // transporter.close(); // Menutup koneksi setelah pengiriman
+    console.log("Transporter connection closed.");
+  }
 };
 
 const sendEmail = async ({ email, html, subject }) => {
   const transporter = nodemailer.createTransport({
     service: "gmail",
+    pool: true, // Aktifkan mode pool
     auth: {
       user: "admin@zisindosat.id",
       pass: "ziswaf2019",
@@ -58,17 +67,25 @@ const sendEmail = async ({ email, html, subject }) => {
     attachDataUrls: true,
   });
 
-  const info = await transporter.sendMail({
-    from: "admin@zisindosat.id",
-    to: email,
-    subject,
-    html: html
-  });
+  try {
+    const info = await transporter.sendMail({
+      from: "admin@zisindosat.id",
+      to: email,
+      subject,
+      html: html,
+    });
 
-  console.log("Message sent: %s", info.messageId);
-
-  return info.messageId;
+    console.log("Message sent: %s", info.messageId);
+    return info.messageId;
+  } catch (error) {
+    console.error("Error sending email: ", error.message);
+    throw error;
+  } finally {
+    // transporter.close(); // Menutup koneksi setelah selesai
+    console.log("Transporter connection closed.");
+  }
 };
+
 
 const generateTemplate = ({ email, password }) => {
   const encodedEmail = Buffer.from(email).toString("base64");
