@@ -1402,7 +1402,7 @@ model jurnal_lk_header {
   currency      String?        @db.VarChar(5)
   doc_type      Int?
   iswakaf       Int?           @default(0) @db.SmallInt
-  proposal_id   Int?
+  description   String?        @db.Text
   istransformed Int?           @default(0) @db.SmallInt
   jurnal_lk     jurnal_lk[]
   document_type document_type? @relation(fields: [doc_type], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_header_document_type_FK")

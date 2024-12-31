@@ -406,8 +406,8 @@ module.exports = {
   async allDataJurnalDetail(req, res) {
     try {
       const page = Number(req.query.page || 1);
-      const sortBy = req.query.sortBy || "id";
-      const sortType = req.query.order || "asc";
+      const sortBy = req.query.sortBy || "jurnal_head_id";
+      const sortType = req.query.order || "desc";
       const docNumberFilter = req.query.docNumber || null; // Filter untuk doc_number
       const indicatorFilter = req.query.indicator || null; // Filter untuk indicator
 
@@ -464,9 +464,14 @@ module.exports = {
               },
             },
           },
-          orderBy: {
-            [sortBy]: sortType, // Urutan data
-          },
+          orderBy: [
+            {
+              [sortBy]: sortType, // Urutkan berdasarkan jurnal_head_id
+            },
+            {
+              jurnal_isdebit: "desc", // Pastikan debit muncul lebih dulu dalam grup
+            },
+          ],
           where: params, // Kondisi where berdasarkan filter
           skip, // Data yang dilewati
           take, // Jumlah data yang diambil
@@ -755,7 +760,7 @@ module.exports = {
           period: Number(period), // Pastikan period adalah angka
           currency: currency, // Simpan currency sebagai varchar
           iswakaf: Number(iswakaf), // Pastikan iswakaf adalah angka (0 atau 1)
-          proposal_id: Number(proposal_id), // Pastikan proposal_id adalah angka
+          description: proposal_id, // Pastikan proposal_id adalah angka
           // Gunakan relasi untuk document_type
           document_type: {
             connect: { id: doc_type }, // Menghubungkan dengan document_type yang memiliki id
