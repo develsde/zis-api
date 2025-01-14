@@ -2636,9 +2636,9 @@ module.exports = {
           where: params,
         }),
         prisma.pemesanan_megakonser.findMany({
-          orderBy: {
-            [sortBy]: sortType,
-          },
+          // orderBy: {
+          //   [sortBy]: sortType,
+          // },
           where: params,
           include: {
             detail_pemesanan_megakonser: {

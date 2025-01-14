@@ -5,8 +5,9 @@ const { customAlphabet } = require("nanoid");
 const { z, number } = require("zod");
 const readXlsxFile = require("read-excel-file/node");
 const { id, tr } = require("date-fns/locale");
-const { includes, gt } = require("lodash");
+const { includes, gt, values } = require("lodash");
 const moment = require ('moment');
+const { glaccount } = require("./controller-reference");
 
 module.exports = {
   async createReport(req, res) {
@@ -1497,6 +1498,56 @@ module.exports = {
       return res.status(200).json({
         message: "Sukses",
         data: mutasi,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getAllCalkData(req, res) {
+    try {
+      
+      const SantunanSembako = await prisma.jurnal_lk.groupBy({                 
+        by: ['jurnal_gl_account'],
+        _sum: {
+          jurnal_nominal: true,          
+        },
+        where: {
+            jurnal_gl_account : {
+                in: [25,24,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+            },            
+        },
+      });
+
+      console.log(JSON.stringify(SantunanSembako));
+
+      const calkData = [
+        {name: "Bagian Amil atas Dana Zakat", value: Number(75070803925)},
+        {name: "Santunan Sembako", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 24).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 24)[0]._sum.jurnal_nominal:0 ) },
+        {name: "Yatim Piatu Dhuafa", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 25).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 25)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Biaya Hidup Individu", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 26).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 26)[0]._sum.jurnal_nominal:0 )},
+        {name: "Zakat fitrah", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 27).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 27)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Bea-Guru", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 28).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 28)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Beasiswa Rutin", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 29).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 29)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Beasiswa Putus", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 30).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 30)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Buku", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 31).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 31)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Prasarana Pendidikan", value : Number(SantunanSembako.filter(val => val.jurnal_gl_account == 32).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 32)[0]._sum.jurnal_nominal:0 )},
+        {name: "Pengobatan Individu", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 33).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 33)[0]._sum.jurnal_nominal:0 )},
+        {name: "Baksos Kesehatan", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 34).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 34)[0]._sum.jurnal_nominal:0 ) },
+        {name: "Klinik", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 35).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 35)[0]._sum.jurnal_nominal:0 )},
+        {name: "Pembinaan Ekonomi Lemah", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 36).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 36)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Modal Usaha", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 37).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 37)[0]._sum.jurnal_nominal:0 )},
+        {name: "Recovery", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 38).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 38)[0]._sum.jurnal_nominal:0 )},
+        {name: "Rescue", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 39).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 39)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bencana", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 40).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 40)[0]._sum.jurnal_nominal:0 )},
+      ]
+      
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: calkData,
       });
     } catch (error) {
       return res.status(500).json({
