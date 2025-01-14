@@ -17,9 +17,11 @@ router.get("/all-jurnal", authentication, report.allDataJurnal);
 router.get("/all-jurnal-header", authentication, report.allDataJurnalHeader);
 router.get("/all-jurnal-proposal", authentication, report.getAllJurnalProposal);
 router.get("/all-mutasi-jurnal", authentication, report.getAllMutasi); 
+router.get("/all-calk", authentication, report.getAllCalkData); 
 router.get("/all-item-perheader/:id", authentication, report.allItemPerHeader);
 router.delete("/delete-header", authentication, report.deleteJurnalHeader);
 router.delete("/delete-item", authentication, report.deleteJurnalItem);
+
 
 
 
