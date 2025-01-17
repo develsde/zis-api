@@ -8,18 +8,19 @@ const sendWhatsapp = async ({ wa_number, text }) => {
   });
 
   let config = {
-    method: 'post',
-    url: 'https://erpapi.zisindosat.id/wapi/send_message',
+    method: "post",
+    url: "https://erpapi.zisindosat.id/wapi/send_message",
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUB6aXNpbmRvc2F0LmlkIiwiaWF0IjoxNzIwMDEzODQ5LCJhdWQiOlsiMTIzNDU2Nzg5Il0sImlzcyI6InozcjBieXRlcyJ9.7Ooh3xUkhG-f_jAPNBCm7LxWV3E751W0JpgTN8ys-Ss'
+      "Content-Type": "application/json",
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiIxMjM0NTY3ODkiLCJlbWFpbCI6IjEyMzQ1Njc4OUB6aXNpbmRvc2F0LmlkIiwiaWF0IjoxNzIwMDEzODQ5LCJhdWQiOlsiMTIzNDU2Nzg5Il0sImlzcyI6InozcjBieXRlcyJ9.7Ooh3xUkhG-f_jAPNBCm7LxWV3E751W0JpgTN8ys-Ss",
     },
     httpsAgent: agent,
     data: {
-      "client_id": "5f041725942955101",
-      "number": wa_number,
-      "message": text,
-    }
+      client_id: "4f7a1736329954633",
+      number: wa_number,
+      message: text,
+    },
   };
 
   const send = await axios.request(config)

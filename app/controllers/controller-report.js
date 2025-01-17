@@ -760,7 +760,7 @@ module.exports = {
           period: Number(period), // Pastikan period adalah angka
           currency: currency, // Simpan currency sebagai varchar
           iswakaf: Number(iswakaf), // Pastikan iswakaf adalah angka (0 atau 1)
-          description: proposal_id, // Pastikan proposal_id adalah angka
+          description: String(proposal_id), // Pastikan proposal_id adalah angka
           // Gunakan relasi untuk document_type
           document_type: {
             connect: { id: doc_type }, // Menghubungkan dengan document_type yang memiliki id

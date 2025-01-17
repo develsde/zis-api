@@ -13,6 +13,7 @@ const {
   generateOrderId,
   getTransactionStatus,
 } = require("../helper/midtrans");
+const { reqPay } = require("../controllers/controller-payment");
 const { scheduleCekStatus } = require("../helper/background-jobs");
 const nanoid = customAlphabet(
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
@@ -1771,6 +1772,7 @@ module.exports = {
         gender,
         lokasi_penyaluran,
         detail_qurban,
+        bank,
       } = req.body;
 
       const totals = Number(harga) + Number(ongkir);
@@ -1780,6 +1782,7 @@ module.exports = {
           .json({ message: "Masukkan detail qurban wajib diisi" });
       }
 
+      // Insert ke tabel activity_qurban
       const postResult = await prisma.activity_qurban.create({
         data: {
           program: {
@@ -1805,31 +1808,7 @@ module.exports = {
           lokasi_penyaluran,
         },
       });
-      // const timesg = String(+new Date());
-      // const midtrans = await midtransfer({
-      //   order: `${timesg}P${program_id}Q${postResult?.id}`,
-      //   price: Number(total),
-      // });
 
-      // const header = {
-      //   isProduction: true,
-      //   serverKey: serverkeys,
-      //   clientKey: clientkeys,
-      // };
-
-      // const log = await prisma.log_vendor.create({
-      //   data: {
-      //     vendor_api: "Snap MidTrans",
-      //     url_api: req.originalUrl,
-      //     api_header: JSON.stringify(header),
-      //     api_body: JSON.stringify({
-      //       order: `${timesg}P${program_id}A${actResult?.id}`,
-      //       price: Number(total),
-      //     }),
-      //     api_response: JSON.stringify(midtrans),
-      //     payload: JSON.stringify(req.body),
-      //   },
-      // });
       if (postResult) {
         const transformedDetails = req.body.detail_qurban.map((detail) => ({
           paket_id: Number(detail.paket_id),
@@ -1838,51 +1817,93 @@ module.exports = {
           qty: detail.qty,
           total: String(detail.total),
         }));
+
+        const totalPrice = transformedDetails.reduce((sum, detail) => {
+          const totalAmount = Number(detail.total.replace(/\D/g, ""));
+          return sum + totalAmount;
+        }, 0);
+
+        const phoneNumber = Number(bank) === 20 ? "086500018999" : no_wa;
+
+        let pn = no_wa;
+        pn = pn.replace(/\D/g, "");
+        if (pn.substring(0, 1) === "0") {
+          pn = "0" + pn.substring(1).trim();
+        } else if (pn.substring(0, 2) === "62") {
+          pn = "0" + pn.substring(2).trim();
+        }
+
+        const dateString = postResult.created_date;
+        const date = new Date(dateString);
+        const formattedDate = date.toLocaleDateString("id-ID", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        });
+
+        const formattedDana = totalPrice.toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        });
+
+        // Mengirim request ke payment gateway menggunakan reqPay
+        const response = await reqPay({
+          body: {
+            phone_number: phoneNumber,
+            id_SOF: bank,
+            price: totalPrice,
+          },
+        });
+
+        // Memproses actionData untuk mendapatkan Bank dan VA Number
+        const actionData = response.data.SendPaymentResp.actionData;
+        const actionParts = actionData
+          .match(/\[([^\]]+)\]/g)
+          .map((item) => item.replace(/\[|\]/g, ""));
+
+        const bankName = actionParts[0]; // Nama bank
+        const vaNumber = actionParts[2]; // Nomor VA
+
+        const msgId = await sendWhatsapp({
+          wa_number: pn.replace(/[^0-9\.]+/g, ""),
+          text:
+            "Menunggu Pembayaran\n" +
+            "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
+            "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
+            "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
+            "\nTanggal/waktu : " +
+            formattedDate +
+            "\nNama : " +
+            nama +
+            "\nNo whatsapp : " +
+            no_wa +
+            "\nJumlah yang harus dibayarkan : " +
+            formattedDana +
+            "\nBank : " +
+            bankName +
+            "\nVA Number : " +
+            vaNumber +
+            "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+            "\nSalam zisindosat\n" +
+            "\nAdmin\n" +
+            "\nPanitia Qurban Raya\n" +
+            "0899-8387-090",
+        });
+
+        const UTC = response.data.SendPaymentResp.uniqueTransactionCode;
+        scheduleCekStatus({ uniqueTransactionCode: UTC });
+
         const detail = await prisma.detail_qurban.createMany({
           data: transformedDetails,
         });
-        // let pn = no_wa;
-        // pn = pn.replace(/\D/g, "");
-        // if (pn.substring(0, 1) == "0") {
-        //   pn = "0" + pn.substring(1).trim();
-        // } else if (pn.substring(0, 3) == "62") {
-        //   pn = "0" + pn.substring(3).trim();
-        // }
-        // const dateString = postResult.created_date;
-        // const date = new Date(dateString);
-        // const formattedDate = date.toLocaleDateString("id-ID", {
-        //   day: "numeric",
-        //   month: "long",
-        //   year: "numeric",
-        // });
-        // const formattedDana = total.toLocaleString("id-ID", {
-        //   style: "currency",
-        //   currency: "IDR",
-        // });
-        // const msgId = await sendWhatsapp({
-        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        //   text:
-        //     "Menunggu Pembayaran\n" +
-        //     "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
-        //     "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
-        //     "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
-        //     "\nTanggal/waktu : " +
-        //     formattedDate +
-        //     "\nNama : " +
-        //     nama +
-        //     "\nNo whatsapp : " +
-        //     no_wa +
-        //     "\nJumlah yang harus dibayarkan : " +
-        //     formattedDana +
-        //     "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
-        //     "\nSalam zisindosat\n" +
-        //     "\nAdmin\n" +
-        //     "\nPanitia Virtual Run For Palestine\n" +
-        //     "0899-8387-090",
-        // });
+
         res.status(200).json({
           message: "Sukses Kirim Data",
-          data: { postResult, detail },
+          data: {
+            postResult,
+            detail,
+            paymentResponse: response,
+          },
         });
       }
     } catch (error) {
@@ -1905,6 +1926,11 @@ module.exports = {
         detail_pemesanan,
       } = req.body;
 
+      // console.log("banksat", bank);
+      console.log("noHp", telepon);
+      console.log("id_sof", bank);
+      console.log("nominal", total_harga);
+
       if (!Array.isArray(detail_pemesanan) || detail_pemesanan.length < 1) {
         return res
           .status(400)
@@ -1923,7 +1949,6 @@ module.exports = {
         }
       }
 
-      // Generate kode_pemesanan A00001 dst
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: { id: "desc" },
         select: { id: true },
@@ -1943,26 +1968,44 @@ module.exports = {
         `Processing new order: ${kode_pemesanan} for email: ${email}`
       );
 
-      // Menggunakan midtransfer untuk pembayaran Snap
-      const response = await midtransfer({
-        order: kode_pemesanan,
-        price: total_harga,
+      // Menggunakan reqPay untuk pembayaran
+      console.log("ayayayayaya");
+      function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      const response = await reqPay({
+        body: {
+          phone_number: telepon,
+          id_SOF: bank, // Ganti dengan ID_SOF yang sesuai
+          price: total_harga,
+        },
       });
 
-      console.log(`Midtrans response for order: ${kode_pemesanan}`, response);
+      // Delay 2 seconds before fetching the status
+      await delay(1000);
+      console.log("resp", response);
+      const UTC = response.data.SendPaymentResp.uniqueTransactionCode;
+      console.log("status transaksi", UTC);
 
-      if (!response.success) {
-        return res.status(500).json({
-          message: response.message,
-        });
-      }
+      scheduleCekStatus({ uniqueTransactionCode: UTC });
+      console.log(`reqPay response for order: ${kode_pemesanan}`, response);
+
+      // if (!response.success) {
+      //   return res.status(500).json({
+      //     message: response.message,
+      //   });
+      // }
 
       const transaction_time = new Date();
       const expiry_time = new Date();
       expiry_time.setMinutes(expiry_time.getMinutes() + 15);
 
-      const statusId = response.data.transaction_status;
-      const displayStatus = statusId === "200" ? "Berhasil" : "gagal";
+      // const statusId =
+      //   response.data.SendPaymentResp.transaction_status || "Pending";
+      // const displayStatus = statusId === "200" ? "Berhasil" : "gagal";
+      const statusId = "Pending"; // Tetapkan status secara statis
+      const displayStatus = "Pending"; // Atur status tampilan menjadi 'Pending'
 
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
@@ -1973,8 +2016,8 @@ module.exports = {
           total_harga: Number(total_harga),
           kode_affiliator,
           kode_pemesanan: kode_pemesanan,
-          metode_pembayaran: "snap", // Indikasikan menggunakan Snap
-          status: displayStatus,
+          metode_pembayaran: "reqPay",
+          status: "pending",
           transaction_time: transaction_time,
           expiry_time: expiry_time,
         },
@@ -2006,8 +2049,8 @@ module.exports = {
         data: {
           postResult,
           transformedDetails,
-          transactionToken: response.data.transaction_token,
-          redirectUrl: response.data.redirect_url,
+          // uniqueTransactionCode:
+          //   response.data.SendPaymentResp.uniqueTransactionCode,
         },
       });
     } catch (error) {
@@ -2636,9 +2679,9 @@ module.exports = {
           where: params,
         }),
         prisma.pemesanan_megakonser.findMany({
-          orderBy: {
-            [sortBy]: sortType,
-          },
+          // orderBy: {
+          //   [sortBy]: sortType,
+          // },
           where: params,
           include: {
             detail_pemesanan_megakonser: {
@@ -3206,70 +3249,44 @@ module.exports = {
       const perPage = Number(req.query.perPage || 10);
       const skip = (page - 1) * perPage;
 
-      const params = {
-        OR: [
-          {
-            nama: {
-              contains: keyword,
-            },
-          },
-          {
-            kode: {
-              contains: keyword,
-            },
-          },
-        ],
-      };
+      const rawResult = await prisma.$queryRaw`
+      SELECT a.nama, a.kode, 
+             COALESCE(SUM(p.total_harga), 0) AS total_harga
+      FROM affiliator a
+      LEFT JOIN pemesanan_megakonser p 
+      ON a.kode = p.kode_affiliator AND p.status = 'settlement'
+      WHERE a.nama LIKE ${"%" + keyword + "%"}
+      GROUP BY a.id
+      ORDER BY total_harga DESC
+      LIMIT ${perPage} OFFSET ${skip}
+    `;
 
-      const [count, result] = await prisma.$transaction([
-        prisma.affiliator.count({
-          where: params,
-        }),
-        prisma.affiliator.findMany({
-          where: params,
-          select: {
-            nama: true,
-            kode: true,
-            pemesanan_megakonser: {
-              where: { status: "settlement" },
-              select: {
-                total_harga: true,
-              },
-            },
-          },
-        }),
-      ]);
+      // Konversi BigInt ke String untuk menghindari error
+      const resultWithString = rawResult.map((row) => ({
+        ...row,
+        total_harga: row.total_harga.toString(), // Konversi BigInt ke string
+      }));
 
-      // Hitung totalHarga dan urutkan dari terbesar ke terkecil berdasarkan totalHarga
-      const affiliatorsWithTotalHarga = result
-        .map((affiliator) => {
-          const totalHarga = affiliator.pemesanan_megakonser.reduce(
-            (sum, order) => sum + order.total_harga,
-            0
-          );
-
-          return {
-            nama: affiliator.nama,
-            kode: affiliator.kode,
-            total_harga: totalHarga,
-          };
-        })
-        .sort((a, b) => b.total_harga - a.total_harga) // Urutkan berdasarkan total_harga dari terbesar ke terkecil
-        .slice(skip, skip + perPage); // Paginate setelah sorting
+      const countResult = await prisma.$queryRaw`
+      SELECT COUNT(*) AS total 
+      FROM affiliator a
+      WHERE a.nama LIKE ${"%" + keyword + "%"}
+    `;
+      const total = Number(countResult[0]?.total || 0); // Pastikan total berupa number
 
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: affiliatorsWithTotalHarga,
+        data: resultWithString,
         pagination: {
-          total: count,
+          total,
           page,
-          hasNext: count > page * perPage,
-          totalPage: Math.ceil(count / perPage),
+          hasNext: total > page * perPage,
+          totalPage: Math.ceil(total / perPage),
         },
       });
     } catch (error) {
       res.status(500).json({
-        message: error?.message,
+        message: error?.message || "Terjadi kesalahan pada server",
       });
     }
   },

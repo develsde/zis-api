@@ -31,6 +31,8 @@ COPY . .
 #RUN touch /usr/src/app/uploads
 #RUN mv /usr/src/app/uploads ../uploads/
 
+# RUN apk add openssl
+
 RUN apk add --no-cache \
     python3 \
     make \

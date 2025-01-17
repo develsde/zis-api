@@ -13,6 +13,7 @@ const {
   poPost,
 } = require("../helper/artajasa_bersamapay");
 
+
 module.exports = {
   async getAuthAJ(req, res) {
     try {
@@ -91,6 +92,9 @@ module.exports = {
         },
       };
 
+      // Menampilkan body request dalam bentuk JSON
+      console.log("Body request (JSON):", JSON.stringify(datas, null, 2));
+
       const str_data = JSON.stringify(datas);
       const hashedData = CryptoJS.SHA256(str_data);
       const digested = CryptoJS.enc.Hex.stringify(hashedData);
@@ -100,6 +104,9 @@ module.exports = {
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=/g, "");
+
+      // Menampilkan body request dalam bentuk Base64
+      console.log("Body request (Base64):", base64);
 
       const check = await poPost({
         date: date,
@@ -111,6 +118,15 @@ module.exports = {
       const data = CryptoJS.enc.Base64.stringify(
         CryptoJS.enc.Utf8.parse(str_data)
       );
+
+      // Menampilkan data yang dikirim ke API
+      console.log("Request body yang dikirim (Base64):", data);
+      console.log("Header yang dikirim:", {
+        "Content-Type": "application/json",
+        Date: date,
+        Authorization: `${auth}:${check}`,
+        Username: username,
+      });
 
       const response = await axios.post(
         "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only",
@@ -124,6 +140,7 @@ module.exports = {
           },
         }
       );
+      console.log("lihat response callback reqpay", response.data);
 
       // Decode Base64 Response if needed
       if (response.data && typeof response.data === "string") {
@@ -131,49 +148,61 @@ module.exports = {
           "utf-8"
         );
         console.log("Decoded Response:", decodedResult);
+
         const dataku = JSON.parse(decodedResult);
-        console.log(dataku);
-        await prisma.log_aj.create({
-          data: {
-            uniqueCode: dataku.SendPaymentResp.uniqueTransactionCode,
-          },
-        });
-        // Parse decoded response to JSON and send
-        return res.status(200).json({
+        if (dataku?.SendPaymentResp) {
+          console.log("lihat dataku", dataku);
+          const kemem = await prisma.log_aj.create({
+            data: {
+              uniqueCode: dataku.SendPaymentResp.uniqueTransactionCode,
+              ammount: dataku.SendPaymentResp.amount,
+            },
+          });
+          console.log("harga", kemem);
+        } else {
+          console.error("SendPaymentResp is undefined in decoded response");
+        }
+
+        return {
           success: true,
           message: "Payment processed successfully",
-          data: dataku, // Convert decoded result to JSON
-        });
+          data: dataku,
+        };
       } else {
         console.log("Response is not a Base64-encoded string:", response.data);
-        await prisma.log_aj.create({
-          data: {
-            uniqueCode: response.data.SendPaymentResp.uniqueTransactionCode,
-          },
-        });
-        // Send raw JSON response
-        return res.status(200).json({
+        if (response.data?.SendPaymentResp) {
+          await prisma.log_aj.create({
+            data: {
+              uniqueCode: response.data.SendPaymentResp.uniqueTransactionCode,
+              ammount: response.data.SendPaymentResp.amount,
+            },
+          });
+        } else {
+          console.error("SendPaymentResp is undefined in raw response");
+        }
+
+        return {
           success: true,
           message: "Payment processed successfully",
           data: response.data,
-        });
+        };
       }
     } catch (error) {
       console.error("Error Details:", {
-        headers: error.config?.headers,
-        method: error.config?.method,
-        url: error.config?.url,
-        data: error.config?.data,
-        error: error.response?.data,
+        headers: error.config?.headers || "No headers",
+        method: error.config?.method || "No method",
+        url: error.config?.url || "No URL",
+        data: error.config?.data || "No data",
+        error: error.response?.data || "No response data",
         message: error.message,
       });
 
       // Return error details as JSON
-      return res.status(500).json({
+      return {
         success: false,
         message: "An error occurred during payment processing",
         error: error.response?.data || error.message,
-      });
+      };
     }
   },
 
@@ -246,6 +275,8 @@ module.exports = {
     const data = CryptoJS.enc.Base64.stringify(
       CryptoJS.enc.Utf8.parse(str_data)
     );
+    console.log("lihat data utc", data);
+
     try {
       const response = await axios.post(
         "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
@@ -260,22 +291,69 @@ module.exports = {
         }
       );
 
+      // Periksa apakah response berupa JSON
+      if (
+        response.headers["content-type"] &&
+        response.headers["content-type"].includes("application/json")
+      ) {
+        console.log("Response is JSON");
+        console.log("response callback", response.data);
+      } else {
+        console.error("Response is not JSON:", response.data);
+        return res
+          .status(500)
+          .json({ success: false, message: "Invalid response format" });
+      }
+
       if (response.data && typeof response.data === "string") {
         const decodedResult = Buffer.from(response.data, "base64").toString(
           "utf-8"
         );
         console.log("Decoded Response:", decodedResult);
+        const dataku = JSON.parse(decodedResult);
+        console.log("icun", dataku);
 
-        // Parse decoded response to JSON and send
+        const aj = await prisma.log_aj.findFirst({
+          where: {
+            uniqueCode: dataku.checkStatusResp.uniqueTransactionCode,
+          },
+        });
+
+        if (!aj) {
+          return res
+            .status(404)
+            .json({ message: "Transaction Code Tidak Ditemukan" });
+        }
+
+        const data = await prisma.log_aj.update({
+          where: {
+            id_aj: aj.id_aj,
+          },
+          data: {
+            timestampt: dataku.checkStatusResp.timeStamp,
+            merchantId: dataku.checkStatusResp.merchantId,
+            respCode: dataku.checkStatusResp.respCode,
+            ammount: dataku.checkStatusResp.amt,
+            uniqueCode: dataku.checkStatusResp.uniqueCode,
+            transRef: dataku.checkStatusResp.transRef,
+            date_time: dataku.checkStatusResp.dateTime,
+            status: dataku.checkStatusResp.status,
+            fail_resson: dataku.checkStatusResp.failReason,
+            status_notify_sof: dataku.checkStatusResp.statusNotifySOF,
+            status_transaction: dataku.checkStatusResp.statusTransaction,
+            status_transaction: dataku.checkStatusResp.status_transaction,
+          },
+        });
+        console.log("infopay", data);
+
         return res.status(200).json({
           success: true,
           message: "Payment processed successfully",
-          data: JSON.parse(decodedResult), // Convert decoded result to JSON
+          data: JSON.parse(decodedResult),
         });
       } else {
         console.log("Response is not a Base64-encoded string:", response.data);
 
-        // Send raw JSON response
         return res.status(200).json({
           success: true,
           message: "Payment processed successfully",
@@ -287,7 +365,11 @@ module.exports = {
         "Error:",
         error.response ? error.response.data : error.message
       );
-      throw error;
+      return res.status(500).json({
+        success: false,
+        message: "Internal Server Error",
+        error: error.message,
+      });
     }
   },
 };

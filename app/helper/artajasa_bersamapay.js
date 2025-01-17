@@ -117,21 +117,18 @@ const JWTToken = async () => {
 const poPost = async ({ digest, date, url }) => {
   try {
     const secret = "secret";
-    const Strings =
-      "POST" +
-      "\n" +
-      date +
-      "\n" +
-      url +
-      "\n" +
-      digest;
+    const Strings = "POST" + "\n" + date + "\n" + url + "\n" + digest;
 
-    console.log(Strings)
+    console.log(Strings);
+
     const dataSign = CryptoJS.HmacSHA256(Strings, secret);
-    
+
     var dataEncB64 = CryptoJS.enc.Base64.stringify(dataSign);
 
-    dataEncB64 = dataEncB64.replace(/\+/gi, '-').replace(/\//gi, '_').replace(/\=/gi, '');
+    dataEncB64 = dataEncB64
+      .replace(/\+/gi, "-")
+      .replace(/\//gi, "_")
+      .replace(/\=/gi, "");
 
     console.log("ALLDATA", JSON.stringify(dataEncB64));
 

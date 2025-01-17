@@ -8,7 +8,7 @@ const crypto = require("node:crypto");
 const md5 = require("md5");
 
 module.exports = {
-  // LOGIN USER 
+  // LOGIN USER
   async loginUser(req, res) {
     try {
       const { username, password } = req.body;
@@ -21,7 +21,7 @@ module.exports = {
 
       const user = await prisma.user.findUnique({
         include: {
-          type: true
+          type: true,
         },
         where: {
           username,
@@ -136,7 +136,10 @@ module.exports = {
         },
       });
 
-      const templateEmail = generateTemplate({ email: body.data.email, password });
+      const templateEmail = generateTemplate({
+        email: body.data.email,
+        password,
+      });
       const msgId = await sendEmail({
         email: body.data.email,
         html: templateEmail,
@@ -282,7 +285,10 @@ module.exports = {
         },
       });
 
-      const templateEmail = generateTemplateForgotEmail({ email: user.username, token: randomToken });
+      const templateEmail = generateTemplateForgotEmail({
+        email: user.username,
+        token: randomToken,
+      });
 
       const msgId = await sendEmail({
         email: user.username,
@@ -381,42 +387,42 @@ module.exports = {
   async resetPasswordErp(req, res) {
     try {
       const { password } = req.body;
-      const { user_id } = req.params;  // Corrected this line to get user_id directly from req.params
-  
+      const { user_id } = req.params; // Corrected this line to get user_id directly from req.params
+
       // Check if password is missing
       if (!password) {
         return res.status(400).json({
           message: "Gagal reset password, password harus diisi",
         });
       }
-  
+
       // Find user by user_id
       const user = await prisma.user.findUnique({
         where: {
           user_id: Number(user_id), // Ensure the user_id is a number if it's not a string
         },
       });
-  
+
       // If user not found
       if (!user) {
         return res.status(400).json({
           message: "Gagal reset password, user tidak ditemukan",
         });
       }
-  
+
       // Hash the new password
       const hashedPassword = await argon2.hash(password);
-  
+
       // Update the user's password
       await prisma.user.update({
         where: {
-          user_id: Number(user_id),  // Use user_id in the update query
+          user_id: Number(user_id), // Use user_id in the update query
         },
         data: {
           user_password: hashedPassword,
         },
       });
-  
+
       return res.status(200).json({
         message: "Sukses",
         data: "Berhasil Reset Password",
@@ -427,7 +433,6 @@ module.exports = {
       });
     }
   },
-  
 
   async verifiedUser(req, res) {
     try {
@@ -524,71 +529,85 @@ module.exports = {
       });
     }
   },
-//outlet login
-async loginOutlet(req, res) {
-  try {
-    const { username, password } = req.body;
+  //outlet login
+  async loginOutlet(req, res) {
+    try {
+      const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({
-        message: "Username atau Password Salah",
+      if (!username || !password) {
+        return res.status(400).json({
+          message: "Username atau Password Salah",
+        });
+      }
+
+      // Menemukan user outlet berdasarkan username dan password
+      const user = await prisma.outlet.findUnique({
+        where: {
+          username,
+          password: md5(password),
+        },
+      });
+
+      if (!user) {
+        return res.status(400).json({
+          message: "Username atau Password Salah",
+        });
+      }
+
+      // Memastikan akun outlet aktif
+      if (user.status === 0) {
+        return res.status(400).json({
+          message: "Akun Anda Tidak Aktif",
+        });
+      }
+
+      // Menghilangkan data sensitif (seperti password dan token)
+      const omit = require("lodash/omit");
+      const cleanUser = omit(user, ["password", "token"]);
+
+      // Membuat token menggunakan fungsi generate
+      const token = generate(cleanUser);
+
+      // Menyimpan token di database
+      await prisma.outlet.update({
+        where: {
+          username,
+        },
+        data: {
+          token: token,
+        },
+      });
+
+      // Menghitung total donasi untuk outlet yang login
+      const totalDonasi = await prisma.register_donasi.aggregate({
+        _sum: {
+          nominal: true,
+        },
+        where: {
+          id_outlet: user.id,
+          transaction_status: "settlement", // hanya transaksi yang berhasil
+        },
+      });
+
+      const totalDonasiFormatted = totalDonasi._sum.nominal
+        ? `Rp ${totalDonasi._sum.nominal
+            .toString()
+            .replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+        : "Rp 0";
+
+      // Mengirimkan respons login berhasil dengan data pengguna dan total donasi
+      return res.status(200).json({
+        message: "Login Berhasil",
+        data: {
+          ...cleanUser,
+          total_donasi: totalDonasiFormatted, // menambahkan total donasi
+        },
+        token,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
       });
     }
-
-    const user = await prisma.outlet.findUnique({
-      include: {
-        type: true
-      },
-      where: {
-        username,        
-        password: md5(password)
-      },
-    });
-
-    if (!user) {
-      return res.status(400).json({
-        message: "Username atau Password Salah",
-      });
-    }
-
-    //const passwordMatch = await argon2.verify(user.user_password, password);
-    // if (!passwordMatch) {
-    //   return res.status(400).json({
-    //     message: "Username atau Password Salah",
-    //   });
-    // }
-
-    if (user.status === 0) {
-      return res.status(400).json({
-        message: "Akun Anda Tidak Aktif",
-      });
-    }
-
-    const omit = require("lodash/omit");
-
-    const cleanUser = omit(user, ["password", "token"]);
-
-    const token = generate(cleanUser);
-
-    await prisma.outlet.update({
-      where: {
-        username,
-      },
-      data: {
-        token: token,
-      },
-    });
-
-    return res.status(200).json({
-      message: "Login Berhasil",
-      data: cleanUser,
-      token,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: error?.message,
-    });
-  }
-},
-
+  },
 };
