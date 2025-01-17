@@ -10,18 +10,18 @@ router.post("/create-mutasi", authentication, report.createMutasi);
 router.post("/create-mutasibank", authentication, report.createMutasiFromBank);
 router.post("/create-jurnal", authentication, report.createJurnal);
 router.post("/create-jurnal-header", authentication, report.createJurnalHeader);
-router.get("/doc-type", authentication, report.alldocType);
-router.post("/header/update", report.getHeaderAndUpdateItems);
+//router.post("/create-jurnal-header-temporary", authentication, report.createJurnalHeaderTemp);
 router.get("/document-number", authentication, report.listDocumentNumber);
 router.get("/all-mutasi", authentication, report.allDataMutasi);
 router.get("/all-jurnal", authentication, report.allDataJurnal);
-router.get("/all-jurnal-header", report.allDataJurnalHeader);
-router.get("/all-items", report.allDataJurnalDetail);
-router.get("/all-jurnal-header/:id", report.getDataJurnalHeaderById);
-router.put("/update-items", report.updateJurnal);
-router.get("/all-item-perheader/:id", report.allItemPerHeader);
+router.get("/all-jurnal-header", authentication, report.allDataJurnalHeader);
+router.get("/all-jurnal-proposal", authentication, report.getAllJurnalProposal);
+router.get("/all-mutasi-jurnal", authentication, report.getAllMutasi); 
+router.get("/all-calk", authentication, report.getAllCalkData); 
+router.get("/all-item-perheader/:id", authentication, report.allItemPerHeader);
 router.delete("/delete-header", authentication, report.deleteJurnalHeader);
 router.delete("/delete-item", authentication, report.deleteJurnalItem);
+
 
 
 

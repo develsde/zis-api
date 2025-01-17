@@ -5,7 +5,9 @@ const { customAlphabet } = require("nanoid");
 const { z, number } = require("zod");
 const readXlsxFile = require("read-excel-file/node");
 const { id, tr } = require("date-fns/locale");
-const { includes } = require("lodash");
+const { includes, gt, values } = require("lodash");
+const moment = require ('moment');
+const { glaccount } = require("./controller-reference");
 
 module.exports = {
   async createReport(req, res) {
@@ -1270,5 +1272,293 @@ module.exports = {
         message: error?.message,
       });
     }
+  },   
+
+  async getAllJurnalProposal(req, res) {
+    try {
+      
+      const doc = await prisma.jurnal.findMany({
+          where: {
+              jurnal_category_id : Number(6),
+              amount_debit : { gt : 25 },
+              datetime : {
+                lte: new Date('2024-10-31'),
+                gte: new Date('2024-10-01')
+              } 
+          },
+          // skip: 0,
+          // take: 10
+      });
+
+      //doc.map((items) => {
+       
+      for(let sdata of doc) {  
+
+        const lastJurnalHeader =  await prisma.jurnal_lk_header.findFirst({
+          orderBy: {
+            doc_number: "desc", // Mengurutkan dari terbesar ke terkecil
+          },
+        });
+  
+        // Tentukan nilai doc_number yang baru
+        const lastDocNumber = lastJurnalHeader
+          ? lastJurnalHeader.doc_number
+          : "10000000";
+  
+        // Pastikan doc_number adalah angka yang valid
+        const newDocNumber = isNaN(parseInt(lastDocNumber))
+          ? 10000001 // Nilai default jika parseInt menghasilkan NaN
+          : parseInt(lastDocNumber) + 1; // Increment dari nilai terakhir
+  
+        const period = 2024;
+  
+        const createJurnalHeader =  await prisma.jurnal_lk_header.create({
+          data: {
+            doc_number : String(newDocNumber),            
+            doc_type: 1,
+            currency: "IDR",
+            period: Number(period),
+            proposal_id: Number(sdata.transaction_proposal_id),
+            istransformed: 1
+          },
+        });
+
+        //console.log(createJurnalHeader)
+        const jurnalKategori = 1;
+        const createJurnalItem =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.datetime,
+              jurnal_deskripsi: String(sdata.deskripsi),
+              jurnal_isdebit: 1,
+              //jurnal_gl_account: Number(sdata.glaccount),
+              gl_account: {
+                connect: {
+                  id: Number(sdata.glaccount),
+                },
+              },
+              jurnal_nominal: Number(sdata.amount_debit),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },              
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+        const glaccountkredit = 363
+        const createJurnalItem2 =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.datetime,
+              jurnal_deskripsi: "Bank Transfer",
+              jurnal_isdebit: 0,
+              gl_account: {
+                connect: {
+                  id: Number(glaccountkredit),
+                },
+              },
+              jurnal_nominal: -Number(sdata.amount_debit),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },       
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+      }
+
+      if (!doc) {
+        return res.status(404).json({
+          message: "Document tidak ditemukan",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: doc,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
   },
+
+
+  async getAllMutasi(req, res) {
+    try {
+      
+      const mutasi = await prisma.mutasi.findMany({          
+          // skip: 0,
+          // take: 10
+      });
+
+      //doc.map((items) => {
+       
+      for(let sdata of mutasi) {  
+
+        const lastJurnalHeader =  await prisma.jurnal_lk_header.findFirst({
+          orderBy: {
+            doc_number: "desc", // Mengurutkan dari terbesar ke terkecil
+          },
+        });
+  
+        // Tentukan nilai doc_number yang baru
+        const lastDocNumber = lastJurnalHeader
+          ? lastJurnalHeader.doc_number
+          : "10000000";
+  
+        // Pastikan doc_number adalah angka yang valid
+        const newDocNumber = isNaN(parseInt(lastDocNumber))
+          ? 10000001 // Nilai default jika parseInt menghasilkan NaN
+          : parseInt(lastDocNumber) + 1; // Increment dari nilai terakhir
+  
+        const period = 2024;
+  
+        const createJurnalHeader =  await prisma.jurnal_lk_header.create({
+          data: {
+            doc_number : String(newDocNumber),            
+            doc_type: 1,
+            currency: String(sdata.mutasi_currency),
+            period: Number(period),            
+            istransformed: 1
+          },
+        });
+
+        //console.log(createJurnalHeader)
+        const glaccountkredit = 363
+        const jurnalKategori = 1;
+        const createJurnalItem =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.mutasi_tanggal_transaksi,
+              jurnal_deskripsi: String(sdata.mutasi_deskripsi),
+              jurnal_isdebit: sdata.mutasi_isdebit != null ? 1 : 0,
+              //jurnal_gl_account: Number(sdata.glaccount),
+              gl_account: {
+                connect: {
+                  id: Number(glaccountkredit),
+                },
+              },
+              jurnal_nominal: Number(sdata.mutasi_amount),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },              
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+        const glaccountbank = 179 //tandain
+        const createJurnalItem2 =  await prisma.jurnal_lk.create({
+          data: {
+              jurnal_tanggal: sdata.mutasi_tanggal_transaksi,
+              jurnal_deskripsi: "Bank",
+              jurnal_isdebit: sdata.mutasi_iscredit != null ? 1 : 0,
+              gl_account: {
+                connect: {
+                  id: Number(glaccountbank),
+                },
+              },
+              jurnal_nominal: -Number(sdata.mutasi_amount),
+              jurnal_status: 1,
+              jurnal_category: {
+                connect: {
+                  id: Number(jurnalKategori),
+                },
+              },       
+              jurnal_lk_header: {
+                connect: {
+                  id: Number(createJurnalHeader.id)
+                },
+              },
+          },
+        });
+
+      }
+
+      if (!mutasi) {
+        return res.status(404).json({
+          message: "Document tidak ditemukan",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: mutasi,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getAllCalkData(req, res) {
+    try {
+      
+      const SantunanSembako = await prisma.jurnal_lk.groupBy({                 
+        by: ['jurnal_gl_account'],
+        _sum: {
+          jurnal_nominal: true,          
+        },
+        where: {
+            jurnal_gl_account : {
+                in: [25,24,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40]
+            },            
+        },
+      });
+
+      console.log(JSON.stringify(SantunanSembako));
+
+      const calkData = [
+        {name: "Bagian Amil atas Dana Zakat", value: Number(75070803925)},
+        {name: "Santunan Sembako", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 24).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 24)[0]._sum.jurnal_nominal:0 ) },
+        {name: "Yatim Piatu Dhuafa", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 25).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 25)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Biaya Hidup Individu", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 26).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 26)[0]._sum.jurnal_nominal:0 )},
+        {name: "Zakat fitrah", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 27).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 27)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Bea-Guru", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 28).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 28)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Beasiswa Rutin", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 29).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 29)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Beasiswa Putus", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 30).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 30)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Buku", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 31).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 31)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Prasarana Pendidikan", value : Number(SantunanSembako.filter(val => val.jurnal_gl_account == 32).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 32)[0]._sum.jurnal_nominal:0 )},
+        {name: "Pengobatan Individu", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 33).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 33)[0]._sum.jurnal_nominal:0 )},
+        {name: "Baksos Kesehatan", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 34).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 34)[0]._sum.jurnal_nominal:0 ) },
+        {name: "Klinik", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 35).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 35)[0]._sum.jurnal_nominal:0 )},
+        {name: "Pembinaan Ekonomi Lemah", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 36).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 36)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bantuan Modal Usaha", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 37).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 37)[0]._sum.jurnal_nominal:0 )},
+        {name: "Recovery", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 38).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 38)[0]._sum.jurnal_nominal:0 )},
+        {name: "Rescue", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 39).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 39)[0]._sum.jurnal_nominal:0 )},
+        {name: "Bencana", value: Number(SantunanSembako.filter(val => val.jurnal_gl_account == 40).length > 0 ? SantunanSembako.filter(val => val.jurnal_gl_account == 40)[0]._sum.jurnal_nominal:0 )},
+      ]
+      
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: calkData,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  
 };

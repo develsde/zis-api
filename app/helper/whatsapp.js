@@ -2,7 +2,6 @@ const axios = require("axios");
 const https = require("https");
 
 const sendWhatsapp = async ({ wa_number, text }) => {
-
   const agent = new https.Agent({
     rejectUnauthorized: false,
   });
@@ -23,18 +22,18 @@ const sendWhatsapp = async ({ wa_number, text }) => {
     },
   };
 
-  const send = await axios.request(config)
-  .then((response) => {
-    console.log("----> WA SEND", JSON.stringify(response.data));
-  })
-  .catch((error) => {
-    console.log(error);
-  });
+  const send = await axios
+    .request(config)
+    .then((response) => {
+      console.log("----> WA SEND", JSON.stringify(response.data));
+    })
+    .catch((error) => {
+      console.log(error);
+    });
 
   return send;
   // return true;
 };
-
 
 module.exports = {
   sendWhatsapp,
