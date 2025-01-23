@@ -1149,6 +1149,7 @@ model activity_qurban {
   gender            String?         @db.VarChar(100)
   ongkir            String?         @db.VarChar(100)
   harga             String?         @db.VarChar(100)
+  UTC               String?         @db.VarChar(100)
   program           program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_qurban_program_FK")
   detail_qurban     detail_qurban[]
 

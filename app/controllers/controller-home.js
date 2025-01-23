@@ -1776,11 +1776,57 @@ module.exports = {
       } = req.body;
 
       const totals = Number(harga) + Number(ongkir);
+
       if (detail_qurban.length < 1) {
         return res
           .status(400)
           .json({ message: "Masukkan detail qurban wajib diisi" });
       }
+
+      // Menghitung total harga dari detail_qurban
+      const transformedDetails = detail_qurban.map((detail) => ({
+        paket_id: Number(detail.paket_id),
+        nama_mudohi: detail.nama_mudohi,
+        qty: detail.qty,
+        total: String(detail.total),
+      }));
+
+      const totalPrice = transformedDetails.reduce((sum, detail) => {
+        const totalAmount = Number(detail.total.replace(/\D/g, ""));
+        return sum + totalAmount;
+      }, 0);
+
+      // Memproses nomor WA
+      let pn = no_wa.replace(/\D/g, "");
+      if (pn.startsWith("0")) {
+        pn = "0" + pn.substring(1).trim();
+      } else if (pn.startsWith("62")) {
+        pn = "0" + pn.substring(2).trim();
+      }
+
+      const phoneNumber = Number(bank) === 20 ? "086500018999" : no_wa;
+
+      // Mengirim request ke payment gateway menggunakan reqPay
+      const response = await reqPay({
+        body: {
+          phone_number: phoneNumber,
+          id_SOF: bank,
+          price: totalPrice,
+        },
+      });
+
+      const UTC = response.data.SendPaymentResp.uniqueTransactionCode;
+      const actionData = response.data.SendPaymentResp.actionData;
+
+      // Memproses actionData jika bank adalah 20
+      const bankName =
+        Number(bank) === 20
+          ? "BlueBCA"
+          : actionData.match(/\[([^\]]+)\]/g)[0].replace(/\[|\]/g, "");
+      const vaNumber =
+        Number(bank) === 20
+          ? actionData // Directly use actionData for VA Number
+          : actionData.match(/\[([^\]]+)\]/g)[2].replace(/\[|\]/g, "");
 
       // Insert ke tabel activity_qurban
       const postResult = await prisma.activity_qurban.create({
@@ -1806,106 +1852,67 @@ module.exports = {
           ongkir: Number(ongkir),
           gender,
           lokasi_penyaluran,
+          UTC, // Menyimpan uniqueTransactionCode
         },
       });
 
-      if (postResult) {
-        const transformedDetails = req.body.detail_qurban.map((detail) => ({
-          paket_id: Number(detail.paket_id),
+      // Menyimpan detail qurban ke tabel
+      const detail = await prisma.detail_qurban.createMany({
+        data: transformedDetails.map((detail) => ({
+          ...detail,
           qurban_id: Number(postResult?.id),
-          nama_mudohi: detail.nama_mudohi,
-          qty: detail.qty,
-          total: String(detail.total),
-        }));
+        })),
+      });
 
-        const totalPrice = transformedDetails.reduce((sum, detail) => {
-          const totalAmount = Number(detail.total.replace(/\D/g, ""));
-          return sum + totalAmount;
-        }, 0);
+      // Kirim pesan WhatsApp
+      const formattedDate = new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
 
-        const phoneNumber = Number(bank) === 20 ? "086500018999" : no_wa;
+      const formattedDana = totalPrice.toLocaleString("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      });
 
-        let pn = no_wa;
-        pn = pn.replace(/\D/g, "");
-        if (pn.substring(0, 1) === "0") {
-          pn = "0" + pn.substring(1).trim();
-        } else if (pn.substring(0, 2) === "62") {
-          pn = "0" + pn.substring(2).trim();
-        }
+      await sendWhatsapp({
+        wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        text:
+          "Menunggu Pembayaran\n" +
+          "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
+          "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
+          "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
+          "\nTanggal/waktu : " +
+          formattedDate +
+          "\nNama : " +
+          nama +
+          "\nNo whatsapp : " +
+          no_wa +
+          "\nJumlah yang harus dibayarkan : " +
+          formattedDana +
+          "\nBank : " +
+          bankName +
+          "\nVA Number : " +
+          vaNumber +
+          "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+          "\nSalam zisindosat\n" +
+          "\nAdmin\n" +
+          "\nPanitia Qurban Raya\n" +
+          "0899-8387-090",
+      });
 
-        const dateString = postResult.created_date;
-        const date = new Date(dateString);
-        const formattedDate = date.toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        });
+      // Menjadwalkan pengecekan status
+      scheduleCekStatus({ uniqueTransactionCode: UTC });
 
-        const formattedDana = totalPrice.toLocaleString("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        });
-
-        // Mengirim request ke payment gateway menggunakan reqPay
-        const response = await reqPay({
-          body: {
-            phone_number: phoneNumber,
-            id_SOF: bank,
-            price: totalPrice,
-          },
-        });
-
-        // Memproses actionData untuk mendapatkan Bank dan VA Number
-        const actionData = response.data.SendPaymentResp.actionData;
-        const actionParts = actionData
-          .match(/\[([^\]]+)\]/g)
-          .map((item) => item.replace(/\[|\]/g, ""));
-
-        const bankName = actionParts[0]; // Nama bank
-        const vaNumber = actionParts[2]; // Nomor VA
-
-        const msgId = await sendWhatsapp({
-          wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text:
-            "Menunggu Pembayaran\n" +
-            "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
-            "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
-            "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
-            "\nTanggal/waktu : " +
-            formattedDate +
-            "\nNama : " +
-            nama +
-            "\nNo whatsapp : " +
-            no_wa +
-            "\nJumlah yang harus dibayarkan : " +
-            formattedDana +
-            "\nBank : " +
-            bankName +
-            "\nVA Number : " +
-            vaNumber +
-            "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
-            "\nSalam zisindosat\n" +
-            "\nAdmin\n" +
-            "\nPanitia Qurban Raya\n" +
-            "0899-8387-090",
-        });
-
-        const UTC = response.data.SendPaymentResp.uniqueTransactionCode;
-        scheduleCekStatus({ uniqueTransactionCode: UTC });
-
-        const detail = await prisma.detail_qurban.createMany({
-          data: transformedDetails,
-        });
-
-        res.status(200).json({
-          message: "Sukses Kirim Data",
-          data: {
-            postResult,
-            detail,
-            paymentResponse: response,
-          },
-        });
-      }
+      res.status(200).json({
+        message: "Sukses Kirim Data",
+        data: {
+          postResult,
+          detail,
+          paymentResponse: response,
+        },
+      });
     } catch (error) {
       res.status(500).json({
         message: error.message,

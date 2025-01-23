@@ -22,7 +22,12 @@ router.get('/listgla', authentication, bank.listGla);
 router.get('/listproposal', authentication, bank.listProposal);
 router.delete('/remove-file', authentication, bank.deleteMt940);
 
-router.post("/upload", authentication, mtupload.single("statement"), bank.statementCreate);
+router.post(
+  "/upload",
+  authentication,
+  mtupload.single("statement"),
+  bank.processFullStatement
+);
 
 
 module.exports = router;

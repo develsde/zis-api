@@ -10,6 +10,7 @@ router.post("/create-mutasi", authentication, report.createMutasi);
 router.post("/create-mutasibank", authentication, report.createMutasiFromBank);
 router.post("/create-jurnal", authentication, report.createJurnal);
 router.post("/create-jurnal-header", authentication, report.createJurnalHeader);
+router.get("/all-items", report.allDataJurnalDetail);
 //router.post("/create-jurnal-header-temporary", authentication, report.createJurnalHeaderTemp);
 router.get("/document-number", authentication, report.listDocumentNumber);
 router.get("/all-mutasi", authentication, report.allDataMutasi);
