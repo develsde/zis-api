@@ -678,10 +678,10 @@ module.exports = {
           { style: "currency", currency: "IDR" }
         );
 
-        const msgId = await sendWhatsapp({
-          wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
-        });
+        // const msgId = await sendWhatsapp({
+        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        //   text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
+        // });
       }
       return res.status(200).json({
         message: "Sukses",

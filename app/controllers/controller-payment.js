@@ -13,7 +13,6 @@ const {
   poPost,
 } = require("../helper/artajasa_bersamapay");
 
-
 module.exports = {
   async getAuthAJ(req, res) {
     try {
@@ -88,12 +87,12 @@ module.exports = {
           discountRule: "0100",
           discountAmount: "000000004000",
           origingoodsPrice: "000000020000",
-          userDefinedl: "Nacha NGUJI COBAAA",
+          userDefinedl: "ZIS INDOSAT",
         },
       };
 
-      // Menampilkan body request dalam bentuk JSON
-      console.log("Body request (JSON):", JSON.stringify(datas, null, 2));
+      // Log JSON body request sebelum dikirim
+      console.log("🔹 Body request (JSON):", JSON.stringify(datas, null, 2));
 
       const str_data = JSON.stringify(datas);
       const hashedData = CryptoJS.SHA256(str_data);
@@ -105,8 +104,8 @@ module.exports = {
         .replace(/\//g, "_")
         .replace(/=/g, "");
 
-      // Menampilkan body request dalam bentuk Base64
-      console.log("Body request (Base64):", base64);
+      // Log Base64 body request
+      console.log("🔹 Body request (Base64):", base64);
 
       const check = await poPost({
         date: date,
@@ -119,14 +118,20 @@ module.exports = {
         CryptoJS.enc.Utf8.parse(str_data)
       );
 
-      // Menampilkan data yang dikirim ke API
-      console.log("Request body yang dikirim (Base64):", data);
-      console.log("Header yang dikirim:", {
+      // Log body dan header yang akan dikirim ke API
+      console.log("🔹 Request body yang dikirim (Base64):", data);
+      console.log("🔹 Header yang dikirim:", {
         "Content-Type": "application/json",
         Date: date,
         Authorization: `${auth}:${check}`,
         Username: username,
       });
+
+      // Log request yang dikirim ke URL
+      console.log(
+        "🔹 Mengirim request ke URL:",
+        "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only"
+      );
 
       const response = await axios.post(
         "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only",
@@ -140,27 +145,30 @@ module.exports = {
           },
         }
       );
-      console.log("lihat response callback reqpay", response.data);
+
+      console.log("🔹 Response dari API:", response.data);
 
       // Decode Base64 Response if needed
       if (response.data && typeof response.data === "string") {
         const decodedResult = Buffer.from(response.data, "base64").toString(
           "utf-8"
         );
-        console.log("Decoded Response:", decodedResult);
+        console.log("🔹 Decoded Response:", decodedResult);
 
         const dataku = JSON.parse(decodedResult);
         if (dataku?.SendPaymentResp) {
-          console.log("lihat dataku", dataku);
+          console.log("🔹 Data dari API:", dataku);
           const kemem = await prisma.log_aj.create({
             data: {
               uniqueCode: dataku.SendPaymentResp.uniqueTransactionCode,
               ammount: dataku.SendPaymentResp.amount,
             },
           });
-          console.log("harga", kemem);
+          console.log("🔹 Harga:", kemem);
         } else {
-          console.error("SendPaymentResp is undefined in decoded response");
+          console.error(
+            "⚠️ SendPaymentResp tidak ditemukan dalam decoded response"
+          );
         }
 
         return {
@@ -169,7 +177,7 @@ module.exports = {
           data: dataku,
         };
       } else {
-        console.log("Response is not a Base64-encoded string:", response.data);
+        console.log("⚠️ Response bukan format Base64:", response.data);
         if (response.data?.SendPaymentResp) {
           await prisma.log_aj.create({
             data: {
@@ -178,7 +186,9 @@ module.exports = {
             },
           });
         } else {
-          console.error("SendPaymentResp is undefined in raw response");
+          console.error(
+            "⚠️ SendPaymentResp tidak ditemukan dalam raw response"
+          );
         }
 
         return {
@@ -188,7 +198,7 @@ module.exports = {
         };
       }
     } catch (error) {
-      console.error("Error Details:", {
+      console.error("🚨 Error Details:", {
         headers: error.config?.headers || "No headers",
         method: error.config?.method || "No method",
         url: error.config?.url || "No URL",
@@ -280,6 +290,7 @@ module.exports = {
     try {
       const response = await axios.post(
         "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
+        // "https://ipg.artajasa.co.id:3067/rest/api/checkStatusTrx",
         data,
         {
           headers: {
