@@ -6,6 +6,7 @@ const { sendWhatsapp } = require("../helper/whatsapp");
 const phoneFormatter = require('phone-formatter');
 const parsenik = require("parsenik");
 const { sendImkas, checkImkas } = require("../helper/imkas");
+const { generateTemplateProposalBayar, sendEmail } = require("../helper/email");
 
 module.exports = {
   async details(req, res) {
@@ -647,6 +648,7 @@ module.exports = {
           user: {
             select: {
               mustahiq: true,
+              username: true,
             },
           },
         },
@@ -678,10 +680,44 @@ module.exports = {
           { style: "currency", currency: "IDR" }
         );
 
-        const msgId = await sendWhatsapp({
-          wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
-        });
+        // const msgId = await sendWhatsapp({
+        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        //   text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
+        // });
+
+        try {
+          const templateEmail = await generateTemplateProposalBayar({
+            nama,
+            formattedDate,
+            formattedDana,
+            bank_number: proposal.user.mustahiq.bank_number || '-',
+            bank_account_name: proposal.user.mustahiq.bank_account_name || '-'
+          });
+
+          const msgId = await sendEmail({
+            email: proposal.user.username,
+            html: templateEmail,
+            subject: "Pembayaran Proposal Telah Berhasil Ditransfer"
+          });
+
+          console.log(`Email send success`);
+          return res.status(200).json({
+            success: true,
+            message: `Email berhasil dikirim`,
+            msgId: msgId,
+          });
+        } catch (error) {
+          console.error(
+            `Gagal membuat atau mengirim email, error:`,
+            error
+          );
+          return res.status(500).json({
+            success: false,
+            message: `Gagal mengirim email`,
+            error: error.message,
+          });
+        }
+
       }
       return res.status(200).json({
         message: "Sukses",

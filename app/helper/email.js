@@ -164,22 +164,22 @@ const generateTemplatePembayaran = async ({ email, tiket }) => {
                 background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
                 <h3 style="margin-bottom: 15px;">Detail Tiket</h3>
                 ${tiket.detail_pemesanan_megakonser.map(
-        (tiket, index) => `
+    (tiket, index) => `
                     <div style="margin-bottom: 10px;">
                         <p><strong>Kode Tiket:</strong> ${tiket.kode_tiket}</p>
                         <p><strong>Harga Tiket:</strong> Rp${tiket.tiket_konser.tiket_harga.toLocaleString(
-          "id-ID"
-        )}</p>
+      "id-ID"
+    )}</p>
                     <p><strong>Jenis Tiket:</strong> ${tiket.tiket_konser_detail?.tiket_konser_detail_nama ?? 'N/A'}</p>
 
  <!-- Menggunakan tiket_konser_detail_nama -->
                     </div>
                     ${index < tiket.length - 1
-            ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
-            : ""
-          }
+        ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
+        : ""
+      }
                 `
-      )
+  )
       .join("")}
                 <p style="font-size: 18px; font-weight: bold; margin-top: 20px;">
                     Total Pembayaran: Rp${totalPembayaran.toLocaleString(
@@ -275,22 +275,22 @@ const generateTemplateExpiredMegaKonser = async ({ email, tiket }) => {
                 background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
                 <h3 style="margin-bottom: 15px;">Detail Tiket</h3>
                 ${tiket.detail_pemesanan_megakonser.map(
-        (tiket, index) => `
+    (tiket, index) => `
                     <div style="margin-bottom: 10px;">
                         <p><strong>Kode Tiket:</strong> ${tiket.kode_tiket}</p>
                         <p><strong>Harga Tiket:</strong> Rp${tiket.tiket_konser.tiket_harga.toLocaleString(
-          "id-ID"
-        )}</p>
+      "id-ID"
+    )}</p>
                     <p><strong>Jenis Tiket:</strong> ${tiket.tiket_konser_detail?.tiket_konser_detail_nama ?? 'N/A'}</p>
 
  <!-- Menggunakan tiket_konser_detail_nama -->
                     </div>
                     ${index < tiket.length - 1
-            ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
-            : ""
-          }
+        ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
+        : ""
+      }
                 `
-      )
+  )
       .join("")}
                 <p style="font-size: 18px; font-weight: bold; margin-top: 20px;">
                     Total Pembayaran: Rp${totalPembayaran.toLocaleString(
@@ -306,6 +306,68 @@ const generateTemplateExpiredMegaKonser = async ({ email, tiket }) => {
   return content;
 };
 
+const generateTemplateProposalBayar = async ({ nama, formattedDate, formattedDana, bank_number, bank_account_name }) => {
+  const content = `
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proposal Disetujui</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            text-align: center;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Proposal Disetujui</div>
+        <div class="content">
+            <p>Assalamu'alaikum, Wr Wb.</p>
+            <p>Proposal atas nama <span class="highlight">${nama}</span> telah disetujui dan telah ditransfer pada <span class="highlight">${formattedDate}</span> sejumlah <span class="highlight">${formattedDana}</span> ke nomor rekening <span class="highlight">${bank_number}</span> a.n <span class="highlight">${bank_account_name}</span>.</p>
+            <p>Terima kasih atas kepercayaannya.</p>
+            <p>Wassalamu'alaikum Wr, Wb.</p>
+        </div>
+        <div class="footer">&copy; ZIS Indosat - Semua Hak Dilindungi</div>
+    </div>
+</body>
+</html>
+
+    `;
+
+  return content;
+};
+
 module.exports = {
   sendEmail,
   sendEmailWithPdf,
@@ -314,4 +376,5 @@ module.exports = {
   generateTemplateMegaKonser,
   generateTemplateExpiredMegaKonser,
   generateTemplatePembayaran,
+  generateTemplateProposalBayar,
 };
