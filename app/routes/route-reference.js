@@ -25,6 +25,11 @@ router.post("/addbank", authentication, refData.createMasterBank);
 router.put("/updatebank/:id", authentication, refData.updateBank);
 router.delete("/removebank", authentication, refData.deleteBank);
 
+router.get("/getBank", authentication, refData.getBank);
+router.post("/postBank", authentication, refData.postBank);
+router.put("/putBank/:id", authentication, refData.putBank);
+router.delete("/deleteBank", authentication, refData.delBank);
+
 router.get("/article", refData.getAllArticle);
 router.get("/article/:id", refData.getByIdArticle);
 router.post(
