@@ -174,6 +174,22 @@ module.exports = {
         });
       }
 
+      const proposal = await prisma.proposal.findFirst({
+        where: {
+          user_id: userId,
+          OR: [
+            { ispaid: 1 },
+            { approved: 2 }
+          ]
+        }
+      });
+
+      if (!proposal) {
+        return res.status(400).json({
+          message: "Anda masih memiliki proposal yang sedang dalam proses approval",
+        });
+      }
+
       const mustahiq = await prisma.user.findUnique({
         where: {
           user_id: userId,

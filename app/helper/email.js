@@ -368,6 +368,68 @@ const generateTemplateProposalBayar = async ({ nama, formattedDate, formattedDan
   return content;
 };
 
+const generateTemplateProposalCreate = async ({ nama, nik_mustahiq, program_title }) => {
+  const content = `
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfirmasi Proposal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 14px;
+            text-align: center;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Konfirmasi Proposal</div>
+        <div class="content">
+            <p>Assalamu'alaikum, Wr Wb.</p>
+            <p>Proposal atas nama <span class="highlight">${nama}</span> dan NIK <span class="highlight">${nik_mustahiq}</span> pada program <span class="highlight">${program_title}</span> telah kami terima.</p>
+            <p>Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal.</p>
+            <p>Terima kasih.</p>
+            <p>Wassalamu'alaikum Wr, Wb.</p>
+        </div>
+        <div class="footer">&copy; ZIS Indosat - Semua Hak Dilindungi</div>
+    </div>
+</body>
+</html>
+    `;
+
+  return content;
+};
+
 module.exports = {
   sendEmail,
   sendEmailWithPdf,
@@ -377,4 +439,5 @@ module.exports = {
   generateTemplateExpiredMegaKonser,
   generateTemplatePembayaran,
   generateTemplateProposalBayar,
+  generateTemplateProposalCreate,
 };

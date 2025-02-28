@@ -472,6 +472,7 @@ model proposal {
   bantuan_pihak_lain          String?              @db.VarChar(255)
   nominal_bantuan             Int?
   nama_pemberi_rekomendasi    String?              @db.VarChar(100)
+  email_pemberi_rekomendasi   String?              @db.VarChar(255)
   alamat_pemberi_rekomendasi  String?              @db.VarChar(255)
   no_telp_pemberi_rekomendasi String?              @db.VarChar(15)
   proposal_kategori           Int?                 @default(0) @db.SmallInt
@@ -895,6 +896,7 @@ model bank {
   id        Int     @id @default(autoincrement())
   bank_name String? @db.VarChar(100)
   bank_code String? @db.VarChar(50)
+  isactive  Int?    @default(1)
 }
 
 model mitra {

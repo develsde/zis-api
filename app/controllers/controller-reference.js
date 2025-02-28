@@ -2435,11 +2435,19 @@ ORDER BY aa.created_date DESC
       const keyword = req.query.keyword || "";
       const sortBy = req.query.sortBy || "id";
       const sortType = req.query.sortType || "asc";
+      const searchEmail = req.query.searchEmail || "";
+      const searchPhone = req.query.searchPhone || "";
 
       const params = {
-        nama: {
-          contains: keyword,
-        },
+        AND: [
+          { nama: { contains: keyword } },
+          {
+            OR: [
+              { email: { equals: searchEmail } },
+              { telepon: { equals: searchPhone } }
+            ]
+          }
+        ]
       };
 
       const [count, refrentor] = await prisma.$transaction([

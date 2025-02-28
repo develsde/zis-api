@@ -6,7 +6,7 @@ const { sendWhatsapp } = require("../helper/whatsapp");
 const phoneFormatter = require('phone-formatter');
 const parsenik = require("parsenik");
 const { sendImkas, checkImkas } = require("../helper/imkas");
-const { generateTemplateProposalBayar, sendEmail } = require("../helper/email");
+const { generateTemplateProposalBayar, sendEmail, generateTemplateProposalCreate } = require("../helper/email");
 
 module.exports = {
   async details(req, res) {
@@ -61,15 +61,14 @@ module.exports = {
       const nama_pemberi_rekomendasi = req.body.nama_pemberi_rekomendasi;
       const alamat_pemberi_rekomendasi = req.body.alamat_pemberi_rekomendasi;
       const no_telp_pemberi_rekomendasi = req.body.no_telp_pemberi_rekomendasi;
+      const email_pemberi_rekomendasi = req.body.email_pemberi_rekomendasi;
       const dana_yang_diajukan = req.body.dana_yang_diajukan;
 
       //console.log(JSON.stringify(req.body))
       const niks = Number(nik_mustahiq);
       const validasi = parsenik.parse(niks);
       console.log(validasi);
-      if (!nik_mustahiq) {
-        return res.status(400).json({ message: "NIK wajib diisi" });
-      } else if (!nama) {
+       else if (!nama) {
         return res.status(400).json({ message: "Nama wajib diisi" });
       } else if (!userId) {
         return res.status(400).json({ message: "User ID wajib diisi" });
@@ -83,10 +82,10 @@ module.exports = {
         return res
           .status(400)
           .json({ message: "Nama Pemberi Rekomendasi wajib diisi" });
-      } else if (!alamat_pemberi_rekomendasi) {
+      } else if (!email_pemberi_rekomendasi) {
         return res
           .status(400)
-          .json({ message: "Alamat Pemberi Rekomendasi wajib diisi" });
+          .json({ message: "Email Pemberi Rekomendasi wajib diisi" });
       } else if (!no_telp_pemberi_rekomendasi) {
         return res
           .status(400)
@@ -244,7 +243,7 @@ module.exports = {
           biaya_hidup_bulanan: Number(biaya_hidup_bulanan),
           dana_yang_diajukan: Number(dana_yang_diajukan),
           nama_pemberi_rekomendasi,
-          alamat_pemberi_rekomendasi,
+          email_pemberi_rekomendasi,
           no_telp_pemberi_rekomendasi,
           nomor_imkas: imkas_number,
           nama_imkas: imkas_name,
@@ -261,17 +260,45 @@ module.exports = {
           pn = "0" + pn.substring(3).trim();
         }
 
-        const msgId = await sendWhatsapp({
-          wa_number: pn.replace(/[^0-9\.]+/g, ""),
-          text:
-            "Proposal Atas Nama " +
-            nama +
-            " dan NIK " +
-            nik_mustahiq +
-            " pada program " +
-            program_title +
-            " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
-        });
+        // const msgId = await sendWhatsapp({
+        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+        //   text:
+        //     "Proposal Atas Nama " +
+        //     nama +
+        //     " dan NIK " +
+        //     nik_mustahiq +
+        //     " pada program " +
+        //     program_title +
+        //     " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
+        // });
+
+        try {
+          const templateEmail = await generateTemplateProposalCreate({
+            nama,
+            nik_mustahiq,
+            program_title
+          });
+
+          const msgId = await sendEmail({
+            email: email_pemberi_rekomendasi,
+            html: templateEmail,
+            subject: "Proposal Telah Berhasil Dikirim",
+          });
+
+          console.log(`Email send success`);
+          return res.status(200).json({
+            success: true,
+            message: `Email berhasil dikirim`,
+            msgId: msgId,
+          });
+        } catch (error) {
+          console.error(`Gagal membuat atau mengirim email, error:`, error);
+          return res.status(500).json({
+            success: false,
+            message: `Gagal mengirim email`,
+            error: error.message,
+          });
+        }
       }
 
       return res.status(200).json({
