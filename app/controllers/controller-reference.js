@@ -2139,7 +2139,7 @@ ORDER BY aa.created_date DESC
   async getAllTransaksiOutlet(req, res) {
     try {
       const keyword = req.query.keyword || "";
-      const cso = req.query.cso || '';
+      const cso = req.query.cso || "";
       const tglAwal = req.query.tgl_awal || null;
       const tglAkhir = req.query.tgl_akhir || null;
       const page = Number(req.query.page || 1);
@@ -2284,6 +2284,161 @@ ORDER BY aa.created_date DESC
       });
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  },
+  async getRefrentor(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.sortType || "asc";
+
+      const params = {
+        nama: {
+          contains: keyword,
+        },
+      };
+
+      const [count, refrentor] = await prisma.$transaction([
+        prisma.pemberi_rekomendasi.count({
+          where: params,
+        }),
+        prisma.pemberi_rekomendasi.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      const refResult = await Promise.all(
+        refrentor.map(async (item) => {
+          return {
+            ...item,
+          };
+        })
+      );
+
+      // const refrentors = await prisma.pemberi_rekomendasi.findMany();
+
+      return res.status(200).json({
+        message: "Data pemberi rekomendasi berhasil diambil",
+        data: refResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  },
+  async createRefrentor(req, res) {
+    try {
+      const { nama, email, telepon } = req.body;
+
+      // Validasi input
+      if (!nama || !email || !telepon) {
+        return res.status(400).json({
+          message: "Nama, email, dan telepon wajib diisi",
+        });
+      }
+
+      // Simpan data ke database
+      const newRefrentor = await prisma.pemberi_rekomendasi.create({
+        data: {
+          nama,
+          email,
+          telepon,
+        },
+      });
+
+      return res.status(201).json({
+        message: "Pemberi rekomendasi berhasil ditambahkan",
+        data: newRefrentor,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  },
+  async updateRefrentor(req, res) {
+    try {
+      const { id } = req.params;
+      const { nama, email, telepon } = req.body;
+
+      // Cek apakah data dengan ID tersebut ada
+      const existingRefrentor = await prisma.pemberi_rekomendasi.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!existingRefrentor) {
+        return res.status(404).json({
+          message: "Pemberi rekomendasi tidak ditemukan",
+        });
+      }
+
+      // Update data
+      const updatedRefrentor = await prisma.pemberi_rekomendasi.update({
+        where: { id: Number(id) },
+        data: { nama, email, telepon },
+      });
+
+      return res.status(200).json({
+        message: "Pemberi rekomendasi berhasil diperbarui",
+        data: updatedRefrentor,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  },
+  async deleteRefrentor(req, res) {
+    try {
+      const { id } = req.params;
+      const refrentorId = parseInt(id, 10);
+
+      // Cek apakah id adalah angka yang valid
+      if (isNaN(refrentorId)) {
+        return res.status(400).json({ message: "Invalid ID format" });
+      }
+      // Cek apakah data dengan ID tersebut ada
+      const existingRefrentor = await prisma.pemberi_rekomendasi.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!existingRefrentor) {
+        return res.status(404).json({
+          message: "Pemberi rekomendasi tidak ditemukan",
+        });
+      }
+
+      // Hapus data
+      await prisma.pemberi_rekomendasi.delete({
+        where: { id: Number(id) },
+      });
+
+      return res.status(200).json({
+        message: "Pemberi rekomendasi berhasil dihapus",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
     }
   },
 

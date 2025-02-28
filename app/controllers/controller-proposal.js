@@ -297,13 +297,10 @@ module.exports = {
       const nama_pemberi_rekomendasi = req.body.nama_pemberi_rekomendasi;
       const no_telp_pemberi_rekomendasi = req.body.no_telp_pemberi_rekomendasi;
       const dana_yang_diajukan = req.body.dana_yang_diajukan;
-      const nomor_imkas = req.body.nomor_imkas;
-      const nama_imkas = req.body.nama_imkas;
+      const nomor_rekening = req.body.nomor_imkas;
+      const nama_bank = req.body.nama_imkas;
+      const nama_rekening = req.body.nama_rekening;
 
-      //console.log(JSON.stringify(req.body))
-      const niks = Number(nik_mustahiq);
-      const validasi = parsenik.parse(niks);
-      console.log(validasi);
       if (!nama) {
         return res.status(400).json({ message: "Nama wajib diisi" });
       } else if (!userId) {
@@ -319,9 +316,7 @@ module.exports = {
       const files = {};
       for (let i = 1; i <= 7; i++) {
         const file = req.files[`lampiran${i}`];
-        console.log(file);
         if (file) {
-          console.log(file?.[0]);
           files[`lampiran${i}`] = "uploads/" + file?.[0].filename;
         }
       }
@@ -335,11 +330,6 @@ module.exports = {
         },
       });
 
-      const users = await prisma.institusi.findMany();
-      const institute = users.filter(
-        (data) => data.institusi_user_id === userId
-      );
-
       const currentDate = new Date();
       const formattedDate = currentDate
         .toISOString()
@@ -347,142 +337,93 @@ module.exports = {
         .replace(/-/g, "");
       const empatnik = "0104";
       const no_proposal = formattedDate + empatnik;
-      const sixMonthsAgo = subMonths(new Date(), 6);
-      const aDayAgo = subDays(new Date(), 1);
-
-      // if (institute < 1) {
-      //   const existingProposal = await prisma.proposal.findFirst({
-      //     where: {
-      //       program_id: Number(program_id),
-      //       program: {
-      //         program_category_id: { in: [1, 2, 4] },
-      //       },
-      //       nik_mustahiq,
-      //       create_date: {
-      //         gte: sixMonthsAgo,
-      //       },
-      //       approved: {
-      //         not: 2,
-      //       },
-      //     },
-      //   });
-      //   if (existingProposal) {
-      //     return res.status(400).json({
-      //       message: "Anda telah mengajukan proposal pada program berikut dalam kurun waktu 6 bulan",
-      //     });
-      //   }
-      // } else {
-      //   const existingProposal = await prisma.proposal.findFirst({
-      //     where: {
-      //       program_id: Number(program_id),
-      //       program: {
-      //         program_category_id: { in: [1, 2, 4] },
-      //       },
-      //       nik_mustahiq,
-      //       create_date: {
-      //         gte: aDayAgo,
-      //       },
-      //       approved: {
-      //         not: 2,
-      //       },
-      //     },
-      //   });
-      //   if (existingProposal) {
-      //     return res.status(400).json({
-      //       message: "Anda telah mengajukan proposal pada program berikut dan baru dapat mengajukan kembali setelah 1 hari",
-      //     });
-      //   }
-      // }
 
       const program_title = program
         ? program.program_title
         : "Program tidak terdaftar";
 
-      let pn = nomor_imkas;
-      if (pn.substring(0, 1) == "0") {
-        pn = "0" + pn.substring(1).trim();
-      } else if (pn.substring(0, 3) == "+62") {
-        pn = "0" + pn.substring(3).trim();
-      }
-      console.log(pn);
-      console.log(pn.replace(/[^0-9\.]+/g, ""));
-      const checks = await sendImkas({
-        phone: pn.replace(/[^0-9\.]+/g, ""),
-        nom: "50",
-        id: `10${userId}${Date.now()}`,
-        desc: "Pengecekan Nomor",
-      });
-      const log = await prisma.log_vendor.create({
+      // Menghapus pengecekan nomor Imkas
+      // let pn = nomor_imkas;
+      // if (pn.substring(0, 1) == "0") {
+      //   pn = "0" + pn.substring(1).trim();
+      // } else if (pn.substring(0, 3) == "+62") {
+      //   pn = "0" + pn.substring(3).trim();
+      // }
+      // const checks = await sendImkas({
+      //   phone: pn.replace(/[^0-9\.]+/g, ""),
+      //   nom: "50",
+      //   id: `10${userId}${Date.now()}`,
+      //   desc: "Pengecekan Nomor",
+      // });
+      // const log = await prisma.log_vendor.create({
+      //   data: {
+      //     vendor_api: checks?.config?.url,
+      //     url_api: req.originalUrl,
+      //     api_header: JSON.stringify(checks.headers),
+      //     api_body: checks?.config?.data,
+      //     api_response: JSON.stringify(checks.data),
+      //     payload: JSON.stringify(req.body),
+      //   },
+      // });
+      // const check = checks?.data;
+      // if (check.responseCode != "00") {
+      //   return res.status(400).json({ message: check.responseDescription });
+      // }
+
+      // Langsung membuat proposal tanpa menunggu response dari checks
+      const ProposalResult = await prisma.proposal.create({
         data: {
-          vendor_api: checks?.config?.url,
-          url_api: req.originalUrl,
-          api_header: JSON.stringify(checks.headers),
-          api_body: checks?.config?.data,
-          api_response: JSON.stringify(checks.data),
-          payload: JSON.stringify(req.body),
+          user: {
+            connect: {
+              user_id: Number(userId),
+            },
+          },
+          program: {
+            connect: {
+              program_id: Number(program_id),
+            },
+          },
+          proposal_kategori: Number(proposal_kategori),
+          nik_mustahiq,
+          no_proposal,
+          nama,
+          alamat_rumah,
+          dana_yang_diajukan: Number(dana_yang_diajukan),
+          nama_pemberi_rekomendasi,
+          no_telp_pemberi_rekomendasi,
+          nomor_rekening,
+          nama_bank,
+          nama_rekening,
+          ...files,
         },
       });
-      const check = checks?.data;
-      console.log(check);
 
-      if (check.responseCode != "00") {
-        return res.status(400).json({ message: check.responseDescription });
-      }
-
-      if (check.responseCode == "00") {
-        const ProposalResult = await prisma.proposal.create({
-          data: {
-            user: {
-              connect: {
-                user_id: Number(userId),
-              },
-            },
-            program: {
-              connect: {
-                program_id: Number(program_id),
-              },
-            },
-            proposal_kategori: Number(proposal_kategori),
-            nik_mustahiq,
-            no_proposal,
-            nama,
-            alamat_rumah,
-            dana_yang_diajukan: Number(dana_yang_diajukan),
-            nama_pemberi_rekomendasi,
-            no_telp_pemberi_rekomendasi,
-            nomor_imkas,
-            nama_imkas,
-            ...files,
-          },
-        });
-
-        if (ProposalResult) {
-          let pn = no_telp_pemberi_rekomendasi;
-          pn = pn.replace(/\D/g, "");
-          if (pn.substring(0, 1) == "0") {
-            pn = "0" + pn.substring(1).trim();
-          } else if (pn.substring(0, 3) == "62") {
-            pn = "0" + pn.substring(3).trim();
-          }
-
-          const msgId = await sendWhatsapp({
-            wa_number: pn.replace(/[^0-9\.]+/g, ""),
-            text:
-              "Proposal Atas Nama " +
-              nama +
-              " dan NIK " +
-              nik_mustahiq +
-              " pada program " +
-              program_title +
-              " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
-          });
+      if (ProposalResult) {
+        let pn = no_telp_pemberi_rekomendasi;
+        pn = pn.replace(/\D/g, "");
+        if (pn.substring(0, 1) == "0") {
+          pn = "0" + pn.substring(1).trim();
+        } else if (pn.substring(0, 3) == "62") {
+          pn = "0" + pn.substring(3).trim();
         }
 
-        return res.status(200).json({
-          message: "Sukses",
-          data: ProposalResult,
+        const msgId = await sendWhatsapp({
+          wa_number: pn.replace(/[^0-9\.]+/g, ""),
+          text:
+            "Proposal Atas Nama " +
+            nama +
+            " dan NIK " +
+            nik_mustahiq +
+            " pada program " +
+            program_title +
+            " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
         });
       }
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: ProposalResult,
+      });
     } catch (error) {
       return res.status(500).json({
         message: "Internal Server Error",
@@ -690,14 +631,14 @@ module.exports = {
             nama,
             formattedDate,
             formattedDana,
-            bank_number: proposal.user.mustahiq.bank_number || '-',
-            bank_account_name: proposal.user.mustahiq.bank_account_name || '-'
+            bank_number: proposal.user.mustahiq.bank_number || "-",
+            bank_account_name: proposal.user.mustahiq.bank_account_name || "-",
           });
 
           const msgId = await sendEmail({
             email: proposal.user.username,
             html: templateEmail,
-            subject: "Pembayaran Proposal Telah Berhasil Ditransfer"
+            subject: "Pembayaran Proposal Telah Berhasil Ditransfer",
           });
 
           console.log(`Email send success`);
@@ -707,17 +648,13 @@ module.exports = {
             msgId: msgId,
           });
         } catch (error) {
-          console.error(
-            `Gagal membuat atau mengirim email, error:`,
-            error
-          );
+          console.error(`Gagal membuat atau mengirim email, error:`, error);
           return res.status(500).json({
             success: false,
             message: `Gagal mengirim email`,
             error: error.message,
           });
         }
-
       }
       return res.status(200).json({
         message: "Sukses",

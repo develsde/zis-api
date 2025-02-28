@@ -367,23 +367,44 @@ module.exports = {
       // Konversi jurnal_tanggal ke format Date
       const tanggalJurnal = new Date(jurnal_tanggal);
       const bulanJurnal = String(tanggalJurnal.getMonth() + 1).padStart(2, "0"); // Ubah ke format dua digit
-      const tahunJurnal = String(tanggalJurnal.getFullYear());
+      const tahunJurnal = String(tanggalJurnal.getFullYear()); // Pastikan tahun tetap dalam format string
 
-      // Ambil data periode yang sesuai
-      const period = await prisma.period.findFirst({
-        where: {
-          from_period: { lte: bulanJurnal }, // from_period (misal "01") harus <= bulanJurnal
-          to_period: { gte: bulanJurnal }, // to_period (misal "02") harus >= bulanJurnal
-          from_year: { lte: tahunJurnal }, // from_year <= tahunJurnal
-          to_year: { gte: tahunJurnal }, // to_year >= tahunJurnal
-        },
-      });
+      // Ambil data periode yang sesuai (harus dibandingkan sebagai string)
+      // const period = await prisma.period.findFirst({
+      //   where: {
+      //     from_period: { lte: bulanJurnal.toString() }, // VARCHAR → tetap string
+      //     to_period: { gte: bulanJurnal.toString() }, // VARCHAR → tetap string
+      //     from_year: { lte: Number(tahunJurnal) }, // YEAR → harus Integer
+      //     to_year: { gte: Number(tahunJurnal) }, // YEAR → harus Integer
+      //   },
+      // });
 
-      // Validasi apakah jurnal_tanggal masuk dalam periode yang tersedia
-      if (!period) {
-        return res.status(400).json({
-          message: "Jurnal tanggal di luar periode yang diperbolehkan.",
-        });
+      // // Validasi apakah jurnal_tanggal masuk dalam periode yang tersedia
+      // if (!period) {
+      //   return res.status(400).json({
+      //     message: "Jurnal tanggal di luar periode yang diperbolehkan.",
+      //   });
+      // }
+
+      // Validasi dan konversi nilai numerik untuk menghindari error
+      const isDebit = isNaN(Number(jurnal_isdebit))
+        ? 0
+        : Number(jurnal_isdebit);
+      const nominal = isNaN(Number(jurnal_nominal))
+        ? 0
+        : Number(jurnal_nominal);
+      const glAccountId = isNaN(Number(jurnal_gl_account))
+        ? null
+        : Number(jurnal_gl_account);
+      const kategoriId = isNaN(Number(jurnal_kategori))
+        ? null
+        : Number(jurnal_kategori);
+      const headId = isNaN(Number(jurnal_head_id))
+        ? null
+        : Number(jurnal_head_id);
+
+      if (glAccountId === null || kategoriId === null || headId === null) {
+        return res.status(400).json({ message: "ID tidak valid" });
       }
 
       // Proses pembuatan jurnal jika validasi lolos
@@ -391,18 +412,12 @@ module.exports = {
         data: {
           jurnal_tanggal,
           jurnal_deskripsi,
-          jurnal_isdebit: Number(jurnal_isdebit),
-          gl_account: {
-            connect: { id: Number(jurnal_gl_account) },
-          },
-          jurnal_nominal: Number(jurnal_nominal),
+          jurnal_isdebit: isDebit,
+          gl_account: { connect: { id: glAccountId } },
+          jurnal_nominal: nominal,
           jurnal_status,
-          jurnal_category: {
-            connect: { id: Number(jurnal_kategori) },
-          },
-          jurnal_lk_header: {
-            connect: { id: Number(jurnal_head_id) },
-          },
+          jurnal_category: { connect: { id: kategoriId } },
+          jurnal_lk_header: { connect: { id: headId } },
         },
       });
 

@@ -525,6 +525,9 @@ model proposal {
   approver_count              Int?                 @default(0) @db.SmallInt
   nomor_imkas                 String?              @db.VarChar(50)
   nama_imkas                  String?              @db.VarChar(255)
+  nama_bank                   String?              @db.VarChar(255)
+  nama_rekening               String?              @db.VarChar(255)
+  nomor_rekening              String?              @db.VarChar(50)
   tgl_bayar                   DateTime?            @db.DateTime(0)
   jurnal                      jurnal[]
   user                        user?                @relation(fields: [user_id], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "proposal_FK")
@@ -891,6 +894,7 @@ model waqif_transaction {
 model bank {
   id        Int     @id @default(autoincrement())
   bank_name String? @db.VarChar(100)
+  bank_code String? @db.VarChar(50)
 }
 
 model mitra {
@@ -1439,4 +1443,11 @@ model posting {
   gl_account        gl_account? @relation(fields: [gla_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_posting_gl_account")
 
   @@index([gla_id], map: "Index 2")
+}
+
+model pemberi_rekomendasi {
+  id      Int     @id @default(autoincrement())
+  nama    String? @db.VarChar(255)
+  email   String? @db.VarChar(255)
+  telepon String? @db.VarChar(15)
 }

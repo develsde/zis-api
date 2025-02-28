@@ -45,7 +45,12 @@ router.get("/institusi/:id", refData.institusi);
 router.get("/glaccBayar", authentication, refData.glaccountPerBayar);
 router.post("/imkasSaldo", refData.checkImkas);
 
+//refrentor
 router.get("/activity-paket/:id", refData.paket);
+router.get("/refrentor", refData.getRefrentor);
+router.post("/create-refrentor", refData.createRefrentor);
+router.put("/update-refrentor/:id", refData.updateRefrentor);
+router.delete("/delete-refrentor/:id", refData.deleteRefrentor);
 
 //Reporting
 router.get("/gl-account-report", authentication, refData.getReportGlaccount);
