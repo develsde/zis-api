@@ -1,26 +1,26 @@
-const config = require('../../config/config.db');
+const config = require("../../config/config.db");
 //const mysql = require('mysql2');
-const { password } = require('../../config/config.db');
+const { password } = require("../../config/config.db");
 //const pool = mysql.createPool(config);
 const { prisma } = require("../../prisma/client");
 const { generate, generateDelete, verify } = require("../helper/auth-jwt");
-const mt940js = require('mt940js');
+const mt940js = require("mt940js");
 //const parser = require('swiftmessageparser');
 const parser = new mt940js.Parser();
-const fs = require('fs');
+const fs = require("fs");
 const { z } = require("zod");
-const moment = require('moment')
-const readXlsxFile = require('read-excel-file/node')
+const moment = require("moment");
+const readXlsxFile = require("read-excel-file/node");
 
 // pool.on('error',(err)=> {
-//     console.error(err); 
+//     console.error(err);
 // });
 
 const gendate = () => {
   const now = new Date();
   const isoDate = now.toISOString();
-  return isoDate
-}
+  return isoDate;
+};
 
 module.exports = {
   // Get All Mustahiq Information
@@ -828,10 +828,23 @@ module.exports = {
           : "10000000";
         const newDocNumber = parseInt(lastDocNumber) + 1;
 
+        // Determine doc_type and jurnal_category based on account_number
+        let doc_type, jurnal_category;
+        if (sdata.account_number === "1030095265464") {
+          doc_type = 1;
+          jurnal_category = 2;
+        } else if (sdata.account_number === "7015738876") {
+          doc_type = 1;
+          jurnal_category = 1;
+        } else {
+          doc_type = 2;
+          jurnal_category = 6;
+        }
+
         const createJurnalHeader = await prisma.jurnal_lk_header.create({
           data: {
             doc_number: String(newDocNumber),
-            doc_type: 1,
+            doc_type: doc_type,
             currency: String(sdata.currency),
             period: 2024,
             istransformed: 1,
@@ -842,18 +855,16 @@ module.exports = {
         const glAccountBank =
           accountToGlAccountMap[sdata.account_number] || 179; // Default ID jika tidak ditemukan
 
-        const jurnalKategori = 1;
-
         // Membuat jurnal untuk transaksi - Debit (Default to GL 363)
         await prisma.jurnal_lk.create({
           data: {
             jurnal_tanggal: sdata.trans_date,
             jurnal_deskripsi: sdata.text_info,
-            jurnal_isdebit: sdata.trans_id === "C" ? 1 : 0,
+            jurnal_isdebit: sdata.trans_id === "D" ? 1 : 0,
             gl_account: { connect: { id: 363 } }, // Default GL Account for debit
-            jurnal_nominal: Number(sdata.trans_amount),
+            jurnal_nominal: -Number(sdata.trans_amount),
             jurnal_status: 1,
-            jurnal_category: { connect: { id: jurnalKategori } },
+            jurnal_category: { connect: { id: jurnal_category } },
             jurnal_lk_header: { connect: { id: createJurnalHeader.id } },
           },
         });
@@ -865,11 +876,11 @@ module.exports = {
           data: {
             jurnal_tanggal: sdata.trans_date,
             jurnal_deskripsi: "Bank",
-            jurnal_isdebit: sdata.trans_id === "D" ? 1 : 0,
-            gl_account: { connect: { id: glAccountCredit } }, // Dynamic GL Account for credit
-            jurnal_nominal: -Number(sdata.trans_amount),
+            jurnal_isdebit: sdata.trans_id === "C" ? 1 : 0,
+            gl_account: { connect: { id: glAccountBank } }, // Dynamic GL Account for credit
+            jurnal_nominal: Number(sdata.trans_amount),
             jurnal_status: 1,
-            jurnal_category: { connect: { id: jurnalKategori } },
+            jurnal_category: { connect: { id: jurnal_category } },
             jurnal_lk_header: { connect: { id: createJurnalHeader.id } },
           },
         });

@@ -40,14 +40,12 @@ module.exports = {
         emergency_contact_number,
         bank_name,
         bank_number,
-        nama_imkas,
-        imkas_number,
         is_institusi,
         institusi_nama,
         institusi_no_hp,
       } = req.body;
 
-      console.log(JSON.stringify(req.body))
+      console.log(JSON.stringify(req.body));
 
       if (is_institusi) {
         await prisma.user.update({
@@ -65,68 +63,32 @@ module.exports = {
         });
       }
 
-      // let pn = imkas_number
-      // if (pn.substring(0, 1) == '0') {
-      //   pn = "0" + pn.substring(1).trim()
-      // } else if (pn.substring(0, 3) == '+62') {
-      //   pn = "0" + pn.substring(3).trim()
-      // }
-      // console.log(pn)
-      // console.log(pn.replace(/[^0-9\.]+/g, ""))
-      // const checks = await sendImkas({
-      //   phone: pn.replace(/[^0-9\.]+/g, ""),
-      //   nom: '50',
-      //   id: `10${userId}`,
-      //   desc: "Pengecekan Nomor",
-      // });
-      // const log = await prisma.log_vendor.create({
-      //   data: {
-      //     vendor_api: checks?.config?.url,
-      //     url_api: req.originalUrl,
-      //     api_header: JSON.stringify(checks.headers),
-      //     api_body: checks?.config?.data,
-      //     api_response: JSON.stringify(checks.data),
-      //     payload: JSON.stringify(req.body),
-      //   },
-      // });
-      // const check = checks?.data
-      // console.log(check);
-
-      // if (check.responseCode != '00') {
-      //   return res.status(400).json({ message: check.responseDescription });
-      // }
-
-      // if (check.responseCode == '00') {
-        const mustahiqResult = await prisma.mustahiq.create({
-          data: {
-            user: {
-              connect: {
-                user_id: userId,
-              },
+      const mustahiqResult = await prisma.mustahiq.create({
+        data: {
+          user: {
+            connect: {
+              user_id: userId,
             },
-            kk_url: `uploads/${req.files?.ktp_file?.[0].filename}`,
-            ktp_url: `uploads/${req.files?.kk_file?.[0].filename}`,
-            address,
-            province,
-            kota,
-            kecamatan,
-            emergency_contact_name,
-            emergency_contact_number,
-            bank_name,
-            bank_number,
-            bank_account_name,
-            nama_imkas,
-            imkas_number,
           },
-        });
+          kk_url: `uploads/${req.files?.ktp_file?.[0].filename}`,
+          ktp_url: `uploads/${req.files?.kk_file?.[0].filename}`,
+          address,
+          province,
+          kota,
+          kecamatan,
+          emergency_contact_name,
+          emergency_contact_number,
+          bank_name,
+          bank_number,
+          bank_account_name,
+        },
+      });
 
-        return res.status(200).json({
-          message: "Sukses",
-          data: mustahiqResult,
-        });
-      }
-    // } 
-    catch (error) {
+      return res.status(200).json({
+        message: "Sukses",
+        data: mustahiqResult,
+      });
+    } catch (error) {
       const ktp_url = req.files?.ktp_file?.[0].path;
       const kk_url = req.files?.kk_file?.[0].path;
 
@@ -143,6 +105,7 @@ module.exports = {
       });
     }
   },
+
   async getProposalById(req, res) {
     try {
       const page = Number(req.query.page || 1);
@@ -152,9 +115,9 @@ module.exports = {
       const keyword = req.query.keyword || "";
       const sortBy = req.query.sortBy || "id";
       const sortType = req.query.order || "asc";
-      const id = req.params.id
+      const id = req.params.id;
       const params = {
-        user_id: Number(id)
+        user_id: Number(id),
       };
 
       const [count, proposal] = await prisma.$transaction([
@@ -225,9 +188,9 @@ module.exports = {
       const keyword = req.query.keyword || "";
       const sortBy = req.query.sortBy || "id";
       const sortType = req.query.order || "asc";
-      const id = req.params.id
+      const id = req.params.id;
       const params = {
-        id: Number(id)
+        id: Number(id),
       };
 
       const [count, proposal] = await prisma.$transaction([

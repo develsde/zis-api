@@ -367,6 +367,7 @@ model gl_account {
   jurnal            jurnal[]
   jurnal_lk         jurnal_lk[]
   jurnal_petty_cash jurnal_petty_cash[]
+  posting           posting[]
   program_category  program_category[]
   report            report[]
 
@@ -1409,4 +1410,33 @@ model jurnal_lk_header {
   document_type document_type? @relation(fields: [doc_type], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_header_document_type_FK")
 
   @@index([doc_type], map: "jurnal_lk_header_document_type_FK")
+}
+
+model period {
+  id          Int       @id @default(autoincrement())
+  comCode     String?   @db.VarChar(50)
+  from_period String?   @db.VarChar(50)
+  from_year   Int?      @db.Year
+  to_period   String?   @db.VarChar(50)
+  to_year     Int?      @db.Year
+  aenam       Int?
+  aedat       DateTime? @db.Date
+  aetim       DateTime? @db.Time(0)
+}
+
+model posting {
+  id                Int         @id @default(autoincrement())
+  account           String?     @db.VarChar(50)
+  gla_id            Int?
+  year              Int?        @db.Year
+  period            String?     @db.VarChar(50)
+  currency          String?     @db.VarChar(50)
+  beginning_balance Int         @default(0)
+  total_transaction Int         @default(0)
+  ending_balance    Int         @default(0)
+  last_change       DateTime    @default(now()) @db.DateTime(0)
+  changes_by        Int         @default(0)
+  gl_account        gl_account? @relation(fields: [gla_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_posting_gl_account")
+
+  @@index([gla_id], map: "Index 2")
 }

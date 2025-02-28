@@ -13,7 +13,7 @@ const fs = require("fs/promises");
 router.post('/mt940', authentication, bank.getDataMt940);
 router.post('/imkas', authentication, bank.getDataImkas);
 router.put('/identified', authentication, bank.updateStatusMT);
-router.get('/alldata/:id', authentication, bank.dataMt940);
+router.get("/alldata/:id", bank.dataMt940);
 router.get('/all-verified', authentication, bank.dataVerified);
 router.get('/allimkas/:id', authentication, bank.dataImkasDetail);
 router.get('/allfile', authentication, bank.dataFileMt940);

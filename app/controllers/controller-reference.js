@@ -2291,7 +2291,7 @@ ORDER BY aa.created_date DESC
       const outlets = await prisma.outlet.findMany({
         where: {
           nama_outlet: { contains: keyword },
-          cso_id: cso ? Number(cso) : undefined,  // Filter by cso_id if provided
+          cso_id: cso ? Number(cso) : undefined, // Filter by cso_id if provided
           register_date: {
             gte: tglAwal ? new Date(tglAwal) : undefined, // Greater than or equal to tgl_awal
             lte: tglAkhir ? new Date(tglAkhir) : undefined, // Less than or equal to tgl_akhir
@@ -2300,6 +2300,7 @@ ORDER BY aa.created_date DESC
         select: {
           id: true,
           nama_outlet: true,
+          telepon: true,
           alamat_outlet: true,
           pic_outlet: true,
           cso_id: true,
@@ -2318,7 +2319,7 @@ ORDER BY aa.created_date DESC
       const count = await prisma.outlet.count({
         where: {
           nama_outlet: { contains: keyword },
-          cso_id: cso ? Number(cso) : undefined,  // Filter by cso_id if provided
+          cso_id: cso ? Number(cso) : undefined, // Filter by cso_id if provided
           register_date: {
             gte: tglAwal ? new Date(tglAwal) : undefined, // Greater than or equal to tgl_awal
             lte: tglAkhir ? new Date(tglAkhir) : undefined, // Less than or equal to tgl_akhir
@@ -2390,6 +2391,7 @@ ORDER BY aa.created_date DESC
             alamat_outlet: outlet.alamat_outlet || "Tidak Diketahui",
             pic_outlet: outlet.pic_outlet,
             cso_id: outlet.cso_id,
+            telepon: outlet.telepon,
             nama_cso: outlet.cso?.nama_cso || "Tidak Diketahui", // Include CSO name
             register_date: outlet.register_date,
             total: totalNominal, // Keep raw value for sorting
