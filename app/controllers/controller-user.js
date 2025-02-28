@@ -166,11 +166,26 @@ module.exports = {
   async updateUser(req, res) {
     try {
       const userId = req.user_id;
-      const { nama, phone } = req.body;
+      const { nama, phone, bank_name, bank_number, bank_account_name } = req.body;
 
       if (!nama || !phone) {
         return res.status(400).json({
           message: "Nama, dan Nomor Telepon harus diisi",
+        });
+      }
+
+      const mustahiq = await prisma.user.findUnique({
+        where: {
+          user_id: userId,
+        },
+        select: {
+          mustahiq_id: true,
+        }
+      });
+
+      if (!mustahiq || !mustahiq.mustahiq_id) {
+        return res.status(400).json({
+          message: "Belum melengkapi data diri, coba refresh halaman",
         });
       }
 
@@ -181,6 +196,17 @@ module.exports = {
         data: {
           user_nama: nama,
           user_phone: phone,
+        },
+      });
+
+      await prisma.mustahiq.update({
+        where: {
+          id: mustahiq.mustahiq_id,
+        },
+        data: {
+          bank_number,
+          bank_name,
+          bank_account_name
         },
       });
 
@@ -591,8 +617,8 @@ module.exports = {
 
       const totalDonasiFormatted = totalDonasi._sum.nominal
         ? `Rp ${totalDonasi._sum.nominal
-            .toString()
-            .replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+          .toString()
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
         : "Rp 0";
 
       // Mengirimkan respons login berhasil dengan data pengguna dan total donasi

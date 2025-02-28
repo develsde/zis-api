@@ -789,6 +789,147 @@ module.exports = {
       });
     }
   },
+
+  async getBank(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const status = Number(req.query.status || 4);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const user_type = req.query.user_type || "";
+      const category = req.query.category || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+
+      const params = {
+        OR: [
+          {
+            bank_name: {
+              contains: keyword,
+            },
+          },
+          {
+            bank_code: {
+              contains: keyword,
+            },
+          },
+        ],
+      };
+
+      const [count, bank] = await prisma.$transaction([
+        prisma.bank.count({
+          where: {
+            isactive: 1,
+            ...params
+          },
+        }),
+        prisma.bank.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: {
+            isactive: 1,
+            ...params
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: bank,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async postBank(req, res) {
+    try {
+      const { bank_name, bank_code } = req.body;
+
+      //console.log(JSON.stringify(req.body))
+
+      const bankResult = await prisma.bank.create({
+        data: {
+          bank_name,
+          bank_code,
+        },
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: bankResult,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  },
+
+  async putBank(req, res) {
+    try {
+      const id = req.params.id;
+
+      const { bank_name, bank_code } = req.body;
+
+      //console.log(JSON.stringify(req.body))
+
+      const bankResult = await prisma.bank.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          bank_name,
+          bank_code,
+        },
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: bankResult,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  },
+
+  async delBank(req, res) {
+    try {
+      const id = req.body.id;
+
+      await prisma.bank.delete({
+        where: {
+          id: Number(id),
+        },
+      });
+
+      return res.status(200).json({
+        message: "Sukses",
+        data: "Berhasil Update Data",
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
   async getAllArticle(req, res) {
     try {
       const page = Number(req.query.page || 1);
