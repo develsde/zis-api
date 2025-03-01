@@ -53,6 +53,7 @@ router.post("/imkasSaldo", refData.checkImkas);
 //refrentor
 router.get("/activity-paket/:id", refData.paket);
 router.get("/refrentor", refData.getRefrentor);
+router.get("/refrentor-erp", refData.getRefrentorErp);
 router.post("/create-refrentor", refData.createRefrentor);
 router.put("/update-refrentor/:id", refData.updateRefrentor);
 router.delete("/delete-refrentor/:id", refData.deleteRefrentor);

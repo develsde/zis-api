@@ -2491,6 +2491,64 @@ ORDER BY aa.created_date DESC
       });
     }
   },
+  async getRefrentorErp(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.sortType || "asc";
+      const searchEmail = req.query.searchEmail || "";
+      const searchPhone = req.query.searchPhone || "";
+
+      const params = {
+        nama: {
+          contains: keyword,
+        },
+      };
+
+      const [count, refrentor] = await prisma.$transaction([
+        prisma.pemberi_rekomendasi.count({
+          where: params,
+        }),
+        prisma.pemberi_rekomendasi.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      const refResult = await Promise.all(
+        refrentor.map(async (item) => {
+          return {
+            ...item,
+          };
+        })
+      );
+
+      // const refrentors = await prisma.pemberi_rekomendasi.findMany();
+
+      return res.status(200).json({
+        message: "Data pemberi rekomendasi berhasil diambil",
+        data: refResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Internal Server Error",
+        error: error.message,
+      });
+    }
+  },
   async createRefrentor(req, res) {
     try {
       const { nama, email, telepon } = req.body;
