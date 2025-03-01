@@ -178,13 +178,13 @@ module.exports = {
         where: {
           user_id: userId,
           OR: [
-            { ispaid: 1 },
-            { approved: 2 }
+            { approved: { notIn: [1, 2] } }, // Jika approved bukan 1 atau 2 (masih dalam proses approval)
+            { approved: 1, ispaid: { not: 1 } } // Jika sudah approved (1), pastikan ispaid = 1
           ]
         }
       });
 
-      if (!proposal) {
+      if (proposal) {
         return res.status(400).json({
           message: "Anda masih memiliki proposal yang sedang dalam proses approval",
         });
