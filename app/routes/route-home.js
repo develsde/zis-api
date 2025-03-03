@@ -16,6 +16,7 @@ router.get("/regAct/:id", home.getRegAct);
 router.post("/postMidTrans", home.postMidTrans);
 router.post("/act-add", home.postAdditionalActivity)
 
+router.get("/getPaket", home.getPaket);
 router.post("/addPaket", home.postPaket)
 router.put("/editPaket/:id", home.putPaket)
 router.delete("/delPaket/:id", authentication, home.delPaket)

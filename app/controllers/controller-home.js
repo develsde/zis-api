@@ -986,6 +986,63 @@ module.exports = {
       });
     }
   },
+  async getPaket(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.sortType || "asc";
+
+      const params = {
+        kategori: {
+          contains: keyword,
+        },
+      };
+
+      const [count, paket] = await prisma.$transaction([
+        prisma.activity_paket.count({
+          where: params,
+        }),
+        prisma.activity_paket.findMany({
+          include: {
+            program: true,
+          },
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      // Konversi BigInt ke String jika ada
+      const paketResult = paket.map((item) => {
+        return JSON.parse(
+          JSON.stringify(item, (_, value) =>
+            typeof value === "bigint" ? value.toString() : value
+          )
+        );
+      });
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: paketResult,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
 
   async postPaket(req, res) {
     try {
