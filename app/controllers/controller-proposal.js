@@ -68,33 +68,33 @@ module.exports = {
       const niks = Number(nik_mustahiq);
       const validasi = parsenik.parse(niks);
       console.log(validasi);
-        if (!nik_mustahiq) {
-          return res.status(400).json({ message: "NIK wajib diisi" });
-        } else if (!nama) {
-          return res.status(400).json({ message: "Nama wajib diisi" });
-        } else if (!userId) {
-          return res.status(400).json({ message: "User ID wajib diisi" });
-        } else if (!program_id) {
-          return res.status(400).json({ message: "Program ID wajib diisi" });
-        } else if (!proposal_kategori) {
-          return res
-            .status(400)
-            .json({ message: "Kategori Proposal wajib diisi" });
-        } else if (!nama_pemberi_rekomendasi) {
-          return res
-            .status(400)
-            .json({ message: "Nama Pemberi Rekomendasi wajib diisi" });
-        } else if (!email_pemberi_rekomendasi) {
-          return res
-            .status(400)
-            .json({ message: "Email Pemberi Rekomendasi wajib diisi" });
-        } else if (!no_telp_pemberi_rekomendasi) {
-          return res
-            .status(400)
-            .json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
-        } else if (validasi.valid === false) {
-          return res.status(400).json({ message: "NIK tidak valid" });
-        }
+      if (!nik_mustahiq) {
+        return res.status(400).json({ message: "NIK wajib diisi" });
+      } else if (!nama) {
+        return res.status(400).json({ message: "Nama wajib diisi" });
+      } else if (!userId) {
+        return res.status(400).json({ message: "User ID wajib diisi" });
+      } else if (!program_id) {
+        return res.status(400).json({ message: "Program ID wajib diisi" });
+      } else if (!proposal_kategori) {
+        return res
+          .status(400)
+          .json({ message: "Kategori Proposal wajib diisi" });
+      } else if (!nama_pemberi_rekomendasi) {
+        return res
+          .status(400)
+          .json({ message: "Nama Pemberi Rekomendasi wajib diisi" });
+      } else if (!email_pemberi_rekomendasi) {
+        return res
+          .status(400)
+          .json({ message: "Email Pemberi Rekomendasi wajib diisi" });
+      } else if (!no_telp_pemberi_rekomendasi) {
+        return res
+          .status(400)
+          .json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
+      } else if (validasi.valid === false) {
+        return res.status(400).json({ message: "NIK tidak valid" });
+      }
 
       const files = {};
       for (let i = 1; i <= 7; i++) {
@@ -326,8 +326,8 @@ module.exports = {
       const nama_pemberi_rekomendasi = req.body.nama_pemberi_rekomendasi;
       const no_telp_pemberi_rekomendasi = req.body.no_telp_pemberi_rekomendasi;
       const dana_yang_diajukan = req.body.dana_yang_diajukan;
-      const nomor_rekening = req.body.nomor_imkas;
-      const nama_bank = req.body.nama_imkas;
+      const nomor_rekening = req.body.nomor_rekening;
+      const nama_bank = req.body.nama_bank;
       const nama_rekening = req.body.nama_rekening;
 
       if (!nama) {
@@ -340,6 +340,12 @@ module.exports = {
         return res
           .status(400)
           .json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
+      } else if (!nama_bank) {
+        return res.status(400).json({ message: "Bank wajib diisi" });
+      } else if (!nama_rekening) {
+        return res.status(400).json({ message: "Nama pemilik rekening wajib diisi" });
+      } else if (!nomor_rekening) {
+        return res.status(400).json({ message: "Nomor rekening wajib diisi" });
       }
 
       const files = {};

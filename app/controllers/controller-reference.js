@@ -833,6 +833,70 @@ module.exports = {
             ...params
           },
           skip,
+          // take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: bank,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async getBankErp(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const status = Number(req.query.status || 4);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const user_type = req.query.user_type || "";
+      const category = req.query.category || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.order || "asc";
+
+      const params = {
+        OR: [
+          {
+            bank_name: {
+              contains: keyword,
+            },
+          },
+          {
+            bank_code: {
+              contains: keyword,
+            },
+          },
+        ],
+      };
+
+      const [count, bank] = await prisma.$transaction([
+        prisma.bank.count({
+          where: {
+            isactive: 1,
+            ...params
+          },
+        }),
+        prisma.bank.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: {
+            isactive: 1,
+            ...params
+          },
+          skip,
           take: perPage,
         }),
       ]);
