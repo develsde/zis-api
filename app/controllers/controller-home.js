@@ -1043,6 +1043,142 @@ module.exports = {
       });
     }
   },
+  async getLokasiQurban(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const keyword = req.query.keyword || "";
+      const sortBy = req.query.sortBy || "id";
+      const sortType = req.query.sortType || "asc";
+
+      const params = {
+        lokasi_penyembelihan: {
+          contains: keyword,
+        },
+      };
+
+      const [count, lokasi] = await prisma.$transaction([
+        prisma.lokasi_qurban.count({
+          where: params,
+        }),
+        prisma.lokasi_qurban.findMany({
+          orderBy: {
+            [sortBy]: sortType,
+          },
+          where: params,
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Lokasi Qurban",
+        data: lokasi,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+  async createLokasiQurban(req, res) {
+    try {
+      const { lokasi_penyembelihan } = req.body;
+
+      if (!lokasi_penyembelihan) {
+        return res
+          .status(400)
+          .json({ message: "Lokasi penyembelihan harus diisi" });
+      }
+
+      const lokasi = await prisma.lokasi_qurban.create({
+        data: {
+          lokasi_penyembelihan,
+        },
+      });
+
+      res.status(201).json({
+        message: "Lokasi qurban berhasil ditambahkan",
+        data: lokasi,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error.message,
+      });
+    }
+  },
+  async updateLokasiQurban(req, res) {
+    try {
+      const { id } = req.params; // Ambil ID dari parameter URL
+      const { lokasi_penyembelihan } = req.body; // Ambil data dari request body
+
+      // Cek apakah lokasi dengan ID tersebut ada
+      const existingLokasi = await prisma.lokasi_qurban.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!existingLokasi) {
+        return res.status(404).json({
+          message: "Lokasi qurban tidak ditemukan",
+        });
+      }
+
+      // Update data lokasi qurban
+      const updatedLokasi = await prisma.lokasi_qurban.update({
+        where: { id: Number(id) },
+        data: {
+          lokasi_penyembelihan,
+        },
+      });
+
+      res.status(200).json({
+        message: "Lokasi qurban berhasil diperbarui",
+        data: updatedLokasi,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Terjadi kesalahan saat memperbarui lokasi qurban",
+        error: error.message,
+      });
+    }
+  },
+  async deleteLokasiQurban(req, res) {
+    try {
+      const { id } = req.params; // Ambil ID dari parameter URL
+
+      // Cek apakah lokasi dengan ID tersebut ada
+      const existingLokasi = await prisma.lokasi_qurban.findUnique({
+        where: { id: Number(id) },
+      });
+
+      if (!existingLokasi) {
+        return res.status(404).json({
+          message: "Lokasi qurban tidak ditemukan",
+        });
+      }
+
+      // Hapus lokasi qurban
+      await prisma.lokasi_qurban.delete({
+        where: { id: Number(id) },
+      });
+
+      res.status(200).json({
+        message: "Lokasi qurban berhasil dihapus",
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Terjadi kesalahan saat menghapus lokasi qurban",
+        error: error.message,
+      });
+    }
+  },
 
   async postPaket(req, res) {
     try {

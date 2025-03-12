@@ -7,6 +7,7 @@ const { upload } = require("../helper/upload");
 // GET localhost:8080/home => Ambil data semua dari awal
 router.get("/all", authentication, programerp.getAllProgram);
 router.get("/allDetail", authentication, programerp.getAllProgramDetail);
+router.get("/allProg", programerp.getAllProgramDetailNoPagination);
 router.get("/detail/:id", authentication, programerp.getProgramById);
 router.get("/banner", authentication, programerp.getBanner);
 router.post("/create", authentication, upload.single("banner"), programerp.registerProgram);

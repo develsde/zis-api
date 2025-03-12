@@ -19,10 +19,7 @@ module.exports = {
       const sortType = req.query.order || "asc";
 
       const params = {
-        OR: [
-          { program_status: 1 },
-          { program_status: 0 }
-        ],
+        OR: [{ program_status: 1 }, { program_status: 0 }],
         // program_status: status,
         program_title: {
           contains: keyword,
@@ -110,19 +107,16 @@ module.exports = {
       const category = req.query.category || "";
       const sortBy = req.query.sortBy || "program_id";
       const sortType = req.query.order || "asc";
-      const iswakaf = Number(req.query.iswakaf || 0)
+      const iswakaf = Number(req.query.iswakaf || 0);
 
       const params = {
-        OR: [
-          { program_status: 1 },
-          { program_status: 0 }
-        ],
+        OR: [{ program_status: 1 }, { program_status: 0 }],
         // program_status: status,
         program_title: {
           contains: keyword,
         },
         ...(category ? { program_category_id: Number(category) } : {}),
-        iswakaf
+        iswakaf,
       };
 
       const [count, program] = await prisma.$transaction([
@@ -187,6 +181,62 @@ module.exports = {
           hasNext: count > page * perPage,
           totalPage: Math.ceil(count / perPage),
         },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+  async getAllProgramDetailNoPagination(req, res) {
+    try {
+      const status = Number(req.query.status || 1);
+      const keyword = req.query.keyword || "";
+      const category = req.query.category || "";
+      const sortBy = req.query.sortBy || "program_id";
+      const sortType = req.query.order || "asc";
+      const iswakaf = Number(req.query.iswakaf || 0);
+
+      const params = {
+        OR: [{ program_status: 1 }, { program_status: 0 }],
+        program_title: {
+          contains: keyword,
+        },
+        ...(category ? { program_category_id: Number(category) } : {}),
+        iswakaf,
+      };
+
+      const program = await prisma.program.findMany({
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        where: params,
+        include: {
+          kategori_penyaluran: true,
+          program_category: true,
+          program_institusi: {
+            select: {
+              institusi_id: true,
+              institusi_nama: true,
+            },
+          },
+          program_banner: {
+            select: {
+              banners_path: true,
+              banners_id: true,
+            },
+          },
+        },
+      });
+
+      const programResult = program.map((item) => ({
+        ...item,
+        program_target_amount: Number(item.program_target_amount),
+      }));
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: programResult,
       });
     } catch (error) {
       res.status(500).json({
@@ -265,18 +315,27 @@ module.exports = {
   async registerProgram(req, res) {
     try {
       const schema = z.object({
-        program_title: z.string({ required_error: "Judul Harus Diisi" }).min(3, "Judul Terlalu Pendek").max(255),
+        program_title: z
+          .string({ required_error: "Judul Harus Diisi" })
+          .min(3, "Judul Terlalu Pendek")
+          .max(255),
         program_short_desc: z.string().optional(),
-        program_start_date: z.date({ required_error: "Tanggal Mulai Harus Diisi" }),
-        program_end_date: z.date({ required_error: "Tanggal Berakhir Harus Diisi" }),
-        program_description: z.string({ required_error: "Deskripsi Harus Diis" }).min(3),
+        program_start_date: z.date({
+          required_error: "Tanggal Mulai Harus Diisi",
+        }),
+        program_end_date: z.date({
+          required_error: "Tanggal Berakhir Harus Diisi",
+        }),
+        program_description: z
+          .string({ required_error: "Deskripsi Harus Diis" })
+          .min(3),
         //program_institusi_id: z.number().optional(),
         program_target_amount: z.number({
           required_error: "Target Dana Harus Diisi",
           invalid_type_error: "Target Dana Harus Diisi",
         }),
         iswakaf: z.number().optional(),
-        program_wakaf_type: z.number()
+        program_wakaf_type: z.number(),
       });
 
       const program_institusi_id = 1;
@@ -292,7 +351,7 @@ module.exports = {
         program_target_amount: Number(req.body.program_target_amount),
         program_institusi_id: program_institusi_id,
         iswakaf: Number(req.body.iswakaf),
-        program_wakaf_type: Number(req.body.program_wakaf_type)
+        program_wakaf_type: Number(req.body.program_wakaf_type),
       });
 
       const program_cat_id = Number(req.body.program_category_id);
@@ -361,12 +420,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -388,7 +447,12 @@ module.exports = {
 
       res.status(200).json({
         message: "Sukses Tambah Program",
-        data: JSON.parse(JSON.stringify({ ...program, program_target_amount: Number(program.program_target_amount) })),
+        data: JSON.parse(
+          JSON.stringify({
+            ...program,
+            program_target_amount: Number(program.program_target_amount),
+          })
+        ),
       });
     } catch (error) {
       res.status(500).json({
@@ -400,20 +464,28 @@ module.exports = {
   async updateProgram(req, res) {
     try {
       const schema = z.object({
-        program_title: z.string({ required_error: "Judul Harus Diisi" }).min(3, "Judul Terlalu Pendek").max(255),
+        program_title: z
+          .string({ required_error: "Judul Harus Diisi" })
+          .min(3, "Judul Terlalu Pendek")
+          .max(255),
         program_short_desc: z.string().optional(),
-        program_start_date: z.date({ required_error: "Tanggal Mulai Harus Diisi" }),
-        program_end_date: z.date({ required_error: "Tanggal Berakhir Harus Diisi" }),
-        program_description: z.string({ required_error: "Deskripsi Harus Diis" }).min(3),
+        program_start_date: z.date({
+          required_error: "Tanggal Mulai Harus Diisi",
+        }),
+        program_end_date: z.date({
+          required_error: "Tanggal Berakhir Harus Diisi",
+        }),
+        program_description: z
+          .string({ required_error: "Deskripsi Harus Diis" })
+          .min(3),
         program_institusi_id: z.number().optional(),
         program_target_amount: z.number({
           required_error: "Target Dana Harus Diisi",
           invalid_type_error: "Target Dana Harus Diisi",
         }),
-        program_banner: z
-          .any().optional(),
+        program_banner: z.any().optional(),
         iswakaf: z.number(),
-        program_wakaf_type: z.number()
+        program_wakaf_type: z.number(),
       });
 
       // BODY
@@ -425,9 +497,11 @@ module.exports = {
         program_end_date: new Date(req.body.program_end_date),
         program_start_date: new Date(req.body.program_start_date),
         program_target_amount: Number(req.body.program_target_amount),
-        program_institusi_id: req.body.program_institusi_id ? parseInt(req.body.program_institusi_id) : undefined,
+        program_institusi_id: req.body.program_institusi_id
+          ? parseInt(req.body.program_institusi_id)
+          : undefined,
         iswakaf: Number(req.body.iswakaf),
-        program_wakaf_type: Number(req.body.program_wakaf_type)
+        program_wakaf_type: Number(req.body.program_wakaf_type),
       });
 
       const program_cat_id = Number(req.body.program_category_id);
@@ -477,12 +551,12 @@ module.exports = {
         program_kode: nanoid(),
         ...(program_institusi_id
           ? {
-            program_institusi: {
-              connect: {
-                institusi_id: program_institusi_id,
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
+                },
               },
-            },
-          }
+            }
           : {}),
       };
 
@@ -524,7 +598,8 @@ module.exports = {
               user_id: Number(userId),
             },
           },
-          description: "Program Anda Telah Berhasil Diedit, Silahkan Tunggu Konfirmasi Dari Admin",
+          description:
+            "Program Anda Telah Berhasil Diedit, Silahkan Tunggu Konfirmasi Dari Admin",
           title: "Program Baru",
           type: "program",
           program: {
@@ -537,7 +612,12 @@ module.exports = {
 
       res.status(200).json({
         message: "Sukses Edit Program",
-        data: JSON.parse(JSON.stringify({ ...program, program_target_amount: Number(program.program_target_amount) })),
+        data: JSON.parse(
+          JSON.stringify({
+            ...program,
+            program_target_amount: Number(program.program_target_amount),
+          })
+        ),
       });
     } catch (error) {
       res.status(500).json({
@@ -575,7 +655,6 @@ module.exports = {
       });
     }
   },
-
 
   async getBanner(req, res) {
     try {
@@ -619,14 +698,14 @@ module.exports = {
 
       const kat_penyaluran_id = req.body.kat_penyaluran_id;
 
-      console.log(kat_penyaluran_id)
+      console.log(kat_penyaluran_id);
 
       const glResult = await prisma.program.update({
         where: {
           program_id: Number(id),
         },
         data: {
-          kat_penyaluran_id: Number(kat_penyaluran_id)
+          kat_penyaluran_id: Number(kat_penyaluran_id),
         },
       });
 

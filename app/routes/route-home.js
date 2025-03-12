@@ -23,6 +23,12 @@ router.delete("/delPaket/:id", authentication, home.delPaket)
 router.get("/getActAdd", authentication, home.getAdditional)
 router.get("/getActUser/:id", authentication, home.getActUser)
 
+//lokasi qurban
+router.get("/locQurban", home.getLokasiQurban);
+router.post("/create-locQurban", home.createLokasiQurban);
+router.put("/update-locQurban/:id", home.updateLokasiQurban);
+router.delete("/delete-locQurban/:id", home.deleteLokasiQurban);
+
 router.get("/rajaOngkirProv", home.checkProv)
 router.get("/rajaOngkirCities/:id", home.checkCities)
 router.get("/rajaOngkirKec/:id", home.checkKec)
