@@ -362,6 +362,7 @@ module.exports = {
         jurnal_status,
         jurnal_kategori,
         jurnal_head_id,
+        com_code,
       } = req.body;
 
       // Konversi jurnal_tanggal ke format Date
@@ -418,6 +419,7 @@ module.exports = {
           jurnal_status,
           jurnal_category: { connect: { id: kategoriId } },
           jurnal_lk_header: { connect: { id: headId } },
+          com_code,
         },
       });
 
@@ -852,6 +854,7 @@ module.exports = {
         proposal_id,
         iswakaf,
         istransformed,
+        com_code,
       } = req.body;
 
       // Ambil nilai doc_number terakhir dari database
@@ -900,8 +903,10 @@ module.exports = {
             connect: { id: doc_type }, // Menghubungkan dengan document_type yang memiliki id
           },
           istransformed: istransformed,
+          com_code: com_code,
         },
       });
+      console.log('quer create', createJurnalHeader)
 
       return res.status(200).json({
         message: "Sukses membuat jurnal header",

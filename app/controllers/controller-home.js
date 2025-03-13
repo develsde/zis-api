@@ -1090,7 +1090,7 @@ module.exports = {
   },
   async createLokasiQurban(req, res) {
     try {
-      const { lokasi_penyembelihan } = req.body;
+      const { lokasi_penyembelihan, wilayah } = req.body;
 
       if (!lokasi_penyembelihan) {
         return res
@@ -1101,6 +1101,7 @@ module.exports = {
       const lokasi = await prisma.lokasi_qurban.create({
         data: {
           lokasi_penyembelihan,
+          wilayah,
         },
       });
 
@@ -1117,7 +1118,7 @@ module.exports = {
   async updateLokasiQurban(req, res) {
     try {
       const { id } = req.params; // Ambil ID dari parameter URL
-      const { lokasi_penyembelihan } = req.body; // Ambil data dari request body
+      const { lokasi_penyembelihan, wilayah } = req.body; // Ambil data dari request body
 
       // Cek apakah lokasi dengan ID tersebut ada
       const existingLokasi = await prisma.lokasi_qurban.findUnique({
@@ -1135,6 +1136,7 @@ module.exports = {
         where: { id: Number(id) },
         data: {
           lokasi_penyembelihan,
+          wilayah
         },
       });
 

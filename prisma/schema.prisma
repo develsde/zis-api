@@ -361,6 +361,7 @@ model gl_account {
   doc_number        Int?
   asnaf_type_id     Int?
   parent_id         Int?                @default(0) @db.SmallInt
+  coa_code          String?             @db.VarChar(50)
   ebs_validation    ebs_validation[]
   document_number   document_number?    @relation(fields: [doc_number], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gl_account_FK_1")
   gl_account_type   gl_account_type?    @relation(fields: [gl_type], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "gl_account_type_FK")
@@ -1157,6 +1158,7 @@ model activity_qurban {
   ongkir            String?         @db.VarChar(100)
   harga             String?         @db.VarChar(100)
   UTC               String?         @db.VarChar(100)
+  log_aj            log_aj?         @relation(fields: [UTC], references: [uniqueCode], onDelete: NoAction, onUpdate: NoAction, map: "FK_activity_qurban_log_aj")
   program           program         @relation(fields: [program_id], references: [program_id], onDelete: NoAction, onUpdate: NoAction, map: "activity_qurban_program_FK")
   detail_qurban     detail_qurban[]
 
@@ -1164,6 +1166,7 @@ model activity_qurban {
   @@index([district_id], map: "activity_qurban_district_id_IDX")
   @@index([program_id], map: "activity_qurban_program_FK")
   @@index([province_id], map: "activity_qurban_province_id_IDX")
+  @@index([UTC], map: "Index 6")
 }
 
 model detail_qurban {
@@ -1184,6 +1187,7 @@ model detail_qurban {
 model lokasi_qurban {
   id                   Int     @id @default(autoincrement())
   lokasi_penyembelihan String? @db.Text
+  wilayah              String? @db.VarChar(250)
 }
 
 model detail_pemesanan_megakonser {
@@ -1322,19 +1326,20 @@ model affiliator {
 }
 
 model log_aj {
-  id_aj              Int     @id @default(autoincrement())
-  timestampt         String? @db.VarChar(300)
-  merchantId         String? @db.VarChar(300)
-  respCode           String? @db.VarChar(300)
-  ammount            String? @db.VarChar(300)
-  uniqueCode         String? @db.VarChar(300)
-  transRef           String? @db.VarChar(300)
-  date_time          String? @db.VarChar(300)
-  status             String? @db.VarChar(300)
-  fail_resson        String? @db.VarChar(300)
-  trx_type           String? @db.VarChar(300)
-  status_notify_sof  String? @db.VarChar(300)
-  status_transaction String? @db.VarChar(300)
+  id_aj              Int               @id @default(autoincrement())
+  timestampt         String?           @db.VarChar(300)
+  merchantId         String?           @db.VarChar(300)
+  respCode           String?           @db.VarChar(300)
+  ammount            String?           @db.VarChar(300)
+  uniqueCode         String?           @unique(map: "Index 2") @db.VarChar(300)
+  transRef           String?           @db.VarChar(300)
+  date_time          String?           @db.VarChar(300)
+  status             String?           @db.VarChar(300)
+  fail_resson        String?           @db.VarChar(300)
+  trx_type           String?           @db.VarChar(300)
+  status_notify_sof  String?           @db.VarChar(300)
+  status_transaction String?           @db.VarChar(300)
+  activity_qurban    activity_qurban[]
 }
 
 model report {
@@ -1393,6 +1398,7 @@ model jurnal_lk {
   jurnal_status     Int?              @default(1) @db.SmallInt
   jurnal_kategori   Int?
   jurnal_head_id    Int?
+  com_code          String?           @db.VarChar(50)
   gl_account        gl_account?       @relation(fields: [jurnal_gl_account], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_gl_account_FK")
   jurnal_category   jurnal_category?  @relation(fields: [jurnal_kategori], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_jurnal_category_FK")
   jurnal_lk_header  jurnal_lk_header? @relation(fields: [jurnal_head_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_jurnal_lk_header_FK")
@@ -1412,6 +1418,7 @@ model jurnal_lk_header {
   iswakaf       Int?           @default(0) @db.SmallInt
   description   String?        @db.Text
   istransformed Int?           @default(0) @db.SmallInt
+  com_code      String?        @db.VarChar(50)
   jurnal_lk     jurnal_lk[]
   document_type document_type? @relation(fields: [doc_type], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jurnal_lk_header_document_type_FK")
 
