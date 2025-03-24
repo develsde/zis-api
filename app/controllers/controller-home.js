@@ -2036,7 +2036,16 @@ module.exports = {
         pn = "0" + pn.substring(2).trim();
       }
 
-      const phoneNumber = Number(bank) === 20 ? "086500018999" : no_wa;
+    let phoneNumber;
+    if (Number(bank) === 20) {
+      phoneNumber = "086500018999";
+    } else if (Number(bank) === 2) {
+      phoneNumber = "085640966502"; // Jika berhasil
+    } else if (Number(bank) === 14) {
+      phoneNumber = "0817345545";
+    } else {
+      phoneNumber = no_wa;
+    }
 
       // Mengirim request ke payment gateway menggunakan reqPay
       const response = await reqPay({
