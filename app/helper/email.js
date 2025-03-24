@@ -430,6 +430,161 @@ const generateTemplateProposalCreate = async ({ nama, nik_mustahiq, program_titl
   return content;
 };
 
+const generateTemplateQurban = async ({ program_id, nama, formattedDate, no_wa, formattedDana, bankName, vaNumber, lokasi, detail_qurban, alokasi_hak, type, province, city, kecamatan, alamat, nik_karyawan }) => {
+  const alokasiHakMapping = {
+    "1": "Saya serahkan ke panitia untuk di distribusikan",
+    "2": "Saya ambil di Kantor Pusat IOH",
+    "3": "Dikirim ke rumah"
+  };
+
+  const tipePendaftarMapping = {
+    "1": "Karyawan Aktif IOH",
+    "2": "Pensiunan IOH",
+    "3": "Mitra IOH"
+  };
+
+  const tipePendaftar = program_id === 97 ? tipePendaftarMapping[type] || "Tipe Tidak Diketahui" : null;
+  const alokasiHak = alokasiHakMapping[alokasi_hak] || lokasi; // Ganti lokasi dengan alokasi hak jika program_id = 97
+
+  const wordingAlamat = (alokasi_hak === "3")
+    ? `<p>Berikut adalah informasi alamat lengkap untuk pengiriman:</p>`
+    : "";
+
+  const alamatLengkap = (alokasi_hak === "3")
+    ? `
+      ${wordingAlamat}
+      <div class="alamat-details">
+        <p><span class="highlight">Provinsi:</span> ${province}</p>
+        <p><span class="highlight">Kota/Kabupaten:</span> ${city}</p>
+        <p><span class="highlight">Kecamatan:</span> ${kecamatan}</p>
+        <p><span class="highlight">Alamat:</span> ${alamat}</p>
+      </div>
+    `
+    : "";
+
+  const content = `
+    <html>
+    <head>
+      <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        .content {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #d35400;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 12px;
+            text-align: center;
+            color: #555;
+            display: block !important;
+        }
+        .details, .alamat-details, .rincian {
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .details p, .alamat-details p, .rincian p {
+            margin: 5px 0;
+        }
+        .cta {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .cta a {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .cta a:hover {
+            background-color: #c0392b;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">Menunggu Pembayaran</div>
+        <div class="content">
+          <p>Terima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.</p>
+          <p>Mohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.</p>
+          <p>Pastikan kembali nominal yang Anda kirimkan sesuai dengan data berikut:</p>
+  
+          <div class="details">
+            <p><span class="highlight">Tanggal/Waktu:</span> ${formattedDate}</p>
+            <p><span class="highlight">${program_id === 97 ? "Alokasi Hak" : "Lokasi Penyembelihan"}:</span> ${alokasiHak}</p>
+            <p><span class="highlight">Nama:</span> ${nama}</p>
+            ${tipePendaftar ? `<p><span class="highlight">Tipe Pendaftar:</span> ${tipePendaftar}</p>` : ""}
+            ${type === "1" ? `<p><span class="highlight">NIK Karyawan:</span> ${nik_karyawan}</p>` : ""}
+            <p><span class="highlight">No WhatsApp:</span> ${no_wa}</p>
+            <p><span class="highlight">Nominal:</span> ${formattedDana}</p>
+            <p><span class="highlight">Bank:</span> ${bankName}</p>
+            <p><span class="highlight">VA Number:</span> ${vaNumber}</p>
+          </div>
+  
+          ${alamatLengkap}
+
+          <p><strong>Berikut adalah rincian qurban yang telah Anda daftarkan:</strong></p>
+          <p>Pastikan kembali data berikut sudah sesuai dengan yang Anda inginkan. Jika ada kesalahan, segera hubungi admin.</p>
+
+          <p><strong>Rincian Qurban:</strong></p>
+          <div class="rincian">
+            ${detail_qurban.map((item, index) => `
+              <p><span class="highlight">#${index + 1}</span></p>
+              <p><span class="highlight">Nama Mudohi:</span> ${item.nama_mudohi}</p>
+              <p><span class="highlight">Paket Hewan:</span> ${item.paket_hewan}</p>
+              <p><span class="highlight">Harga:</span> ${item.total}</p>
+              <hr>
+            `).join('')}
+          </div>
+  
+          <p>Jika ada informasi yang tidak sesuai, harap hubungi admin kami.</p>
+          <div class="cta">
+            <a href="https://wa.me/085693318006">Hubungi Admin</a>
+          </div>
+          <div class="footer">
+            <p>Salam,</p>
+            <p><b>ZIS Indosat</b></p>
+            <p>Panitia Qurban</p>
+            <p>0856-9331-8006</p>
+            <p><small>Email dikirim pada: ${formattedDate}</small></p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return content;
+};
+
 module.exports = {
   sendEmail,
   sendEmailWithPdf,
@@ -440,4 +595,5 @@ module.exports = {
   generateTemplatePembayaran,
   generateTemplateProposalBayar,
   generateTemplateProposalCreate,
+  generateTemplateQurban
 };
