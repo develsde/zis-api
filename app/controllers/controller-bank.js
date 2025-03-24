@@ -848,6 +848,7 @@ module.exports = {
             currency: String(sdata.currency),
             period: 2024,
             istransformed: 1,
+            com_code: "1000",
           },
         });
 
@@ -866,6 +867,7 @@ module.exports = {
             jurnal_status: 1,
             jurnal_category: { connect: { id: jurnal_category } },
             jurnal_lk_header: { connect: { id: createJurnalHeader.id } },
+            com_code: "1000",
           },
         });
 
@@ -882,6 +884,7 @@ module.exports = {
             jurnal_status: 1,
             jurnal_category: { connect: { id: jurnal_category } },
             jurnal_lk_header: { connect: { id: createJurnalHeader.id } },
+            com_code: "1000",
           },
         });
       }

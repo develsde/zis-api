@@ -1212,7 +1212,7 @@ module.exports = {
 
   async putPaket(req, res) {
     try {
-      const { kategori, biaya, keterangan } = req.body;
+      const { kategori, biaya, keterangan, program_id } = req.body;
       const id = req.params.id;
 
       const putResult = await prisma.activity_paket.update({
@@ -1223,6 +1223,7 @@ module.exports = {
           kategori,
           biaya: Number(biaya),
           keterangan,
+          program_id,
         },
       });
 
