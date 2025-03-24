@@ -25,6 +25,7 @@ router.get("/getActUser/:id", authentication, home.getActUser)
 
 //lokasi qurban
 router.get("/locQurban", home.getLokasiQurban);
+router.get("/locQurbanPortal", home.getLokasiQurbanPortal);
 router.post("/create-locQurban", home.createLokasiQurban);
 router.put("/update-locQurban/:id", home.updateLokasiQurban);
 router.delete("/delete-locQurban/:id", home.deleteLokasiQurban);
@@ -93,6 +94,9 @@ router.get("/getTiket/:kode_pemesanan", home.getDetailByKodePemesanan);
 router.get("/getAllTiket", home.getAllDetails);
 router.put("/updateStatusTiket/:id", home.updateDetailStatusById);
 router.put("/updateAllStatusTiket", home.updateDetailStatusByIdPemesanan);
+
+//Qurban Report
+router.get("/getReportQutab", home.getReportQutab)
 
 
 module.exports = router;

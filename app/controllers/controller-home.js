@@ -25,6 +25,7 @@ const {
   generateTemplateCancelMegaKonser,
   generateTemplatePembayaran,
   sendEmailWithPdf,
+  generateTemplateQurban,
 } = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
@@ -306,12 +307,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -1085,6 +1086,41 @@ module.exports = {
     } catch (error) {
       res.status(500).json({
         message: error.message,
+      });
+    }
+  },
+  async getLokasiQurbanPortal(req, res) {
+    try {
+      const lokasiList = await prisma.lokasi_qurban.findMany({
+        select: {
+          id: true,
+          wilayah: true,
+          lokasi_penyembelihan: true,
+        },
+        orderBy: {
+          lokasi_penyembelihan: "asc", // Urutkan ASC berdasarkan lokasi_penyembelihan
+        },
+      });
+
+      // Group by wilayah secara manual
+      const groupedLokasi = lokasiList.reduce((acc, lokasi) => {
+        const { wilayah } = lokasi;
+        if (!acc[wilayah]) {
+          acc[wilayah] = [];
+        }
+        acc[wilayah].push(lokasi);
+        return acc;
+      }, {});
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Lokasi Qurban",
+        data: groupedLokasi,
+      });
+    } catch (error) {
+      console.error("Error getLokasiQurbanPortal:", error);
+      res.status(500).json({
+        message: "Terjadi kesalahan saat mengambil data",
+        error: error.message,
       });
     }
   },
@@ -2011,7 +2047,7 @@ module.exports = {
         },
       });
 
-      const UTC = response.data.SendPaymentResp.uniqueTransactionCode;
+      const UTC = response.data.SendPaymentResp.uniqueTransactionCode || '0';
       const actionData = response.data.SendPaymentResp.actionData;
 
       // Memproses actionData jika bank adalah 20
@@ -2028,27 +2064,33 @@ module.exports = {
       const postResult = await prisma.activity_qurban.create({
         data: {
           program: {
-            connect: {
-              program_id: Number(program_id),
-            },
+            connect: { program_id: Number(program_id) },
           },
           nama,
           no_wa,
           email,
-          province_id: Number(province_id),
-          city_id: Number(city_id),
-          district_id: Number(district_id),
-          alamat,
-          ukuran,
-          nik,
-          type: Number(type),
-          alokasi_hak: Number(alokasi_hak),
-          total: Number(totals),
-          harga: Number(harga),
-          ongkir: Number(ongkir),
+          province_id: Number(province_id) || 0,
+          city_id: Number(city_id) || 0,
+          district_id: Number(district_id) || 0,
+          alamat: alamat || "",
+          ukuran: ukuran || "",
+          nik: nik || "",
+          type: Number(type) || 0,
+          alokasi_hak: isNaN(Number(alokasi_hak)) ? 0 : Number(alokasi_hak),
+          total: isNaN(Number(totals)) ? 0 : Number(totals),
+          harga: isNaN(Number(harga)) ? 0 : Number(harga),
+          ongkir: isNaN(Number(ongkir)) ? 0 : Number(ongkir),
           gender,
-          lokasi_penyaluran,
-          UTC, // Menyimpan uniqueTransactionCode
+          lokasi_qurban: lokasi_penyaluran
+            ? {
+              connect: { id: Number(lokasi_penyaluran) }, // Sesuaikan field `id` dengan struktur di DB
+            }
+            : undefined,
+          log_aj: UTC
+            ? {
+              connect: { uniqueCode: UTC }, // Sesuaikan field `UTC` dengan struktur di DB
+            }
+            : undefined,
         },
       });
 
@@ -2072,31 +2114,100 @@ module.exports = {
         currency: "IDR",
       });
 
-      await sendWhatsapp({
-        wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        text:
-          "Menunggu Pembayaran\n" +
-          "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
-          "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
-          "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
-          "\nTanggal/waktu : " +
-          formattedDate +
-          "\nNama : " +
-          nama +
-          "\nNo whatsapp : " +
-          no_wa +
-          "\nJumlah yang harus dibayarkan : " +
-          formattedDana +
-          "\nBank : " +
-          bankName +
-          "\nVA Number : " +
-          vaNumber +
-          "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
-          "\nSalam zisindosat\n" +
-          "\nAdmin\n" +
-          "\nPanitia Qurban Raya\n" +
-          "0899-8387-090",
+      let lokasi
+      if (lokasi_penyaluran) {
+        const lok = await prisma.lokasi_qurban.findUnique({
+          where: {
+            id: lokasi_penyaluran
+          }
+        });
+        lokasi = lok
+      }
+
+      const wilayah = await prisma.districts.findUnique({
+        where: {
+          dis_id: Number(district_id)
+        },
+        include: {
+          cities: {
+            where: {
+              city_id: Number(city_id)
+            },
+            include: {
+              provinces: {
+                where: {
+                  prov_id: Number(province_id)
+                },
+              },
+            },
+          },
+        },
       });
+
+      const detailQurban = await prisma.detail_qurban.findMany({
+        where: { qurban_id: postResult?.id },
+        include: {
+          activity_paket: {
+            select: { kategori: true } // Ambil nama kategori, bukan ID
+          }
+        }
+      });
+
+      const templateEmail = await generateTemplateQurban({
+        program_id,
+        nama,
+        formattedDate,
+        no_wa,
+        formattedDana,
+        bankName,
+        vaNumber,
+        detail_qurban: detailQurban.map(dq => ({
+          nama_mudohi: dq.nama_mudohi,
+          paket_hewan: dq.activity_paket?.kategori || "Tidak diketahui",
+          qty: dq.qty,
+          total: new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(dq.total)
+        })),
+        lokasi: lokasi?.lokasi_penyembelihan || '-',
+        alokasi_hak,
+        type,
+        province: wilayah?.cities?.provinces?.prov_name || 'Tidak Diketahui',
+        city: wilayah?.cities?.city_name || 'Tidak Diketahui',
+        kecamatan: wilayah?.dis_name || 'Tidak Diketahui',
+        alamat,
+        nik_karyawan: nik,
+      });
+      
+      const msgId = await sendEmail({
+        email,
+        html: templateEmail,
+        subject: "Pembayaran Qurban Zis Indosat",
+      });
+
+      // await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text:
+      //     "Menunggu Pembayaran\n" +
+      //     "\nTerima kasih atas partisipasi kamu, pendaftaran kamu sudah kami terima.\n" +
+      //     "\nMohon segera lakukan pembayaran dan jangan tinggalkan halaman sebelum pembayaran benar-benar selesai.\n" +
+      //     "\nPastikan kembali nominal yang anda kirimkan sesuai dengan data berikut :" +
+      //     "\nTanggal/waktu : " +
+      //     formattedDate +
+      //     "\nNama : " +
+      //     nama +
+      //     "\nNo whatsapp : " +
+      //     no_wa +
+      //     "\nJumlah yang harus dibayarkan : " +
+      //     formattedDana +
+      //     "\nBank : " +
+      //     bankName +
+      //     "\nVA Number : " +
+      //     vaNumber +
+      //     "\n\nJika ada informasi yang tidak sesuai harap hubungi admin kami.\n" +
+      //     "\nSalam zisindosat\n" +
+      //     "\nAdmin\n" +
+      //     "\nPanitia Qurban Raya\n" +
+      //     "0899-8387-090",
+      // });
 
       // Menjadwalkan pengecekan status
       scheduleCekStatus({ uniqueTransactionCode: UTC });
@@ -2163,8 +2274,8 @@ module.exports = {
         detail_pemesanan[0].id_tiket === 1
           ? "A"
           : detail_pemesanan[0].id_tiket === 3
-          ? "B"
-          : "C";
+            ? "B"
+            : "C";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
 
       console.log(
@@ -3557,8 +3668,8 @@ module.exports = {
         detail_pemesanan[0].id_tiket === 1
           ? "A"
           : detail_pemesanan[0].id_tiket === 3
-          ? "B"
-          : "C";
+            ? "B"
+            : "C";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
 
       const postResult = await prisma.pemesanan_megakonser.create({
@@ -3645,6 +3756,103 @@ module.exports = {
       console.error(`Error processing order: ${error.message}`);
       res.status(500).json({
         message: error.message,
+      });
+    }
+  },
+
+  async getReportQutab(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const status = req.query.status || "";
+      const kode_affiliator = req.query.kode_affiliator || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "transaction_time";
+      const sortType = req.query.order || "desc";
+
+      // const params = {
+      //   OR: [
+      //     {
+      //       nama: {
+      //         contains: keyword,
+      //       },
+      //     },
+      //     {
+      //       telepon: {
+      //         contains: keyword,
+      //       },
+      //     },
+      //     {
+      //       email: {
+      //         contains: keyword,
+      //       },
+      //     },
+      //     {
+      //       kode_pemesanan: {
+      //         contains: keyword,
+      //       },
+      //     },
+      //   ],
+      //   ...(status && { status }),
+      //   ...(kode_affiliator && { kode_affiliator }),
+      // };
+
+      const [count, qutab] = await prisma.$transaction([
+        prisma.detail_qurban.count({
+          where: {
+            activity_qurban: {
+              program_id: 98,
+              log_aj: {
+                status_transaction: 'Success'
+              }
+            },
+          },
+        }),
+        prisma.detail_qurban.findMany({
+          where: {
+            activity_qurban: {
+              program_id: 98,
+              log_aj: {
+                status_transaction: 'Success'
+              }
+            },
+          },
+          include: {
+            activity_paket: true,
+            activity_qurban: {
+              include: {
+                program: {
+                  select: {
+                    program_id: true,
+                    program_title: true
+                  }
+                },
+                lokasi_qurban: true,
+                log_aj: true
+              }
+            }
+          },
+          skip,
+          take: perPage,
+        }),
+      ]);
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: {
+          tabel: qutab,
+        },
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
       });
     }
   },
