@@ -64,7 +64,10 @@ module.exports = {
 
   async reqPay(req, res) {
     const date = new Date().toString();
-    const timesg = moment().format("DDMMYYHHmmss");
+    const timesg = moment()
+      .utcOffset(7 * 60)
+      .format("DDMMYYHHmmss");
+
     const username = "zisindosat";
     const { phone_number, id_SOF, price } = req.body;
 
@@ -130,11 +133,13 @@ module.exports = {
       // Log request yang dikirim ke URL
       console.log(
         "🔹 Mengirim request ke URL:",
-        "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only"
+        // "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only"
+        "https://ipg.artajasa.co.id:3067/rest/api/sof_payment_only"
       );
 
       const response = await axios.post(
-        "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only",
+        // "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only",
+        "https://ipg.artajasa.co.id:3067/rest/api/sof_payment_only",
         data,
         {
           headers: {
@@ -289,8 +294,8 @@ module.exports = {
 
     try {
       const response = await axios.post(
-        "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
-        // "https://ipg.artajasa.co.id:3067/rest/api/checkStatusTrx",
+        // "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
+        "https://ipg.artajasa.co.id:3067/rest/api/checkStatusTrx",
         data,
         {
           headers: {

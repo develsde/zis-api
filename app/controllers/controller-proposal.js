@@ -278,7 +278,7 @@ module.exports = {
           const templateEmail = await generateTemplateProposalCreate({
             nama,
             nik_mustahiq,
-            program_title
+            program_title,
           });
 
           const msgId = await sendEmail({
@@ -343,7 +343,9 @@ module.exports = {
       } else if (!nama_bank) {
         return res.status(400).json({ message: "Bank wajib diisi" });
       } else if (!nama_rekening) {
-        return res.status(400).json({ message: "Nama pemilik rekening wajib diisi" });
+        return res
+          .status(400)
+          .json({ message: "Nama pemilik rekening wajib diisi" });
       } else if (!nomor_rekening) {
         return res.status(400).json({ message: "Nomor rekening wajib diisi" });
       }
@@ -869,11 +871,24 @@ module.exports = {
   async approvalProposal(req, res) {
     try {
       const userId = req.user_id;
-
       const { proposal_id, status, amount } = req.body;
 
-      //console.log(JSON.stringify(req.body))
+      // Cek apakah user sudah pernah approve proposal ini
+      const existingApproval = await prisma.proposal_approval.findFirst({
+        where: {
+          proposal_id: Number(proposal_id),
+          user_id: Number(userId),
+        },
+      });
 
+      if (existingApproval) {
+        return res.status(400).json({
+          message:
+            "User sudah pernah memberikan persetujuan untuk proposal ini.",
+        });
+      }
+
+      // Insert approval baru
       const appResult = await prisma.proposal_approval.create({
         data: {
           proposal: {
@@ -891,8 +906,9 @@ module.exports = {
         },
       });
 
+      // Jika status 2 (disetujui), update status proposal
       if (status == 2) {
-        const updateStatusAll = await prisma.proposal.update({
+        await prisma.proposal.update({
           where: {
             id: Number(proposal_id),
           },
@@ -903,7 +919,7 @@ module.exports = {
       }
 
       return res.status(200).json({
-        message: "Approva",
+        message: "Approval berhasil",
         data: appResult,
       });
     } catch (error) {

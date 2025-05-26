@@ -821,7 +821,7 @@ module.exports = {
         prisma.bank.count({
           where: {
             isactive: 1,
-            ...params
+            ...params,
           },
         }),
         prisma.bank.findMany({
@@ -830,7 +830,7 @@ module.exports = {
           },
           where: {
             isactive: 1,
-            ...params
+            ...params,
           },
           skip,
           // take: perPage,
@@ -885,7 +885,7 @@ module.exports = {
         prisma.bank.count({
           where: {
             isactive: 1,
-            ...params
+            ...params,
           },
         }),
         prisma.bank.findMany({
@@ -894,7 +894,7 @@ module.exports = {
           },
           where: {
             isactive: 1,
-            ...params
+            ...params,
           },
           skip,
           take: perPage,
@@ -1262,18 +1262,23 @@ module.exports = {
 
   async paket(req, res) {
     try {
-      const id_program = req.params.id;
+      const id_program = Number(req.params.id);
+
+      const whereCondition = {
+        program_id: id_program,
+        ...(id_program === 81 && { id: 43 }),
+      };
+
       const paket = await prisma.activity_paket.findMany({
-        where: {
-          program_id: Number(id_program),
-        },
+        where: whereCondition,
       });
 
-      if (!paket) {
+      if (!paket || paket.length === 0) {
         return res.status(404).json({
           message: "Paket tidak ditemukan",
         });
       }
+
       return res.status(200).json({
         message: "Sukses",
         data: paket,
@@ -2508,10 +2513,10 @@ ORDER BY aa.created_date DESC
           {
             OR: [
               { email: { equals: searchEmail } },
-              { telepon: { equals: searchPhone } }
-            ]
-          }
-        ]
+              { telepon: { equals: searchPhone } },
+            ],
+          },
+        ],
       };
 
       const [count, refrentor] = await prisma.$transaction([

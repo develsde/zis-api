@@ -64,6 +64,7 @@ router.get("/allPemesanan", home.getPemesananMegakonserWithoutPagination),
     home.getDetailPemesananMegakonser
   );
 router.get("/resendEmail/:kode_pemesanan", authentication, home.resendEmail);
+router.get("/resendEmailVrfp/:order_id", authentication, home.resendEmailVrfp);
 router.get(
   "/exportAllDataPemesanan",
   authentication,
@@ -84,7 +85,7 @@ router.get(
   authentication,
   home.getPenjualanAffiliator
 );
-router.get("/getAffiliator", authentication, home.getAffiliator);
+router.get("/getAffiliatorKonser", authentication, home.getAffiliatorKonser);
 router.post(
   "/pemesananMegaKonser-erp",
   authentication,
@@ -96,7 +97,19 @@ router.put("/updateStatusTiket/:id", home.updateDetailStatusById);
 router.put("/updateAllStatusTiket", home.updateDetailStatusByIdPemesanan);
 
 //Qurban Report
-router.get("/getReportQutab", home.getReportQutab)
+router.get("/getReportQutab", home.getReportQutab);
+router.get("/getReportQuray", home.getReportQuray);
+router.get("/LaporanPenjualanQutab", home.getPenjualanQutab);
+router.get("/sendEmailQurban/:UTC", home.sendEmailQurban);
 
-
+//management affiliator
+router.get("/getAffiliatorQurban", home.getAffiliatorQurban);
+router.post("/createAffQurban", home.createAffiliatorQurban);
+router.put("/update-affQurban/:id", home.updateAffiliatorQurban);
+router.get("/getListAfKonser", home.getAffiliatorKonser);
+router.post("/createAffiliatorKonser", home.createAffiliatorKonser);
+router.put("/updateAffKonser/:id", home.updateAffiliatorKonser);
+router.get("/getAffiliatorVrfp", home.getAffiliatorVrfp);
+router.post("/createAffVrfp", home.createAffiliatorVrfpr);
+router.put("/updateAffVrfp/:id", home.updateAffiliatorVRFP);
 module.exports = router;
