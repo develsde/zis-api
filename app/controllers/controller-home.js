@@ -33,6 +33,7 @@ const {
   generateTemplateVRFP,
   generateTemplateVrfpSuccess,
   generateTemplatePemotonganQurban,
+  generateTemplateQurbanSuccess,
 } = require("../helper/email");
 const { sendWhatsapp } = require("../helper/whatsapp");
 const moment = require("moment");
@@ -1187,6 +1188,87 @@ module.exports = {
       });
     }
   },
+  async sendEmailQurbanSuccess(req, res) {
+    try {
+      const { UTC } = req.params;
+
+      // Ambil data pemesanan berdasarkan UTC dan relasinya
+      const pemesanan = await prisma.activity_qurban.findFirst({
+        where: { UTC },
+        include: {
+          lokasi_qurban: true,
+          program: true,
+          detail_qurban: {
+            include: {
+              activity_paket: true,
+            },
+          },
+        },
+      });
+
+      if (!pemesanan) {
+        return res.status(404).json({
+          success: false,
+          message: `Pemesanan dengan kode ${UTC} tidak ditemukan.`,
+        });
+      }
+
+      const { nama, email, detail_qurban, program } = pemesanan;
+
+      // Hitung total dari seluruh detail_qurban
+      const totalDana = detail_qurban.reduce((sum, item) => {
+        return sum + Number(item.total || 0);
+      }, 0);
+
+      const formattedDana = new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+      }).format(totalDana);
+
+      const formattedDate = new Date().toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const formattedDetail = detail_qurban.map((dq) => ({
+        nama_mudohi: dq.nama_mudohi,
+        paket_hewan: dq.activity_paket?.kategori || "-",
+        qty: dq.qty,
+        total: new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: "IDR",
+        }).format(dq.total),
+      }));
+
+      const templateEmail = await generateTemplateQurbanSuccess({
+        nama,
+        formattedDate,
+        formattedDana,
+        program_nama: program?.nama || "-",
+        detail_qurban: formattedDetail,
+      });
+
+      const msgId = await sendEmail({
+        email,
+        html: templateEmail,
+        subject: "Pembayaran Qurban Anda Berhasil - ZISWAF Indosat",
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: `Email berhasil dikirim ulang untuk order ${UTC}`,
+        msgId,
+      });
+    } catch (error) {
+      console.error("Error dalam resend email:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat mengirim ulang email",
+        error: error.message,
+      });
+    }
+  },
 
   async getPaket(req, res) {
     try {
@@ -2037,20 +2119,22 @@ module.exports = {
       );
       const statuses = await Promise.all(statusPromises);
 
-      // Filter based on status
+      // Filter based on status or include exception ID
       const filteredActAdditional = ActAdditional.filter((item, index) => {
-        return statuses[index].data.transaction_status === "settlement";
+        const isSettlement =
+          statuses[index]?.data?.transaction_status === "settlement";
+        const isExceptionId = item.id === 1577;
+        return isSettlement || isExceptionId;
       });
 
       // Extract subdistrict IDs from filteredActAdditional
       const subdistrictIds = filteredActAdditional
-        .map((item) => item.district_id) // Adjust the property if necessary
+        .map((item) => item.district_id)
         .filter((id) => id !== undefined && id !== null);
 
       console.log("Subdistrict IDs:", subdistrictIds);
 
-      // Example of using subdistrictIds:
-      // Fetch subdistrict data
+      // Fetch subdistrict data from RajaOngkir
       const subdistrictPromises = subdistrictIds.map((subdistrictId) =>
         axios.get(
           `https://pro.rajaongkir.com/api/subdistrict?id=${subdistrictId}`,
@@ -2619,6 +2703,7 @@ module.exports = {
         total_harga,
         kode_affiliator,
         bank,
+        infaq,
         detail_pemesanan,
       } = req.body;
 
@@ -2641,7 +2726,7 @@ module.exports = {
         }
       }
 
-      // Generate kode_pemesanan: A00001 dst
+      // Generate kode_pemesanan: SOF00001 dst
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: { id: "desc" },
         select: { id: true },
@@ -2650,23 +2735,19 @@ module.exports = {
       const baseId = 686; // Jika kosong, mulai dari ID 686
       const nextId = lastOrder ? lastOrder.id + 1 : baseId;
 
-      const hurufAwal =
-        detail_pemesanan[0].id_tiket === 1
-          ? "A"
-          : detail_pemesanan[0].id_tiket === 3
-          ? "B"
-          : "C";
-
-      const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
+      const kode_pemesanan = `SOF${String(nextId).padStart(5, "0")}`;
 
       console.log(
         `Processing new order: ${kode_pemesanan} for email: ${email}`
       );
 
+      // Pastikan infaq bertipe number (default 0 jika null/undefined)
+      const totalHargaFinal = Number(total_harga) + Number(infaq || 0);
+
       // Proses Midtrans Snap
       const response = await midtransfer({
         order: kode_pemesanan,
-        price: total_harga,
+        price: totalHargaFinal,
       });
 
       if (!response.success) {
@@ -2694,6 +2775,7 @@ module.exports = {
           status: displayStatus,
           transaction_time,
           expiry_time,
+          infaq,
         },
       });
 
@@ -2747,6 +2829,7 @@ module.exports = {
       const templateEmail = await generateTemplatePembayaran({
         email,
         postResult,
+        totalHargaFinal,
         detail: transformedDetails,
         tiket: pemesanan,
       });
@@ -3416,10 +3499,90 @@ module.exports = {
     }
   },
 
-  async getPemesananMegakonser(req, res) {
+  // async getPemesananMegakonser(req, res) {
+  //   try {
+  //     const keyword = req.query.keyword || "";
+  //     const kode_affiliator = req.query.kode_affiliator || "";
+  //     const page = Number(req.query.page || 1);
+  //     const perPage = Number(req.query.perPage || 10);
+  //     const skip = (page - 1) * perPage;
+  //     const sortBy = req.query.sortBy || "transaction_time";
+  //     const sortType = req.query.order || "desc";
+
+  //     const filterParams = {
+  //       OR: [
+  //         { nama: { contains: keyword } },
+  //         { telepon: { contains: keyword } },
+  //         { email: { contains: keyword } },
+  //         { kode_pemesanan: { contains: keyword } },
+  //       ],
+  //       ...(kode_affiliator && { kode_affiliator }),
+  //     };
+
+  //     // Ambil semua pemesanan dulu
+  //     const allPemesanan = await prisma.pemesanan_megakonser.findMany({
+  //       where: filterParams,
+  //       orderBy: {
+  //         [sortBy]: sortType,
+  //       },
+  //       include: {
+  //         detail_pemesanan_megakonser: {
+  //           include: {
+  //             tiket_konser: true,
+  //             tiket_konser_detail: true,
+  //           },
+  //         },
+  //         affiliator: true,
+  //       },
+  //     });
+
+  //     // Ambil semua order_id
+  //     const orderIds = allPemesanan.map((p) => p.kode_pemesanan);
+
+  //     // Panggil cekStatus untuk masing-masing order_id
+  //     const statusResults = await Promise.all(
+  //       orderIds.map((order) => cekStatus({ order }))
+  //     );
+
+  //     // Filter hanya yang status settlement
+  //     const filtered = allPemesanan.filter((p, index) => {
+  //       return statusResults[index].data.transaction_status === "settlement";
+  //     });
+
+  //     const count = filtered.length;
+
+  //     // Pagination manual
+  //     const paginatedData = filtered.slice(skip, skip + perPage);
+
+  //     const formatted = paginatedData.map((pesan) => ({
+  //       ...pesan,
+  //       detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
+  //         ...detail,
+  //         tiket_konser_detail: detail.tiket_konser_detail,
+  //       })),
+  //     }));
+
+  //     res.status(200).json({
+  //       message: "Sukses Ambil Data",
+  //       data: formatted,
+  //       pagination: {
+  //         total: count,
+  //         page,
+  //         hasNext: count > page * perPage,
+  //         totalPage: Math.ceil(count / perPage),
+  //       },
+  //     });
+  //   } catch (error) {
+  //     console.error("Error getPemesananMegakonser:", error);
+  //     res.status(500).json({
+  //       message: error.message || "Internal Server Error",
+  //     });
+  //   }
+  // },
+
+  async getPemesananMegakonserLama(req, res) {
     try {
       const keyword = req.query.keyword || "";
-      const status = req.query.status || "";
       const kode_affiliator = req.query.kode_affiliator || "";
       const page = Number(req.query.page || 1);
       const perPage = Number(req.query.perPage || 10);
@@ -3427,104 +3590,80 @@ module.exports = {
       const sortBy = req.query.sortBy || "transaction_time";
       const sortType = req.query.order || "desc";
 
-      const params = {
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid Date Range" });
+      }
+
+      const filterParams = {
         OR: [
-          {
-            nama: {
-              contains: keyword,
-            },
-          },
-          {
-            telepon: {
-              contains: keyword,
-            },
-          },
-          {
-            email: {
-              contains: keyword,
-            },
-          },
-          {
-            kode_pemesanan: {
-              contains: keyword,
-            },
-          },
+          { nama: { contains: keyword } },
+          { telepon: { contains: keyword } },
+          { email: { contains: keyword } },
+          { kode_pemesanan: { contains: keyword } },
         ],
-        ...(status && { status }),
+        transaction_time: {
+          gte: validStart,
+          lte: validEnd,
+        },
         ...(kode_affiliator && { kode_affiliator }),
       };
 
-      // const [count, pemesanan] = await prisma.$transaction([
-      //     prisma.pemesanan_megakonser.count({
-      //         where: params,
-      //     }),
-      //     prisma.pemesanan_megakonser.findMany({
-      //         orderBy: {
-      //             [sortBy]: sortType,
-      //         },
-      //         where: params,
-      //         include: {
-      //             detail_pemesanan_megakonser: {
-      //                 include: {
-      //                     tiket_konser: true,
-      //                     tiket_konser_detail: {
-      //                         select: {
-      //                             tiket_konser_detail_nama: true, // Memastikan kolom ini diambil
-      //                         }
-      //                     },
-      //                 },
-      //             },
-      //         },
-      //         skip,
-      //         take: perPage,
-      //     }),
-      // ]);
-
-      const [count, pemesanan] = await prisma.$transaction([
-        prisma.pemesanan_megakonser.count({
-          where: params,
-        }),
-        prisma.pemesanan_megakonser.findMany({
-          // orderBy: {
-          //   [sortBy]: sortType,
-          // },
-          where: params,
-          include: {
-            detail_pemesanan_megakonser: {
-              include: {
-                tiket_konser: true, // Mengambil semua field dari tiket_konser
-                tiket_konser_detail: true, // Mengambil semua field dari tiket_konser_detail
-              },
+      const allPemesanan = await prisma.pemesanan_megakonser.findMany({
+        where: filterParams,
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
             },
-            affiliator: true,
           },
-          skip, // Menggunakan offset untuk paginasi
-          take: perPage, // Mengambil jumlah data sesuai perPage
-        }),
-      ]);
+          affiliator: true,
+        },
+      });
 
-      // Memformat data agar lebih mudah diakses
-      // const formattedData = pemesanan.map(pesan => ({
-      //     ...pesan,
-      //     detail_pemesanan: pesan.detail_pemesanan_megakonser.map(detail => ({
-      //         ...detail,
-      //         tiket_konser_detail_nama: detail.tiket_konser_detail.tiket_konser_detail_nama, // Akses nama tiket konser detail
-      //     })),
-      // }));
+      // Ambil semua kecuali yang memiliki id_tiket = 8
+      const filteredOut = allPemesanan.filter(
+        (p) => !p.detail_pemesanan_megakonser.some((d) => d.id_tiket === 8)
+      );
 
-      const formattedData = pemesanan.map((pesan) => ({
+      const orderIds = filteredOut.map((p) => p.kode_pemesanan);
+
+      const statusResults = await Promise.all(
+        orderIds.map((order) => cekStatus({ order }))
+      );
+
+      const filtered = filteredOut.filter(
+        (p, index) =>
+          statusResults[index].data.transaction_status === "settlement"
+      );
+
+      const count = filtered.length;
+      const paginatedData = filtered.slice(skip, skip + perPage);
+
+      const formatted = paginatedData.map((pesan) => ({
         ...pesan,
         detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
           ...detail,
-          tiket_konser_detail: detail.tiket_konser_detail, // Mengambil semua field dari tiket_konser_detail
+          tiket_konser_detail: detail.tiket_konser_detail,
         })),
       }));
 
-      console.log(JSON.stringify(formattedData, null, 2)); // Cek hasil
-
       res.status(200).json({
         message: "Sukses Ambil Data",
-        data: formattedData,
+        data: formatted,
         pagination: {
           total: count,
           page,
@@ -3533,8 +3672,111 @@ module.exports = {
         },
       });
     } catch (error) {
+      console.error("Error getPemesananMegakonser:", error);
       res.status(500).json({
-        message: error?.message,
+        message: error.message || "Internal Server Error",
+      });
+    }
+  },
+
+  async getPemesananMegakonser(req, res) {
+    try {
+      const keyword = req.query.keyword || "";
+      const kode_affiliator = req.query.kode_affiliator || "";
+      const page = Number(req.query.page || 1);
+      const perPage = Number(req.query.perPage || 10);
+      const skip = (page - 1) * perPage;
+      const sortBy = req.query.sortBy || "transaction_time";
+      const sortType = req.query.order || "desc";
+
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid Date Range" });
+      }
+
+      console.log("start", validStart);
+      console.log("end", validEnd);
+
+      const filterParams = {
+        OR: [
+          { nama: { contains: keyword } },
+          { telepon: { contains: keyword } },
+          { email: { contains: keyword } },
+          { kode_pemesanan: { contains: keyword } },
+        ],
+        transaction_time: {
+          gte: validStart,
+          lte: validEnd,
+        },
+
+        ...(kode_affiliator && { kode_affiliator }),
+      };
+
+      const allPemesanan = await prisma.pemesanan_megakonser.findMany({
+        where: filterParams,
+        orderBy: {
+          [sortBy]: sortType,
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser: true,
+              tiket_konser_detail: true,
+            },
+          },
+          affiliator: true,
+        },
+      });
+
+      // Filter hanya yang memiliki id_tiket = 8
+      const withSpecificTiket = allPemesanan.filter((p) =>
+        p.detail_pemesanan_megakonser.some((d) => d.id_tiket === 8)
+      );
+
+      const orderIds = withSpecificTiket.map((p) => p.kode_pemesanan);
+
+      const statusResults = await Promise.all(
+        orderIds.map((order) => cekStatus({ order }))
+      );
+
+      const filtered = withSpecificTiket.filter((p, index) => {
+        return statusResults[index].data.transaction_status === "settlement";
+      });
+
+      const count = filtered.length;
+      const paginatedData = filtered.slice(skip, skip + perPage);
+
+      const formatted = paginatedData.map((pesan) => ({
+        ...pesan,
+        detail_pemesanan: pesan.detail_pemesanan_megakonser.map((detail) => ({
+          ...detail,
+          tiket_konser_detail: detail.tiket_konser_detail,
+        })),
+      }));
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        data: formatted,
+        pagination: {
+          total: count,
+          page,
+          hasNext: count > page * perPage,
+          totalPage: Math.ceil(count / perPage),
+        },
+      });
+    } catch (error) {
+      console.error("Error getPemesananMegakonser:", error);
+      res.status(500).json({
+        message: error.message || "Internal Server Error",
       });
     }
   },
@@ -4908,6 +5150,61 @@ module.exports = {
     } catch (error) {
       res.status(500).json({
         message: "Terjadi kesalahan saat memperbarui affiliator VRFP",
+        error: error.message,
+      });
+    }
+  },
+  async getAllProposalErp(req, res) {
+    try {
+      // Ambil semua proposal yang berelasi dengan mustahiq yang province-nya 11
+      const proposals = await prisma.proposal.findMany({
+        where: {
+          user: {
+            mustahiq: {
+              province: "11", // Ganti dengan "11" atau angka sesuai format datanya
+            },
+          },
+        },
+        select: {
+          id: true,
+          nama: true,
+          alamat_rumah: true,
+          dana_yang_diajukan: true,
+          status_approval: true,
+          create_date: true,
+          user: {
+            select: {
+              user_id: true,
+              mustahiq: {
+                select: {
+                  province: true,
+                  kota: true,
+                  kecamatan: true,
+                  address: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (proposals.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "Tidak ada proposal ditemukan untuk province = 11",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Data proposal berhasil diambil",
+        data: proposals,
+      });
+    } catch (error) {
+      console.error("Gagal mengambil data proposal:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan saat mengambil data proposal",
         error: error.message,
       });
     }

@@ -56,8 +56,13 @@ router.get("/tiket-sold", home.getTiketSold)
 
 //Megakonser ERP
 router.get("/tiketMegaKonserErp", home.getAllTiketErp)
-router.get("/pemesanan-megakonser", authentication, home.getPemesananMegakonser)
-router.get("/allPemesanan", home.getPemesananMegakonserWithoutPagination),
+router.get("/pemesanan-megakonser-old", home.getPemesananMegakonserLama),
+  router.get(
+    "/pemesanan-megakonser",
+    authentication,
+    home.getPemesananMegakonser
+  ),
+  router.get("/allPemesanan", home.getPemesananMegakonserWithoutPagination),
   router.get(
     "/detail-pemesanan-megakonser/:id",
     authentication,
@@ -101,6 +106,7 @@ router.get("/getReportQutab", home.getReportQutab);
 router.get("/getReportQuray", home.getReportQuray);
 router.get("/LaporanPenjualanQutab", home.getPenjualanQutab);
 router.get("/sendEmailQurban/:UTC", home.sendEmailQurban);
+router.get("/sendEmailSuccess/:UTC", home.sendEmailQurbanSuccess);
 
 //management affiliator
 router.get("/getAffiliatorQurban", home.getAffiliatorQurban);

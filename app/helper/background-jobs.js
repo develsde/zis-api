@@ -43,11 +43,17 @@ const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) =>
       console.log(`Checking status for order: ${order}, Email: ${email}`);
 
       let stats = await cekStatus({ order });
+      console.log("status", stats.data);
 
       // Log the status response from cekStatus
-      console.log(`Status response for order: ${order} - Status code: ${stats.data?.status_code}, Transaction status: ${stats.data?.transaction_status}`);
+      console.log(
+        `Status response for order: ${order} - Status code: ${stats.data?.status_code}, Transaction status: ${stats.data?.transaction_status}`
+      );
 
-      if (stats.data?.status_code == 200) {
+      if (
+        stats.data?.status_code == 200 &&
+        stats.data?.transaction_status === "settlement"
+      ) {
         // Generate email template
         const templateEmail = await generateTemplateMegaKonser({
           email,
@@ -56,7 +62,9 @@ const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) =>
         });
 
         // Log the template creation
-        console.log(`Generated email template for order: ${order}, Email: ${email}`);
+        console.log(
+          `Generated email template for order: ${order}, Email: ${email}`
+        );
 
         const msgId = await sendEmailWithPdf({
           email,
@@ -66,7 +74,9 @@ const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) =>
         });
 
         // Log the email sent with PDF
-        console.log(`Email with PDF sent for order: ${order}, Email: ${email}, Message ID: ${msgId}`);
+        console.log(
+          `Email with PDF sent for order: ${order}, Email: ${email}, Message ID: ${msgId}`
+        );
 
         // Delete the PDF file after sending
         // fs.unlink(filePath, (err) => {
@@ -84,12 +94,16 @@ const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) =>
         });
 
         // Log the order settlement
-        console.log(`Order ${order} settled successfully. Email sent: ${msgId}`);
+        console.log(
+          `Order ${order} settled successfully. Email sent: ${msgId}`
+        );
         task.stop();
       } else {
         elapsedMinutes += 1;
         // Log the elapsed time
-        console.log(`Elapsed time for order: ${order} is now ${elapsedMinutes} minutes`);
+        console.log(
+          `Elapsed time for order: ${order} is now ${elapsedMinutes} minutes`
+        );
 
         if (elapsedMinutes >= 5) {
           // Expire the payment if it takes too long

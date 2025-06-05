@@ -19,8 +19,9 @@ let snap = new midtransClient.Snap({
 const sendEmailWithPdf = async ({ email, html, subject, pdfPath }) => {
   console.log("Apa Path nya? ", pdfPath);
   const transporter = nodemailer.createTransport({
-    service: "gmail",
-    pool: true, // Aktifkan mode pool email transport
+    host: "mail.zisindosat.id",
+    port: 465,
+    secure: true,
     auth: {
       user: "admin@zisindosat.id",
       pass: "ziswaf2019",
@@ -129,12 +130,17 @@ const generateTemplateForgotEmail = ({ email, token }) => {
   return content;
 };
 
-const generateTemplatePembayaran = async ({ email, tiket }) => {
+const generateTemplatePembayaran = async ({
+  email,
+  tiket,
+  totalHargaFinal,
+}) => {
   const encodedEmail = Buffer.from(email).toString("base64");
   const url = `https://portal.zisindosat.id`;
   const qrCodeImage = await QRCode.toDataURL(url);
 
   const kodePemesanan = tiket.kode_pemesanan;
+  const infaq = tiket.infaq;
   const metodePembayaran = tiket.metode_pembayaran;
   const vaNumber = tiket.va_number;
   const totalPembayaran = tiket.total_harga;
@@ -188,10 +194,12 @@ const generateTemplatePembayaran = async ({ email, tiket }) => {
                   )
                   .join("")}
                 <p style="font-size: 18px; font-weight: bold; margin-top: 20px;">
-                    Total Pembayaran: Rp${totalPembayaran.toLocaleString(
-                      "id-ID"
-                    )}
-                </p>
+    <strong>Infaq: Rp${Number(infaq || 0).toLocaleString("id-ID")}
+</p>
+<p style="font-size: 18px; font-weight: bold; margin-top: 10px;">
+    Total Pembayaran: Rp${totalHargaFinal.toLocaleString("id-ID")}
+</p>
+
             </div>
             <p style="font-size: 16px;">Mohon melakukan pembayaran sebelum batas waktu yang sudah ditentukan.</p>
             <p style="font-size: 16px;">Wassalamu'alaikum Wr, Wb</p>\

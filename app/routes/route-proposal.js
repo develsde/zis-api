@@ -48,5 +48,6 @@ router.post(
   ]),
   proposal.createProposalErp
 );
+router.get("/proposalJkt", proposal.getProposalJktTesting);
 
 module.exports = router;

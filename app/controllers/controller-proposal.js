@@ -1864,4 +1864,62 @@ module.exports = {
       });
     }
   },
+  async getProposalJktTesting(req, res) {
+    try {
+      // Step 1: Ambil daftar kota yang ID-nya antara 152-157
+      const targetCityIds = [152, 153, 154, 155, 156, 157];
+
+      const cities = await prisma.cities.findMany({
+        where: {
+          city_id: {
+            in: targetCityIds,
+          },
+        },
+        select: {
+          city_id: true,
+          city_name: true,
+        },
+      });
+
+      // Step 2: Konversi city_id ke string karena mustahiq.kota bertipe string
+      const cityIdsAsString = cities.map((city) => String(city.city_id));
+
+      // Step 3: Hitung jumlah proposal mustahiq per kota (kota dalam string)
+      const grouped = await prisma.mustahiq.groupBy({
+        by: ["kota"],
+        where: {
+          kota: {
+            in: cityIdsAsString,
+          },
+        },
+        _count: {
+          _all: true,
+        },
+      });
+
+      // Step 4: Gabungkan dengan nama kota dari tabel cities
+      const result = grouped.map((item) => {
+        const matchedCity = cities.find((c) => String(c.city_id) === item.kota);
+        return {
+          city_id: matchedCity?.city_id || null,
+          city_name: matchedCity?.city_name || "Tidak diketahui",
+          total_proposal: item._count._all,
+        };
+      });
+
+      // Step 5: Response
+      return res.status(200).json({
+        success: true,
+        message: "Data proposal berdasarkan kota berhasil diambil",
+        data: result,
+      });
+    } catch (error) {
+      console.error("Error in getProposalJkt:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Gagal mengambil data proposal",
+        error: error.message,
+      });
+    }
+  },
 };

@@ -531,6 +531,7 @@ model proposal {
   nama_rekening               String?              @db.VarChar(255)
   nomor_rekening              String?              @db.VarChar(50)
   tgl_bayar                   DateTime?            @db.DateTime(0)
+  disbursement                disbursement[]
   jurnal                      jurnal[]
   user                        user?                @relation(fields: [user_id], references: [user_id], onDelete: Restrict, onUpdate: Restrict, map: "proposal_FK")
   program                     program?             @relation(fields: [program_id], references: [program_id], onUpdate: SetNull, map: "proposal_FK_1")
@@ -1231,6 +1232,7 @@ model pemesanan_megakonser {
   status                      String?                       @db.VarChar(50)
   transaction_time            DateTime?                     @db.DateTime(0)
   expiry_time                 DateTime?                     @db.DateTime(0)
+  infaq                       String?                       @db.VarChar(50)
   detail_pemesanan_megakonser detail_pemesanan_megakonser[]
   affiliator                  affiliator?                   @relation(fields: [kode_affiliator], references: [kode], onDelete: NoAction, onUpdate: NoAction, map: "FK_pemesanan_megakonser_affiliator")
 
@@ -1485,4 +1487,45 @@ model affiliator_vrfp {
   no_hp               String?               @db.VarChar(100)
   kode_affiliator     String?               @db.VarChar(100)
   activity_additional activity_additional[]
+}
+
+model disbursement {
+  id                          Int                @id @default(autoincrement())
+  proposal_id                 Int?
+  type                        disbursement_type?
+  stan                        String?            @db.VarChar(20)
+  ref_number                  String?            @db.VarChar(50)
+  trans_datetime              String?            @db.VarChar(14)
+  inst_id                     String?            @db.VarChar(10)
+  token_id                    String?            @db.VarChar(50)
+  sender_account_id           String?            @db.VarChar(50)
+  sender_name                 String?            @db.VarChar(100)
+  sender_curr_code            String?            @db.VarChar(10)
+  sender_amount               String?            @db.VarChar(50)
+  sender_rate                 String?            @db.VarChar(50)
+  sender_area_code            String?            @db.VarChar(10)
+  beneficiary_purpose_code    String?            @db.VarChar(10)
+  beneficiary_purpose_desc    String?            @db.VarChar(100)
+  beneficiary_inst_id         String?            @db.VarChar(10)
+  beneficiary_account_id      String?            @db.VarChar(50)
+  beneficiary_curr_code       String?            @db.VarChar(10)
+  beneficiary_amount          String?            @db.VarChar(50)
+  beneficiary_cust_ref_number String?            @db.VarChar(50)
+  beneficiary_name            String?            @db.VarChar(100)
+  beneficiary_regency_code    String?            @db.VarChar(10)
+  response_code               String?            @db.VarChar(10)
+  response_description        String?            @db.VarChar(100)
+  signature_data              String?            @db.Text
+  account_balance             String?            @db.VarChar(50)
+  created_at                  DateTime?          @db.DateTime(0)
+  proposal                    proposal?          @relation(fields: [proposal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disbursement_proposal")
+
+  @@index([proposal_id], map: "Index 2")
+}
+
+enum disbursement_type {
+  inquiry
+  transfer
+  status
+  checkBalance
 }
