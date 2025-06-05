@@ -316,12 +316,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-                program_institusi: {
-                  connect: {
-                    institusi_id: program_institusi_id,
-                  },
+              program_institusi: {
+                connect: {
+                  institusi_id: program_institusi_id,
                 },
-              }
+              },
+            }
             : {}),
         },
       });
@@ -2379,21 +2379,21 @@ module.exports = {
         Number(bank) === 20
           ? "BlueBCA"
           : Number(bank) === 2
-          ? "OVO"
-          : Number(bank) === 16
-          ? "Qris"
-          : Number(bank) === 14
-          ? "Dana"
-          : actionMatches && actionMatches[0]
-          ? actionMatches[0]
-          : "Unknown Bank";
+            ? "OVO"
+            : Number(bank) === 16
+              ? "Qris"
+              : Number(bank) === 14
+                ? "Dana"
+                : actionMatches && actionMatches[0]
+                  ? actionMatches[0]
+                  : "Unknown Bank";
 
       const vaNumber =
         Number(bank) === 20 || Number(bank) === 2
           ? actionData
           : actionMatches && actionMatches[2]
-          ? actionMatches[2]
-          : "Unknown VA";
+            ? actionMatches[2]
+            : "Unknown VA";
 
       // Insert ke tabel activity_qurban
       const postResult = await prisma.activity_qurban.create({
@@ -2421,13 +2421,13 @@ module.exports = {
           gender,
           lokasi_qurban: lokasi_penyaluran
             ? {
-                connect: { id: Number(lokasi_penyaluran) }, // Sesuaikan field `id` dengan struktur di DB
-              }
+              connect: { id: Number(lokasi_penyaluran) }, // Sesuaikan field `id` dengan struktur di DB
+            }
             : undefined,
           log_aj: UTC
             ? {
-                connect: { uniqueCode: UTC }, // Sesuaikan field `UTC` dengan struktur di DB
-              }
+              connect: { uniqueCode: UTC }, // Sesuaikan field `UTC` dengan struktur di DB
+            }
             : undefined,
         },
       });
@@ -4402,8 +4402,8 @@ module.exports = {
         detail_pemesanan[0].id_tiket === 1
           ? "A"
           : detail_pemesanan[0].id_tiket === 3
-          ? "B"
-          : "C";
+            ? "B"
+            : "C";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
 
       const postResult = await prisma.pemesanan_megakonser.create({
@@ -4508,9 +4508,9 @@ module.exports = {
       // Base filter untuk activity_qurban
       const baseWhere = {
         program_id: 98,
-        // log_aj: {
-        //   status_transaction: "Success",
-        // },
+        log_aj: {
+          status_transaction: "Success",
+        },
         ...(lokasi && {
           lokasi_qurban: {
             lokasi_penyembelihan: {
