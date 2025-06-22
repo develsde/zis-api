@@ -13,6 +13,9 @@ const morgan = require("morgan");
 
 app.use(morgan("dev"));
 
+const cron = require("node-cron");
+const { checkStatusDisbursement } = require("./app/helper/background-jobs");
+
 app.use(bodyParser.urlencoded({ extended: true, limit: "100mb", parameterLimit: 50000 }));
 app.use(bodyParser.json({ limit: "50mb", extended: true }));
 
@@ -33,7 +36,7 @@ const erpAuthRoute = require("./app/routes/route-erp-auth");
 const erpProgramRoute = require("./app/routes/route-erp-program");
 
 //wakaf
-const waqifRoute = require("./app/routes/route-waqif"); 
+const waqifRoute = require("./app/routes/route-waqif");
 const mitraRoute = require("./app/routes/route-mitra");
 
 //dashboard
@@ -205,7 +208,7 @@ const rawBodySaver = (req, res, buf, encoding) => {
 //     });
 //   }
 // });
-  
+
 
 // app.post("/payment-success", bodyParser.text({
 //   type: '*/*',
@@ -229,7 +232,7 @@ const rawBodySaver = (req, res, buf, encoding) => {
 //     const origin = req.get("origin");
 //     let decodedData;
 //     const parsedBody = req.rawBody;
-    
+
 //     if (parsedBody) {
 //       try {
 //         decodedData = JSON.parse(
@@ -246,7 +249,7 @@ const rawBodySaver = (req, res, buf, encoding) => {
 //     } else {
 //       throw new Error("Missing 'data' field in the request body");
 //     }
-    
+
 //     const requestData = {
 //       timestamp: new Date().toISOString(),
 //       headers: req?.headers,
@@ -314,6 +317,39 @@ const rawBodySaver = (req, res, buf, encoding) => {
 //     });
 //   }
 // });
+
+//Schedule Check Status Disbursement
+cron.schedule("0 9 * * *", async () => {
+  console.log("🔁 Menjalankan cron pengecekan disbursement...");
+
+  const logs = await prisma.disbursement_cron_log.findMany({
+    where: { status: 'waiting' },
+  });
+
+  if (logs.length === 0) {
+    console.log("✅ Tidak ada disbursement yang menunggu pengecekan.");
+    return;
+  }
+  console.log(logs);
+  for (const log of logs) {
+    try {
+      console.log(`➡️ Memulai pengecekan log ID ${log.id} (ref: ${log.ref_number})`);
+
+      await checkStatusDisbursement({
+        proposal_id: log.proposal_id,
+        query_stan: log.query_stan,
+        query_trans_datetime: log.query_trans_datetime,
+        refNumber: log.ref_number,
+        nama: log.nama,
+        cronLogId: log.id,
+      });
+
+      console.log(`✅ Selesai pengecekan log ID ${log.id}`);
+    } catch (err) {
+      console.error(`❌ Gagal pengecekan log ID ${log.id}:`, err);
+    }
+  }
+});
 
 app.post(
   "/payment-success",

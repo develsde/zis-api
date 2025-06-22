@@ -1490,7 +1490,7 @@ model affiliator_vrfp {
 }
 
 model disbursement {
-  id                          Int                @id @default(autoincrement())
+  id                          BigInt             @id @default(autoincrement())
   proposal_id                 Int?
   type                        disbursement_type?
   stan                        String?            @db.VarChar(20)
@@ -1521,6 +1521,23 @@ model disbursement {
   proposal                    proposal?          @relation(fields: [proposal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disbursement_proposal")
 
   @@index([proposal_id], map: "Index 2")
+}
+
+model area {
+  area_id   Int     @id @default(autoincrement())
+  area_name String? @db.VarChar(250)
+}
+
+model disbursement_cron_log {
+  id                   BigInt    @id @default(autoincrement())
+  proposal_id          Int
+  ref_number           String?   @db.VarChar(50)
+  query_stan           String?   @db.VarChar(20)
+  query_trans_datetime String?   @db.VarChar(40)
+  nama                 String?   @db.VarChar(255)
+  status               String?   @default("waiting") @db.VarChar(10)
+  created_at           DateTime? @default(now()) @db.DateTime(0)
+  updated_at           DateTime? @default(now()) @db.DateTime(0)
 }
 
 enum disbursement_type {

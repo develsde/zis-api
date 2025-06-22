@@ -11,6 +11,9 @@ router.get("/signin", payment.signin);
 router.post("/request", payment.reqPay)
 router.post("/cancel", payment.cancelPay)
 router.post("/info", payment.infoPay)
-
+router.post("/disbursement", authentication, payment.transferInquiry)
+router.post("/inquiry-disbursement/:id", authentication, payment.inquiry)
+router.post("/status-disbursement/:id", authentication, payment.statusInquiry)
+router.post("/balance-disbursement", authentication, payment.checkBalance)
 
 module.exports = router;

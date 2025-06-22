@@ -171,28 +171,26 @@ const generateTemplatePembayaran = async ({
                 background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
                 <h3 style="margin-bottom: 15px;">Detail Tiket</h3>
                 ${tiket.detail_pemesanan_megakonser
-                  .map(
-                    (tiket, index) => `
+      .map(
+        (tiket, index) => `
                     <div style="margin-bottom: 10px;">
                         <p><strong>Kode Tiket:</strong> ${tiket.kode_tiket}</p>
                         <p><strong>Harga Tiket:</strong> Rp${tiket.tiket_konser.tiket_harga.toLocaleString(
-                          "id-ID"
-                        )}</p>
-                    <p><strong>Jenis Tiket:</strong> ${
-                      tiket.tiket_konser_detail?.tiket_konser_detail_nama ??
-                      "N/A"
-                    }</p>
+          "id-ID"
+        )}</p>
+                    <p><strong>Jenis Tiket:</strong> ${tiket.tiket_konser_detail?.tiket_konser_detail_nama ??
+          "N/A"
+          }</p>
 
  <!-- Menggunakan tiket_konser_detail_nama -->
                     </div>
-                    ${
-                      index < tiket.length - 1
-                        ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
-                        : ""
-                    }
+                    ${index < tiket.length - 1
+            ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
+            : ""
+          }
                 `
-                  )
-                  .join("")}
+      )
+      .join("")}
                 <p style="font-size: 18px; font-weight: bold; margin-top: 20px;">
     <strong>Infaq: Rp${Number(infaq || 0).toLocaleString("id-ID")}
 </p>
@@ -287,32 +285,30 @@ const generateTemplateExpiredMegaKonser = async ({ email, tiket }) => {
                 background-color: #fff; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
                 <h3 style="margin-bottom: 15px;">Detail Tiket</h3>
                 ${tiket.detail_pemesanan_megakonser
-                  .map(
-                    (tiket, index) => `
+      .map(
+        (tiket, index) => `
                     <div style="margin-bottom: 10px;">
                         <p><strong>Kode Tiket:</strong> ${tiket.kode_tiket}</p>
                         <p><strong>Harga Tiket:</strong> Rp${tiket.tiket_konser.tiket_harga.toLocaleString(
-                          "id-ID"
-                        )}</p>
-                    <p><strong>Jenis Tiket:</strong> ${
-                      tiket.tiket_konser_detail?.tiket_konser_detail_nama ??
-                      "N/A"
-                    }</p>
+          "id-ID"
+        )}</p>
+                    <p><strong>Jenis Tiket:</strong> ${tiket.tiket_konser_detail?.tiket_konser_detail_nama ??
+          "N/A"
+          }</p>
 
  <!-- Menggunakan tiket_konser_detail_nama -->
                     </div>
-                    ${
-                      index < tiket.length - 1
-                        ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
-                        : ""
-                    }
+                    ${index < tiket.length - 1
+            ? '<hr style="margin: 10px 0; border-top: 1px solid #ddd;" />'
+            : ""
+          }
                 `
-                  )
-                  .join("")}
+      )
+      .join("")}
                 <p style="font-size: 18px; font-weight: bold; margin-top: 20px;">
                     Total Pembayaran: Rp${totalPembayaran.toLocaleString(
-                      "id-ID"
-                    )}
+        "id-ID"
+      )}
                 </p>
             </div>
             <p style="font-size: 16px;">Mohon melakukan pembayaran sebelum batas waktu yang sudah ditentukan.</p>
@@ -325,68 +321,172 @@ const generateTemplateExpiredMegaKonser = async ({ email, tiket }) => {
 
 const generateTemplateProposalBayar = async ({
   nama,
+  program,
+  programCategory,
   formattedDate,
   formattedDana,
   bank_number,
   bank_account_name,
+  bank_name,
+  refNumber,
+  namaPengirim,
+  rekPengirim,
+  status
 }) => {
+  const statusColor = status === 'Success'
+    ? '#27ae60'       // hijau
+    : status === 'Pending'
+      ? '#f39c12'       // amber
+      : '#c0392b';      // merah
+
+  const statusText = status === 'Success'
+    ? "Dengan ini kami sampaikan bahwa proposal Anda telah disetujui dan proses penyaluran dana telah <b>berhasil dilakukan</b>."
+    : status === 'Pending'
+      ? "Proposal Anda telah disetujui dan <b>sedang dalam proses penyaluran dana</b>. Mohon ditunggu beberapa saat."
+      : "Proposal Anda telah disetujui, namun <b>penyaluran dana gagal dilakukan</b>. Silakan hubungi tim terkait untuk informasi lebih lanjut.";
+
   const content = `
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Proposal Disetujui</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: auto;
-            background: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            text-align: center;
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        .content {
-            font-size: 16px;
-            line-height: 1.6;
-        }
-        .highlight {
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .footer {
-            margin-top: 20px;
-            font-size: 14px;
-            text-align: center;
-            color: #555;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Konfirmasi Pembayaran Proposal</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f4;
+      padding: 10px;
+      color: #333;
+    }
+    .container {
+      max-width: 700px;
+      margin: auto;
+      background: #fff;
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 25px;
+      color: #2c3e50;
+    }
+    .content {
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .highlight {
+      font-weight: bold;
+      color: #2980b9; /* Biru untuk jumlah dana */
+    }
+    .status {
+      font-weight: bold;
+      color: ${statusColor};
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 12px;
+    }
+    table td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    table td.label {
+      font-weight: bold;
+      width: 40%;
+      background-color: #f9f9f9;
+    }
+    .section-title {
+      margin-top: 30px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #34495e;
+    }
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 14px;
+      color: #777;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">Proposal Disetujui</div>
-        <div class="content">
-            <p>Assalamu'alaikum, Wr Wb.</p>
-            <p>Proposal atas nama <span class="highlight">${nama}</span> telah disetujui dan telah ditransfer pada <span class="highlight">${formattedDate}</span> sejumlah <span class="highlight">${formattedDana}</span> ke nomor rekening <span class="highlight">${bank_number}</span> a.n <span class="highlight">${bank_account_name}</span>.</p>
-            <p>Terima kasih atas kepercayaannya.</p>
-            <p>Wassalamu'alaikum Wr, Wb.</p>
-        </div>
-        <div class="footer">&copy; ZIS Indosat - Semua Hak Dilindungi</div>
+  <div class="container">
+    <div class="header">Konfirmasi Pembayaran Proposal</div>
+    <div class="content">
+      <p>Assalamu'alaikum Warahmatullahi Wabarakatuh,</p>
+      <p>${statusText}</p>
+
+      <div class="section-title">📌 Rincian Proposal</div>
+      <table>
+        <tr>
+          <td class="label">Nama Proposal</td>
+          <td>${nama}</td>
+        </tr>
+        <tr>
+          <td class="label">Program</td>
+          <td>${program}</td>
+        </tr>
+        <tr>
+          <td class="label">Kategori Program</td>
+          <td>${programCategory}</td>
+        </tr>
+      </table>
+
+      <div class="section-title">💳 Rincian Pembayaran</div>
+      <table>
+        <tr>
+          <td class="label">Nomor Referensi</td>
+          <td>${refNumber}</td>
+        </tr>
+        <tr>
+          <td class="label">Waktu</td>
+          <td>${formattedDate}</td>
+        </tr>
+        <tr>
+          <td class="label">Nama Pengirim</td>
+          <td>${namaPengirim}</td>
+        </tr>
+        <tr>
+          <td class="label">Rekening Pengirim</td>
+          <td>${rekPengirim}</td>
+        </tr>
+        <tr>
+          <td class="label">Nama Penerima</td>
+          <td>${bank_account_name}</td>
+        </tr>
+        <tr>
+          <td class="label">Bank Tujuan</td>
+          <td>${bank_name}</td>
+        </tr>
+        <tr>
+          <td class="label">Nomor Rekening</td>
+          <td>${bank_number}</td>
+        </tr>
+        <tr>
+          <td class="label">Jumlah Dana</td>
+          <td><b class="highlight">${formattedDana}</b></td>
+        </tr>
+        <tr>
+          <td class="label">Status</td>
+          <td class="status">${status}</td>
+        </tr>
+      </table>
+
+      <p class="mt-4">
+        Semoga bantuan ini dapat memberikan manfaat sebesar-besarnya kepada yang menerima, dan menjadi keberkahan bagi semua pihak yang terlibat.
+      </p>
+      <p>Wassalamu’alaikum Warahmatullahi Wabarakatuh.</p>
     </div>
+    <div class="footer">&copy; ZIS Indosat - Seluruh Hak Dilindungi</div>
+  </div>
 </body>
 </html>
-
-    `;
+  `;
 
   return content;
 };
@@ -476,8 +576,8 @@ const generateTemplateQurbanSuccess = async ({
       <h3>Detail Qurban Anda:</h3>
       <ul>
         ${detail_qurban
-          .map(
-            (d) => `
+      .map(
+        (d) => `
           <li>
             <strong>Nama Mudhohi:</strong> ${d.nama_mudohi}<br>
             <strong>Paket Hewan:</strong> ${d.paket_hewan}<br>
@@ -485,8 +585,8 @@ const generateTemplateQurbanSuccess = async ({
             <strong>Total:</strong> ${d.total}
           </li>
         `
-          )
-          .join("")}
+      )
+      .join("")}
       </ul>
 
       <p>Terima kasih telah berpartisipasi dalam program Qurban ZISWAF Indosat.</p>
@@ -631,20 +731,17 @@ const generateTemplateQurban = async ({
   
           <div class="details">
             <p><span class="highlight">Tanggal/Waktu:</span> ${formattedDate}</p>
-            <p><span class="highlight">${
-              program_id === 97 ? "Alokasi Hak" : "Lokasi Penyembelihan"
-            }:</span> ${alokasiHak}</p>
+            <p><span class="highlight">${program_id === 97 ? "Alokasi Hak" : "Lokasi Penyembelihan"
+    }:</span> ${alokasiHak}</p>
             <p><span class="highlight">Nama:</span> ${nama}</p>
-            ${
-              tipePendaftar
-                ? `<p><span class="highlight">Tipe Pendaftar:</span> ${tipePendaftar}</p>`
-                : ""
-            }
-            ${
-              type === "1"
-                ? `<p><span class="highlight">NIK Karyawan:</span> ${nik_karyawan}</p>`
-                : ""
-            }
+            ${tipePendaftar
+      ? `<p><span class="highlight">Tipe Pendaftar:</span> ${tipePendaftar}</p>`
+      : ""
+    }
+            ${type === "1"
+      ? `<p><span class="highlight">NIK Karyawan:</span> ${nik_karyawan}</p>`
+      : ""
+    }
             <p><span class="highlight">No WhatsApp:</span> ${no_wa}</p>
             <p><span class="highlight">Nominal:</span> ${formattedDana}</p>
             <p><span class="highlight">Bank:</span> ${bankName}</p>
@@ -659,20 +756,18 @@ const generateTemplateQurban = async ({
           <p><strong>Rincian Qurban:</strong></p>
           <div class="rincian">
             ${detail_qurban
-              .map(
-                (item, index) => `
+      .map(
+        (item, index) => `
               <p><span class="highlight">#${index + 1}</span></p>
-              <p><span class="highlight">Nama Mudohi:</span> ${
-                item.nama_mudohi
-              }</p>
-              <p><span class="highlight">Paket Hewan:</span> ${
-                item.paket_hewan
-              }</p>
+              <p><span class="highlight">Nama Mudohi:</span> ${item.nama_mudohi
+          }</p>
+              <p><span class="highlight">Paket Hewan:</span> ${item.paket_hewan
+          }</p>
               <p><span class="highlight">Harga:</span> ${item.total}</p>
               <hr>
             `
-              )
-              .join("")}
+      )
+      .join("")}
           </div>
   
           <p>Jika ada informasi yang tidak sesuai, harap hubungi admin kami.</p>
@@ -762,19 +857,17 @@ const generateTemplatePemotonganQurban = async ({
           <p><strong>Rincian Qurban:</strong></p>
           <div class="rincian">
             ${detail_qurban
-              .map(
-                (item, index) => `
+      .map(
+        (item, index) => `
               <p><span class="highlight">#${index + 1}</span></p>
-              <p><span class="highlight">Nama Mudohi:</span> ${
-                item.nama_mudohi
-              }</p>
-              <p><span class="highlight">Paket Hewan:</span> ${
-                item.activity_paket?.kategori || "-"
-              }</p>
+              <p><span class="highlight">Nama Mudohi:</span> ${item.nama_mudohi
+          }</p>
+              <p><span class="highlight">Paket Hewan:</span> ${item.activity_paket?.kategori || "-"
+          }</p>
               <hr>
             `
-              )
-              .join("")}
+      )
+      .join("")}
           </div>
 
           <p>Semoga qurban yang telah Bapak/Ibu tunaikan diterima oleh Allah SWT dan membawa keberkahan bagi kita semua.</p>
@@ -831,12 +924,10 @@ const generateTemplateVRFP = ({
         <strong>Paket:</strong> ${kategori} - ${formatCurrency(
     biaya_paket
   )}<br />
-        <strong>Infaq Palestina:</strong> ${
-          zak ? formatCurrency(zak) : "Rp. ---"
-        }<br />
-        <strong>Wakaf Palestina:</strong> ${
-          wak ? formatCurrency(wak) : "Rp. ---"
-        }<br />
+        <strong>Infaq Palestina:</strong> ${zak ? formatCurrency(zak) : "Rp. ---"
+    }<br />
+        <strong>Wakaf Palestina:</strong> ${wak ? formatCurrency(wak) : "Rp. ---"
+    }<br />
         <strong>Jumlah yang harus dibayarkan:</strong> ${formattedDana}
       </p>
 
@@ -883,12 +974,10 @@ const generateTemplateVrfpSuccess = ({
         <strong>Paket:</strong> ${kategori} - ${formatCurrency(
     biaya_paket
   )}<br />
-        <strong>Infaq Palestina:</strong> ${
-          zak ? formatCurrency(zak) : "Rp. ---"
-        }<br />
-        <strong>Wakaf Palestina:</strong> ${
-          wak ? formatCurrency(wak) : "Rp. ---"
-        }<br />
+        <strong>Infaq Palestina:</strong> ${zak ? formatCurrency(zak) : "Rp. ---"
+    }<br />
+        <strong>Wakaf Palestina:</strong> ${wak ? formatCurrency(wak) : "Rp. ---"
+    }<br />
         <strong>Total Pembayaran:</strong> ${formattedDana}
       </p>
 
@@ -939,12 +1028,10 @@ const generateTemplateExpiredVrfp = ({
         <strong>Paket:</strong> ${kategori} - ${formatCurrency(
     biaya_paket
   )}<br />
-        <strong>Infaq Palestina:</strong> ${
-          zak ? formatCurrency(zak) : "Rp. ---"
-        }<br />
-        <strong>Wakaf Palestina:</strong> ${
-          wak ? formatCurrency(wak) : "Rp. ---"
-        }<br />
+        <strong>Infaq Palestina:</strong> ${zak ? formatCurrency(zak) : "Rp. ---"
+    }<br />
+        <strong>Wakaf Palestina:</strong> ${wak ? formatCurrency(wak) : "Rp. ---"
+    }<br />
         <strong>Total yang seharusnya dibayar:</strong> ${formattedDana}
       </p>
 
@@ -982,11 +1069,9 @@ const generateTemplateQurbanExpired = ({
       (item, index) => `
       <tr>
         <td style="padding: 8px; border: 1px solid #ddd;">${index + 1}</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${
-          item.nama_mudohi
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.nama_mudohi
         }</td>
-        <td style="padding: 8px; border: 1px solid #ddd;">${
-          item.paket_hewan
+        <td style="padding: 8px; border: 1px solid #ddd;">${item.paket_hewan
         }</td>
         <td style="padding: 8px; border: 1px solid #ddd;">${item.qty}</td>
         <td style="padding: 8px; border: 1px solid #ddd;">${item.total}</td>
