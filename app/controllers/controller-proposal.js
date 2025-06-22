@@ -7,6 +7,9 @@ const phoneFormatter = require('phone-formatter');
 const parsenik = require("parsenik");
 const { sendImkas, checkImkas } = require("../helper/imkas");
 const { generateTemplateProposalBayar, sendEmail, generateTemplateProposalCreate } = require("../helper/email");
+const moment = require("moment");
+const { TransferAJ } = require("../helper/artajasa");
+const { checkStatusDisbursement } = require("../helper/background-jobs");
 
 module.exports = {
   async details(req, res) {
@@ -607,99 +610,285 @@ module.exports = {
   },
 
   async sudahBayar(req, res) {
+    async function generateRRN() {
+      const now = new Date();
+
+      // ambil format YYMMDDhhmmss
+      const year = now.getFullYear().toString().slice(-2); // 2 digit tahun
+      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 2 digit bulan
+      const day = now.getDate().toString().padStart(2, '0'); // 2 digit tanggal
+      const hour = now.getHours().toString().padStart(2, '0'); // 2 digit jam
+      const minute = now.getMinutes().toString().padStart(2, '0'); // 2 digit menit
+      const second = now.getSeconds().toString().padStart(2, '0'); // 2 digit detik
+
+      return year + month + day + hour + minute + second; // 12 digit
+    }
+    async function generateCustRefNumber(length = 16) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let result = '';
+      for (let i = 0; i < length; i++) {
+        result += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return result;
+    }
+    async function generateUniqueCustRefNumber() {
+      let unique = false;
+      let ref;
+      while (!unique) {
+        ref = await generateCustRefNumber();
+        const existing = await prisma.disbursement.findFirst({
+          where: { beneficiary_cust_ref_number: ref },
+        });
+        if (!existing) unique = true;
+      }
+      return ref;
+    }
     try {
       const id = req.params.id;
       const ispaid = req.body.ispaid;
       const nama = req.body.nama;
       const ref = req.body.ref;
       const tgl_bayar = new Date();
+      const nowWIB = moment().utc().add(7, 'hours').toDate();
 
-      const proposal = await prisma.proposal.update({
+      const lastRecord = await prisma.disbursement.findFirst({
         where: {
-          id: Number(id),
+          type: 'transfer',
         },
-        data: {
-          ispaid,
-          tgl_bayar,
+        orderBy: {
+          id: 'desc',
         },
-        include: {
-          user: {
-            select: {
-              mustahiq: true,
-              username: true,
-            },
+        select: { stan: true },
+      });
+      const lastStan = lastRecord?.stan || '0';
+      const newStan = parseInt(lastStan, 10) + 1;
+      const stan = newStan.toString().padStart(6, '0');
+
+      const lastRecordBalance = await prisma.disbursement.findFirst({
+        where: {
+          type: 'checkBalance',
+        },
+        orderBy: {
+          id: 'desc',
+        },
+        select: { stan: true },
+      });
+      const lastStanBalance = lastRecordBalance?.stan || '0';
+      const newStanBalance = parseInt(lastStanBalance, 10) + 1;
+      const stanBalance = newStanBalance.toString().padStart(6, '0');
+
+      const refNumberTransfer = await generateRRN();
+      const custRefNumber = await generateUniqueCustRefNumber()
+
+      const saveToDbBalance = async (data, type) => {
+        const m = data?.MethodResponse;
+        await prisma.disbursement.create({
+          data: {
+            proposal_id: Number(id),
+            type: type,
+            stan: m.TransactionID?.STAN,
+            trans_datetime: m.TransactionID?.TransDateTime,
+            inst_id: m.TransactionID?.InstID,
+
+            response_code: m.Response?.Code,
+            response_description: m.Response?.Description,
+            signature_data: m.Signature?.Data,
+
+            account_balance: m.Account.Balance || null,
+
+            created_at: nowWIB,
+          }
+        });
+      };
+
+      const saveToDb = async (data, type, refNumber) => {
+        const m = data?.MethodResponse;
+        await prisma.disbursement.create({
+          data: {
+            proposal_id: Number(id),
+            type: type,
+            stan: m.TransactionID?.STAN,
+            ref_number: refNumber,
+            trans_datetime: m.TransactionID?.TransDateTime,
+            inst_id: m.TransactionID?.InstID,
+            token_id: m.TransactionID?.TokenID,
+
+            sender_account_id: m.SenderData?.AccountID,
+            sender_name: m.SenderData?.Name,
+            sender_curr_code: m.SenderData?.CurrCode,
+            sender_amount: m.SenderData?.Amount,
+            sender_rate: m.SenderData?.Rate,
+            sender_area_code: m.SenderData?.AreaCode,
+
+            beneficiary_purpose_code: m.BeneficiaryData?.PurposeCode,
+            beneficiary_purpose_desc: m.BeneficiaryData?.PurposeDesc,
+            beneficiary_inst_id: m.BeneficiaryData?.InstID,
+            beneficiary_account_id: m.BeneficiaryData?.AccountID,
+            beneficiary_curr_code: m.BeneficiaryData?.CurrCode,
+            beneficiary_amount: m.BeneficiaryData?.Amount,
+            beneficiary_cust_ref_number: m.BeneficiaryData?.CustRefNumber,
+            beneficiary_name: m.BeneficiaryData?.Name?.trim(),
+            beneficiary_regency_code: m.BeneficiaryData?.RegencyCode,
+
+            response_code: m.Response?.Code,
+            response_description: m.Response?.Description,
+            signature_data: m.Signature?.Data,
+
+            created_at: nowWIB,
+          }
+        });
+      };
+
+      const handleTransferResult = async (transfer, refNumberTransfer, statusEmail) => {
+
+        const bankCodeNormalized = parseInt(transfer.MethodResponse.BeneficiaryData.InstID, 10).toString();
+        const bank = await prisma.bank.findFirst({
+          where: { bank_code: bankCodeNormalized },
+          select: { bank_name: true }
+        });
+        const bank_name = bank?.bank_name || 'Bank tidak ditemukan';
+
+        const formattedDana = Number(transfer.MethodResponse.BeneficiaryData.Amount).toLocaleString("id-ID", {
+          style: "currency",
+          currency: "IDR",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        });
+
+        const proposal = await prisma.proposal.update({
+          where: { id: Number(id) },
+          data: {
+            ispaid, // 0 untuk pending, 1 untuk berhasil
+            tgl_bayar,
           },
-        },
-      });
+          include: {
+            user: { select: { mustahiq: true, username: true } },
+            program: { select: { program_title: true, program_category: true } }
+          },
+        });
 
-      const currentDate = new Date();
-      const formattedDate = currentDate.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
+        const formattedDate = `${new Date().toLocaleDateString("id-ID", {
+          day: "numeric", month: "long", year: "numeric",
+        })} ${new Date().toLocaleTimeString("id-ID", {
+          hour: "2-digit", minute: "2-digit", hour12: false,
+        })} WIB`;
 
-      if (!proposal) {
-        return res.status(400).json({
-          message: "Proposal tidak ditemukan",
+        const templateEmail = await generateTemplateProposalBayar({
+          nama,
+          formattedDate,
+          formattedDana,
+          program: proposal.program?.program_title || '-',
+          bank_name,
+          programCategory: proposal.program.program_category?.name || '-',
+          refNumber: refNumberTransfer,
+          bank_number: transfer.MethodResponse.BeneficiaryData.AccountID || "-",
+          bank_account_name: transfer.MethodResponse.BeneficiaryData.Name?.trim() || "-",
+          namaPengirim: transfer.MethodResponse.SenderData.Name?.trim() || "-",
+          rekPengirim: transfer.MethodResponse.SenderData.AccountID || "-",
+          status: statusEmail,
+        });
+
+        await sendEmail({
+          email: proposal.user.username,
+          html: templateEmail,
+          subject: statusEmail === 'Pending'
+            ? "Pembayaran Proposal Dalam Proses Transfer"
+            : "Pembayaran Proposal Telah Berhasil Ditransfer",
         });
       }
 
-      if (ispaid == 1) {
-        let pn = ref;
-        if (pn.substring(0, 1) == "0") {
-          pn = "0" + pn.substring(1).trim();
-        } else if (pn.substring(0, 3) == "+62") {
-          pn = "0" + pn.substring(3).trim();
+      const inquiry = await prisma.disbursement.findFirst({
+        where: {
+          response_code: '00',
+          type: 'inquiry',
+          proposal_id: Number(id),
+        },
+        orderBy: {
+          id: 'desc',
         }
-
-        const formattedDana = proposal.dana_yang_disetujui.toLocaleString(
-          "id-ID",
-          { style: "currency", currency: "IDR" }
-        );
-
-        // const msgId = await sendWhatsapp({
-        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        //   text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
-        // });
-
-        try {
-          const templateEmail = await generateTemplateProposalBayar({
-            nama,
-            formattedDate,
-            formattedDana,
-            bank_number: proposal.user.mustahiq.bank_number || "-",
-            bank_account_name: proposal.user.mustahiq.bank_account_name || "-",
-          });
-
-          const msgId = await sendEmail({
-            email: proposal.user.username,
-            html: templateEmail,
-            subject: "Pembayaran Proposal Telah Berhasil Ditransfer",
-          });
-
-          console.log(`Email send success`);
-          return res.status(200).json({
-            success: true,
-            message: `Email berhasil dikirim`,
-            msgId: msgId,
-          });
-        } catch (error) {
-          console.error(`Gagal membuat atau mengirim email, error:`, error);
-          return res.status(500).json({
-            success: false,
-            message: `Gagal mengirim email`,
-            error: error.message,
-          });
-        }
-      }
-      return res.status(200).json({
-        message: "Sukses",
-        data: "Berhasil Ubah Data",
       });
+
+      if (!inquiry) {
+        return res.status(404).json({ error: "Data inquiry tidak ditemukan." });
+      }
+
+      const nama_rekening = inquiry.beneficiary_name || '-'
+      const amount = inquiry.beneficiary_amount || '-'
+      const beneficiaryInstId = inquiry.beneficiary_inst_id || '-'
+      const beneficiaryAccountId = inquiry.beneficiary_account_id || '-'
+      const beneficiaryName = inquiry.beneficiary_name || '-'
+      const tokenID = inquiry.token_id || '-'
+
+      const result = await TransferAJ({
+        stan, refNumberTransfer, custRefNumber, nama_rekening, amount, beneficiaryInstId, beneficiaryAccountId, beneficiaryName, tokenID
+      });
+
+      if (result.error && result.success === false) {
+        return res.status(500).json(result);
+      }
+
+      if (result?.data && result?.success === false) {
+        await saveToDb(result.data, result.type, refNumberTransfer);
+        if (result.errorCode === 'TO' || result.errorCode === '68') {
+          const resultBalance = await BalanceAJ({
+            stan
+          });
+          await saveToDbBalance(resultBalance.data, 'checkBalance');
+          await handleTransferResult(result.data, refNumberTransfer, 'Pending');
+          // checkStatusDisbursement({
+          //   proposal_id: Number(id),
+          //   query_stan: result.data?.MethodResponse?.TransactionID?.STAN,
+          //   query_trans_datetime: result.data?.MethodResponse?.TransactionID?.TransDateTime,
+          //   refNumber: refNumberTransfer,
+          //   nama
+          // });
+          await prisma.disbursement_cron_log.create({
+            data: {
+              proposal_id: Number(id),
+              ref_number: refNumberTransfer,
+              query_stan: result.data?.MethodResponse?.TransactionID?.STAN || null,
+              query_trans_datetime: result.data?.MethodResponse?.TransactionID?.TransDateTime || null,
+              nama: nama || '-',
+              status: 'waiting',
+              created_at: nowWIB,
+              updated_at: nowWIB,
+            },
+          });
+          return res.status(202).json(result);
+        }
+        return res.status(500).json(result);
+      }
+
+      const transfer = result?.data;
+
+      await saveToDb(transfer, 'transfer', refNumberTransfer);
+      const resultBalance = await BalanceAJ({
+        stanBalance
+      });
+      await saveToDbBalance(resultBalance.data, 'checkBalance');
+      await handleTransferResult(transfer, refNumberTransfer, result.data.MethodResponse.Response.Description);
+
+      // let pn = ref;
+      // if (pn.substring(0, 1) == "0") {
+      //   pn = "0" + pn.substring(1).trim();
+      // } else if (pn.substring(0, 3) == "+62") {
+      //   pn = "0" + pn.substring(3).trim();
+      // }
+
+      // const formattedDana = proposal.dana_yang_disetujui.toLocaleString(
+      //   "id-ID",
+      //   { style: "currency", currency: "IDR" }
+      // );
+
+      // const msgId = await sendWhatsapp({
+      //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
+      //   text: `Proposal Atas Nama ${nama} telah disetujui dan telah ditransfer pada ${formattedDate} sejumlah ${formattedDana} ke nomor Rekening atau Rekening ${proposal.user.mustahiq.bank_number} a.n ${proposal.user.mustahiq.bank_account_name} . Terima kasih`,
+      // });
+
+      res.status(200).json(result);
     } catch (error) {
-      return res.status(500).json({
-        message: error?.message,
+      res.status(500).json({
+        error: error.message || 'Terjadi kesalahan saat memproses inquiry transfer.',
       });
     }
   },
@@ -1581,6 +1770,11 @@ module.exports = {
                   },
                 },
               },
+            },
+            disbursement: {
+              where: { type: "checkBalance" },
+              take: 1,
+              orderBy: { id: "desc" }
             },
           },
           orderBy: {
