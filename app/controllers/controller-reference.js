@@ -1266,7 +1266,11 @@ module.exports = {
 
       const whereCondition = {
         program_id: id_program,
-        ...(id_program === 81 && { id: 43 }),
+        ...(id_program === 81 && {
+          id: {
+            in: [43, 44],
+          },
+        }),
       };
 
       const paket = await prisma.activity_paket.findMany({

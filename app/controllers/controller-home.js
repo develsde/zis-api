@@ -46,6 +46,7 @@ const path = require("path");
 const { error } = require("console");
 const { schedule } = require("node-cron");
 const { connect } = require("http2");
+const { sendFonnte } = require("../helper/whatsapp");
 
 module.exports = {
   async getAllProgram(req, res) {
@@ -316,12 +317,12 @@ module.exports = {
           program_kode: nanoid(),
           ...(program_institusi_id
             ? {
-              program_institusi: {
-                connect: {
-                  institusi_id: program_institusi_id,
+                program_institusi: {
+                  connect: {
+                    institusi_id: program_institusi_id,
+                  },
                 },
-              },
-            }
+              }
             : {}),
         },
       });
@@ -1952,29 +1953,11 @@ module.exports = {
 
   async getPenjualan(req, res) {
     try {
-      const start = new Date(req.query.start);
-      const end = new Date(req.query.end);
-
-      const validStart = !isNaN(start.getTime()) ? start : new Date();
-      const validEnd =
-        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
-
-      validStart.setHours(0, 0, 0, 0);
-      validEnd.setHours(23, 59, 59, 999);
-
-      if (validStart > validEnd) {
-        return res.status(400).json({ message: "Invalid date range" });
-      }
-
-      const params = {
-        created_date: {
-          gte: validStart,
-          lte: validEnd,
-        },
-      };
-
+      // Ambil semua activity_additional yang sudah settlement
       const ActAdditional = await prisma.activity_additional.findMany({
-        where: params,
+        where: {
+          status_transaksi: "settlement",
+        },
         include: {
           program: {
             select: {
@@ -1987,60 +1970,48 @@ module.exports = {
         },
       });
 
-      const orderIds = ActAdditional.map((item) => item.order_id);
-
-      const statuses = [];
-      for (const orderId of orderIds) {
-        const statuss = await cekStatus({ order: orderId });
-        const log = await prisma.log_vendor.create({
-          data: {
-            vendor_api: statuss?.config?.url,
-            url_api: req.originalUrl,
-            api_header: JSON.stringify(statuss.headers),
-            api_body: statuss?.config?.data,
-            api_response: JSON.stringify(statuss.data),
-            payload: JSON.stringify(req.body),
-          },
-        });
-        const status = statuss.data;
-        statuses.push(status);
-      }
-
-      const filteredActAdditional = ActAdditional.filter((item, index) => {
-        return statuses[index].transaction_status === "settlement";
-      });
-
-      const additionalIds = filteredActAdditional
-        .map((item) => item.id)
-        .filter((id) => id !== undefined && id !== null);
+      // Ambil semua ID untuk digunakan dalam query raw
+      const additionalIds = ActAdditional.map((item) => item.id).filter(
+        (id) => id !== undefined && id !== null
+      );
 
       const additionalIdsString = additionalIds.join(",");
+      if (additionalIds.length === 0) {
+        return res.status(200).json({
+          message: "Tidak ada transaksi settlement",
+          dataPenjualan: [],
+          totalZakat: 0,
+          totalWakaf: 0,
+          ongkir: 0,
+          totalPendapatan: 0,
+        });
+      }
 
       const pendapatan = await prisma.$queryRawUnsafe(`
-      SELECT SUM(total_biaya) AS totalPendapatan
-      FROM activity_additional
-      WHERE id IN (${additionalIdsString})
+        SELECT SUM(total_biaya) AS totalPendapatan
+        FROM activity_additional
+        WHERE id IN (${additionalIdsString})
       `);
 
       const zakatWakaf = await prisma.$queryRawUnsafe(`
-      SELECT SUM(wakaf) AS total_wakaf, SUM(zakat) AS total_zakat
-      FROM activity_additional
-      WHERE id IN (${additionalIdsString})
+        SELECT SUM(wakaf) AS total_wakaf, SUM(zakat) AS total_zakat
+        FROM activity_additional
+        WHERE id IN (${additionalIdsString})
       `);
 
       const penjualan = await prisma.$queryRawUnsafe(`
-      SELECT a.paket_id, p.kategori, SUM(jumlah_peserta) AS jumlah_pemesanan, p.biaya,  
-      p.biaya * SUM(a.jumlah_peserta) AS hasil_penjualan
-      FROM activity_additional a
-      INNER JOIN activity_paket p ON a.paket_id = p.id
-      WHERE a.id IN (${additionalIdsString})
-      GROUP BY a.paket_id
+        SELECT a.paket_id, p.kategori, SUM(jumlah_peserta) AS jumlah_pemesanan, p.biaya,  
+        p.biaya * SUM(a.jumlah_peserta) AS hasil_penjualan
+        FROM activity_additional a
+        INNER JOIN activity_paket p ON a.paket_id = p.id
+        WHERE a.id IN (${additionalIdsString})
+        GROUP BY a.paket_id
       `);
 
       const ongkir = await prisma.$queryRawUnsafe(`
-      SELECT SUM(ongkir) AS total_ongkir
-      FROM activity_additional
-      WHERE id IN (${additionalIdsString})
+        SELECT SUM(ongkir) AS total_ongkir
+        FROM activity_additional
+        WHERE id IN (${additionalIdsString})
       `);
 
       res.status(200).json({
@@ -2379,21 +2350,21 @@ module.exports = {
         Number(bank) === 20
           ? "BlueBCA"
           : Number(bank) === 2
-            ? "OVO"
-            : Number(bank) === 16
-              ? "Qris"
-              : Number(bank) === 14
-                ? "Dana"
-                : actionMatches && actionMatches[0]
-                  ? actionMatches[0]
-                  : "Unknown Bank";
+          ? "OVO"
+          : Number(bank) === 16
+          ? "Qris"
+          : Number(bank) === 14
+          ? "Dana"
+          : actionMatches && actionMatches[0]
+          ? actionMatches[0]
+          : "Unknown Bank";
 
       const vaNumber =
         Number(bank) === 20 || Number(bank) === 2
           ? actionData
           : actionMatches && actionMatches[2]
-            ? actionMatches[2]
-            : "Unknown VA";
+          ? actionMatches[2]
+          : "Unknown VA";
 
       // Insert ke tabel activity_qurban
       const postResult = await prisma.activity_qurban.create({
@@ -2421,13 +2392,13 @@ module.exports = {
           gender,
           lokasi_qurban: lokasi_penyaluran
             ? {
-              connect: { id: Number(lokasi_penyaluran) }, // Sesuaikan field `id` dengan struktur di DB
-            }
+                connect: { id: Number(lokasi_penyaluran) }, // Sesuaikan field `id` dengan struktur di DB
+              }
             : undefined,
           log_aj: UTC
             ? {
-              connect: { uniqueCode: UTC }, // Sesuaikan field `UTC` dengan struktur di DB
-            }
+                connect: { uniqueCode: UTC }, // Sesuaikan field `UTC` dengan struktur di DB
+              }
             : undefined,
         },
       });
@@ -2713,7 +2684,6 @@ module.exports = {
           .json({ message: "Detail pemesanan wajib diisi" });
       }
 
-      // Cek affiliator jika ada kode
       if (kode_affiliator) {
         const affiliator = await prisma.affiliator.findUnique({
           where: { kode: kode_affiliator },
@@ -2726,25 +2696,21 @@ module.exports = {
         }
       }
 
-      // Generate kode_pemesanan: SOF00001 dst
       const lastOrder = await prisma.pemesanan_megakonser.findFirst({
         orderBy: { id: "desc" },
         select: { id: true },
       });
 
-      const baseId = 686; // Jika kosong, mulai dari ID 686
+      const baseId = 686;
       const nextId = lastOrder ? lastOrder.id + 1 : baseId;
-
       const kode_pemesanan = `SOF${String(nextId).padStart(5, "0")}`;
 
       console.log(
         `Processing new order: ${kode_pemesanan} for email: ${email}`
       );
 
-      // Pastikan infaq bertipe number (default 0 jika null/undefined)
       const totalHargaFinal = Number(total_harga) + Number(infaq || 0);
 
-      // Proses Midtrans Snap
       const response = await midtransfer({
         order: kode_pemesanan,
         price: totalHargaFinal,
@@ -2761,7 +2727,6 @@ module.exports = {
       const statusId = response.data.transaction_status;
       const displayStatus = statusId === "200" ? "Berhasil" : "gagal";
 
-      // Simpan data pemesanan utama
       const postResult = await prisma.pemesanan_megakonser.create({
         data: {
           nama,
@@ -2779,7 +2744,6 @@ module.exports = {
         },
       });
 
-      // Transform detail untuk simpan tiket
       const transformedDetails = detail_pemesanan.map((detail) => {
         const kode_tiket = `TK-${Math.floor(100000 + Math.random() * 900000)}`;
         return {
@@ -2796,7 +2760,6 @@ module.exports = {
 
       console.log(`Details inserted for order: ${kode_pemesanan}`);
 
-      // Ambil ulang data lengkap
       const pemesanan = await prisma.pemesanan_megakonser.findUnique({
         where: { kode_pemesanan },
         include: {
@@ -2809,7 +2772,6 @@ module.exports = {
         },
       });
 
-      // Generate PDF dan schedule pengecekan status
       try {
         const pdfLink = await generatePdf({ orderDetails: pemesanan });
         scheduleCekStatusKonser({
@@ -2825,7 +2787,6 @@ module.exports = {
         );
       }
 
-      // Generate email
       const templateEmail = await generateTemplatePembayaran({
         email,
         postResult,
@@ -2834,10 +2795,59 @@ module.exports = {
         tiket: pemesanan,
       });
 
-      await sendEmail({
-        email,
-        html: templateEmail,
-        subject: "Lakukan Pembayaran Tiket Megakonser",
+      const cleanNumber = telepon.replace(/\D/g, "").replace(/^62/, "0");
+      const wa_number = cleanNumber.startsWith("0")
+        ? cleanNumber
+        : `0${cleanNumber}`;
+
+      const tiketText = pemesanan.detail_pemesanan_megakonser
+        .map((item, index) => {
+          const harga = Number(
+            item.tiket_konser?.tiket_harga || 0
+          ).toLocaleString("id-ID");
+          const jenis =
+            item.tiket_konser_detail?.tiket_konser_detail_nama || "N/A";
+          return (
+            `Tiket #${index + 1}\n` +
+            `Kode Tiket : ${item.kode_tiket}\n` +
+            `Jenis Tiket: ${jenis}\n` +
+            `Harga      : Rp${harga}`
+          );
+        })
+        .join(`\n-----------------------\n`);
+
+      const totalPembayaran = totalHargaFinal.toLocaleString("id-ID");
+      const infaqStr = Number(infaq || 0).toLocaleString("id-ID");
+
+      const waText = `
+  Assalamu'alaikum Wr Wb.
+  
+  Mohon melakukan pembayaran tiket Anda.
+  
+  Berikut ini adalah detail transaksi Anda:
+  
+  Nama               : ${nama}
+  Kode Pemesanan     : ${kode_pemesanan}
+  Metode Pembayaran  : Snap
+  
+  =======================
+  TIKET YANG ANDA PESAN:
+  =======================
+  
+  ${tiketText}
+  
+  Infaq             : Rp${infaqStr}
+  Total Pembayaran  : Rp${totalPembayaran}
+  
+  Silakan segera melakukan pembayaran melalui link berikut:
+  ${response.data.redirect_url}
+  
+  Wassalamu'alaikum Wr Wb.
+  `.trim();
+
+      await sendFonnte({
+        wa_number,
+        text: waText,
       });
 
       res.status(200).json({
@@ -3590,20 +3600,6 @@ module.exports = {
       const sortBy = req.query.sortBy || "transaction_time";
       const sortType = req.query.order || "desc";
 
-      const start = new Date(req.query.start);
-      const end = new Date(req.query.end);
-
-      const validStart = !isNaN(start.getTime()) ? start : new Date();
-      const validEnd =
-        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
-
-      validStart.setHours(0, 0, 0, 0);
-      validEnd.setHours(23, 59, 59, 999);
-
-      if (validStart > validEnd) {
-        return res.status(400).json({ message: "Invalid Date Range" });
-      }
-
       const filterParams = {
         OR: [
           { nama: { contains: keyword } },
@@ -3611,11 +3607,13 @@ module.exports = {
           { email: { contains: keyword } },
           { kode_pemesanan: { contains: keyword } },
         ],
-        transaction_time: {
-          gte: validStart,
-          lte: validEnd,
-        },
         ...(kode_affiliator && { kode_affiliator }),
+        status: "settlement", // ✅ filter status langsung
+        detail_pemesanan_megakonser: {
+          none: {
+            id_tiket: 8, // ✅ exclude jika ada yang pakai tiket id 8
+          },
+        },
       };
 
       const allPemesanan = await prisma.pemesanan_megakonser.findMany({
@@ -3634,24 +3632,8 @@ module.exports = {
         },
       });
 
-      // Ambil semua kecuali yang memiliki id_tiket = 8
-      const filteredOut = allPemesanan.filter(
-        (p) => !p.detail_pemesanan_megakonser.some((d) => d.id_tiket === 8)
-      );
-
-      const orderIds = filteredOut.map((p) => p.kode_pemesanan);
-
-      const statusResults = await Promise.all(
-        orderIds.map((order) => cekStatus({ order }))
-      );
-
-      const filtered = filteredOut.filter(
-        (p, index) =>
-          statusResults[index].data.transaction_status === "settlement"
-      );
-
-      const count = filtered.length;
-      const paginatedData = filtered.slice(skip, skip + perPage);
+      const count = allPemesanan.length;
+      const paginatedData = allPemesanan.slice(skip, skip + perPage);
 
       const formatted = paginatedData.map((pesan) => ({
         ...pesan,
@@ -4184,53 +4166,17 @@ module.exports = {
 
   async getPenjualanMegakonser(req, res) {
     try {
-      const start = new Date(req.query.start);
-      const end = new Date(req.query.end);
-
-      const validStart = !isNaN(start.getTime()) ? start : new Date();
-      const validEnd =
-        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
-
-      validStart.setHours(0, 0, 0, 0);
-      validEnd.setHours(23, 59, 59, 999);
-
-      if (validStart > validEnd) {
-        return res.status(400).json({ message: "Invalid date range" });
-      }
-
-      const params = {
-        created_date: {
-          gte: validStart,
-          lte: validEnd,
-        },
-      };
-
-      const totalPendapatan = await prisma.pemesanan_megakonser.aggregate({
-        _sum: {
-          total_harga: true,
-        },
+      // Ambil semua data pemesanan yang statusnya "settlement"
+      const allPemesanan = await prisma.pemesanan_megakonser.findMany({
         where: {
           status: "settlement",
         },
-      });
-
-      const pemesanan = await prisma.detail_pemesanan_megakonser.findMany({
-        where: {
-          pemesanan_megakonser: {
-            status: "settlement",
-          },
-        },
-        select: {
-          id_detail_tiket: true,
-          tiket_konser_detail: {
-            select: {
-              id: true,
-              tiket_konser_detail_nama: true,
-              tiket_konser: {
-                select: {
-                  tiket_id: true,
-                  tiket_nama: true,
-                  tiket_harga: true,
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser_detail: {
+                include: {
+                  tiket_konser: true,
                 },
               },
             },
@@ -4238,15 +4184,37 @@ module.exports = {
         },
       });
 
-      const groupedData = pemesanan.reduce((acc, item) => {
-        const { tiket_konser } = item.tiket_konser_detail;
-        const tiketKey = tiket_konser.tiket_id;
+      // Filter hanya yang memiliki id_tiket = 8
+      const withSpecificTiket = allPemesanan.filter((p) =>
+        p.detail_pemesanan_megakonser.some(
+          (d) => d.tiket_konser_detail.tiket_konser.tiket_id === 8
+        )
+      );
+
+      // Hitung total pendapatan hanya dari tiket id 8
+      let totalPendapatan = 0;
+
+      const pemesananDetail = [];
+
+      withSpecificTiket.forEach((p) => {
+        p.detail_pemesanan_megakonser.forEach((d) => {
+          if (d.tiket_konser_detail.tiket_konser.tiket_id === 8) {
+            pemesananDetail.push(d);
+            totalPendapatan += d.tiket_konser_detail.tiket_konser.tiket_harga;
+          }
+        });
+      });
+
+      // Grouping berdasarkan tiket_konser_id dan tiket_konser_detail.id
+      const groupedData = pemesananDetail.reduce((acc, item) => {
+        const tiket = item.tiket_konser_detail.tiket_konser;
+        const tiketKey = tiket.tiket_id;
 
         if (!acc[tiketKey]) {
           acc[tiketKey] = {
-            tiket_id: tiket_konser.tiket_id,
-            tiket_nama: tiket_konser.tiket_nama,
-            tiket_harga: tiket_konser.tiket_harga,
+            tiket_id: tiket.tiket_id,
+            tiket_nama: tiket.tiket_nama,
+            tiket_harga: tiket.tiket_harga,
             total_pembelian: 0,
             detail_tiket: {},
           };
@@ -4281,11 +4249,141 @@ module.exports = {
       res.status(200).json({
         message: "Sukses Ambil Data",
         dataPenjualan: penjualan,
-        totalPendapatan: totalPendapatan._sum.total_harga,
+        totalPendapatan,
       });
     } catch (error) {
       res.status(500).json({
         message: error?.message,
+      });
+    }
+  },
+  async getPenjualanMegakonserLama(req, res) {
+    try {
+      // Ambil semua data pemesanan yang statusnya "settlement"
+      const allPemesanan = await prisma.pemesanan_megakonser.findMany({
+        where: {
+          status: "settlement",
+        },
+        include: {
+          detail_pemesanan_megakonser: {
+            include: {
+              tiket_konser_detail: {
+                include: {
+                  tiket_konser: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      // Filter hanya yang memiliki tiket_id selain 8
+      const withOtherTiket = allPemesanan.filter((p) =>
+        p.detail_pemesanan_megakonser.some(
+          (d) => d.tiket_konser_detail.tiket_konser.tiket_id !== 8
+        )
+      );
+
+      // Hitung total pendapatan dari tiket selain id 8
+      let totalPendapatan = 0;
+
+      const pemesananDetail = [];
+
+      withOtherTiket.forEach((p) => {
+        p.detail_pemesanan_megakonser.forEach((d) => {
+          if (d.tiket_konser_detail.tiket_konser.tiket_id !== 8) {
+            pemesananDetail.push(d);
+            totalPendapatan += d.tiket_konser_detail.tiket_konser.tiket_harga;
+          }
+        });
+      });
+
+      // Grouping berdasarkan tiket_konser_id dan tiket_konser_detail.id
+      const groupedData = pemesananDetail.reduce((acc, item) => {
+        const tiket = item.tiket_konser_detail.tiket_konser;
+        const tiketKey = tiket.tiket_id;
+
+        if (!acc[tiketKey]) {
+          acc[tiketKey] = {
+            tiket_id: tiket.tiket_id,
+            tiket_nama: tiket.tiket_nama,
+            tiket_harga: tiket.tiket_harga,
+            total_pembelian: 0,
+            detail_tiket: {},
+          };
+        }
+
+        acc[tiketKey].total_pembelian += 1;
+
+        const detailKey = item.tiket_konser_detail.id;
+
+        if (!acc[tiketKey].detail_tiket[detailKey]) {
+          acc[tiketKey].detail_tiket[detailKey] = {
+            detail_tiket_id: detailKey,
+            tiket_konser_detail_nama:
+              item.tiket_konser_detail.tiket_konser_detail_nama,
+            jumlah_dipesan: 0,
+          };
+        }
+
+        acc[tiketKey].detail_tiket[detailKey].jumlah_dipesan += 1;
+
+        return acc;
+      }, {});
+
+      const penjualan = Object.values(groupedData).map((tiket) => ({
+        tiket_id: tiket.tiket_id,
+        tiket_nama: tiket.tiket_nama,
+        tiket_harga: tiket.tiket_harga,
+        total_pembelian: tiket.total_pembelian,
+        detail_tiket: Object.values(tiket.detail_tiket),
+      }));
+
+      res.status(200).json({
+        message: "Sukses Ambil Data",
+        dataPenjualan: penjualan,
+        totalPendapatan,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message,
+      });
+    }
+  },
+
+  async testSendFonnte(req, res) {
+    try {
+      const wa_number = req.query.wa || "6281234567890"; // default nomor WA jika tidak dikirim
+      const text = "Ini adalah pesan test dari API Fonnte ✅";
+
+      const payload = {
+        target: "082235400787",
+        message: "halo testing",
+      };
+
+      const headers = {
+        Authorization: "V41xrmX2cTcfMWZ49FbS", // Ganti dengan API Key asli kamu atau pakai env
+        "Content-Type": "application/json",
+      };
+
+      const response = await axios.post(
+        "https://api.fonnte.com/send",
+        payload,
+        {
+          headers,
+        }
+      );
+
+      res.status(200).json({
+        success: true,
+        message: "Berhasil mengirim pesan WA test via Fonnte",
+        data: response.data,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Gagal mengirim pesan via Fonnte",
+        error: error?.response?.data || error.message,
       });
     }
   },
@@ -4402,8 +4500,8 @@ module.exports = {
         detail_pemesanan[0].id_tiket === 1
           ? "A"
           : detail_pemesanan[0].id_tiket === 3
-            ? "B"
-            : "C";
+          ? "B"
+          : "C";
       const kode_pemesanan = `${hurufAwal}${String(nextId).padStart(5, "0")}`;
 
       const postResult = await prisma.pemesanan_megakonser.create({
@@ -4555,9 +4653,7 @@ module.exports = {
           skip,
           take: perPage,
           orderBy: {
-            log_aj: {
-              timestampt: sortType,
-            },
+            id: sortType, // <- hanya berdasarkan id
           },
         }),
       ]);

@@ -22,9 +22,132 @@ const {
   generateTemplateVrfpSuccess,
   generateTemplateExpiredVrfp,
 } = require("../helper/email");
+const { sendFonnte, sendFonnteMedia } = require("../helper/whatsapp.js");
 
-const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) => {
-  // Log the start of the process for the order
+// const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) => {
+//   // Log the start of the process for the order
+//   console.log(`Starting schedule for order: ${order}, Email: ${email}`);
+
+//   const currentStatus = await prisma.pemesanan_megakonser.findFirst({
+//     where: { kode_pemesanan: order },
+//   });
+
+//   if (currentStatus?.status === "settlement") {
+//     console.log(`Order ${order} is already settled.`);
+//     return;
+//   }
+
+//   let elapsedMinutes = 0;
+
+//   const task = cron.schedule("*/2 * * * *", async () => {
+//     try {
+//       console.log(`Checking status for order: ${order}, Email: ${email}`);
+
+//       let stats = await cekStatus({ order });
+//       console.log("status", stats.data);
+
+//       // Log the status response from cekStatus
+//       console.log(
+//         `Status response for order: ${order} - Status code: ${stats.data?.status_code}, Transaction status: ${stats.data?.transaction_status}`
+//       );
+
+//       if (
+//         stats.data?.status_code == 200 &&
+//         stats.data?.transaction_status === "settlement"
+//       ) {
+//         // Generate email template
+//         const templateEmail = await generateTemplateMegaKonser({
+//           email,
+//           password: email,
+//           tiket: pemesanan,
+//         });
+
+//         // Log the template creation
+//         console.log(
+//           `Generated email template for order: ${order}, Email: ${email}`
+//         );
+
+//         const msgId = await sendEmailWithPdf({
+//           email,
+//           html: templateEmail,
+//           subject: "Pembelian Tiket Sound of Freedom",
+//           pdfPath: filePath,
+//         });
+
+//         // Log the email sent with PDF
+//         console.log(
+//           `Email with PDF sent for order: ${order}, Email: ${email}, Message ID: ${msgId}`
+//         );
+
+//         // Delete the PDF file after sending
+//         // fs.unlink(filePath, (err) => {
+//         //   if (err) {
+//         //     console.error("Error saat menghapus file PDF:", err);
+//         //   } else {
+//         //     console.log(`Deleted PDF file for order: ${order}, File path: ${filePath}`);
+//         //   }
+//         // });
+
+//         // Update the order status to 'settlement'
+//         await prisma.pemesanan_megakonser.update({
+//           where: { kode_pemesanan: order },
+//           data: { status: stats.data.transaction_status || "" },
+//         });
+
+//         // Log the order settlement
+//         console.log(
+//           `Order ${order} settled successfully. Email sent: ${msgId}`
+//         );
+//         task.stop();
+//       } else {
+//         elapsedMinutes += 1;
+//         // Log the elapsed time
+//         console.log(
+//           `Elapsed time for order: ${order} is now ${elapsedMinutes} minutes`
+//         );
+
+//         if (elapsedMinutes >= 5) {
+//           // Expire the payment if it takes too long
+//           stats = await expirePayment({ order });
+
+//           // Generate expired email template
+//           const templateEmailExpired = await generateTemplateExpiredMegaKonser({
+//             email,
+//             password: email,
+//             tiket: pemesanan,
+//           });
+
+//           // Send expired email
+//           const msgId = await sendEmail({
+//             email,
+//             html: templateEmailExpired,
+//             subject: "Pembelian Tiket Mega Konser Indosat",
+//           });
+
+//           // Log the expired status
+//           console.log(`Order ${order} expired. Notification sent: ${msgId}`);
+
+//           // Update the order status to 'expired'
+//           await prisma.pemesanan_megakonser.update({
+//             where: { kode_pemesanan: order },
+//             data: { status: "expired" },
+//           });
+
+//           task.stop();
+//         }
+//       }
+//     } catch (error) {
+//       // Log any errors during the process
+//       console.error(`Error checking order status for order: ${order}, Error: ${error.message}`);
+//     }
+//   });
+// };
+const scheduleCekStatusKonser = async ({
+  order,
+  email,
+  pemesanan,
+  filePath,
+}) => {
   console.log(`Starting schedule for order: ${order}, Email: ${email}`);
 
   const currentStatus = await prisma.pemesanan_megakonser.findFirst({
@@ -45,102 +168,101 @@ const scheduleCekStatusKonser = async ({ order, email, pemesanan, filePath }) =>
       let stats = await cekStatus({ order });
       console.log("status", stats.data);
 
-      // Log the status response from cekStatus
-      console.log(
-        `Status response for order: ${order} - Status code: ${stats.data?.status_code}, Transaction status: ${stats.data?.transaction_status}`
-      );
-
       if (
         stats.data?.status_code == 200 &&
         stats.data?.transaction_status === "settlement"
       ) {
-        // Generate email template
-        const templateEmail = await generateTemplateMegaKonser({
-          email,
-          password: email,
-          tiket: pemesanan,
-        });
-
-        // Log the template creation
-        console.log(
-          `Generated email template for order: ${order}, Email: ${email}`
-        );
-
-        const msgId = await sendEmailWithPdf({
-          email,
-          html: templateEmail,
-          subject: "Pembelian Tiket Sound of Freedom",
-          pdfPath: filePath,
-        });
-
-        // Log the email sent with PDF
-        console.log(
-          `Email with PDF sent for order: ${order}, Email: ${email}, Message ID: ${msgId}`
-        );
-
-        // Delete the PDF file after sending
-        // fs.unlink(filePath, (err) => {
-        //   if (err) {
-        //     console.error("Error saat menghapus file PDF:", err);
-        //   } else {
-        //     console.log(`Deleted PDF file for order: ${order}, File path: ${filePath}`);
-        //   }
-        // });
-
-        // Update the order status to 'settlement'
         await prisma.pemesanan_megakonser.update({
           where: { kode_pemesanan: order },
           data: { status: stats.data.transaction_status || "" },
         });
 
-        // Log the order settlement
-        console.log(
-          `Order ${order} settled successfully. Email sent: ${msgId}`
-        );
+        // Kirim WA QR saat sukses
+        if (pemesanan?.telepon && filePath) {
+          const wa_number = pemesanan.telepon
+            .replace(/\D/g, "")
+            .replace(/^62/, "0");
+
+          const totalHargaFinal =
+            Number(pemesanan.total_harga || 0) + Number(pemesanan.infaq || 0);
+
+          const caption = `🟢 *Pembayaran Berhasil*
+
+Halo ${pemesanan.nama || "Customer"}, pembayaran Anda telah *berhasil*.
+
+Kode Pemesanan: ${pemesanan.kode_pemesanan || order}
+Status: *settlement*
+Total Pembayaran: Rp${totalHargaFinal.toLocaleString("id-ID")}
+
+📎 Berikut adalah QR Code tiket Anda.
+
+Terima kasih telah melakukan pembelian. Wassalamu'alaikum Wr Wb.`;
+
+          await sendFonnteMedia({
+            wa_number,
+            filePath,
+            caption,
+          });
+
+          console.log(`✅ WA with QR sent to ${wa_number}`);
+        } else {
+          console.error(
+            `❌ Missing phone number or filePath for order ${order}, skipping WA`
+          );
+        }
+
+        console.log(`✅ Order ${order} settled and WA sent.`);
         task.stop();
       } else {
-        elapsedMinutes += 1;
-        // Log the elapsed time
+        elapsedMinutes += 2;
         console.log(
-          `Elapsed time for order: ${order} is now ${elapsedMinutes} minutes`
+          `⏱️ Elapsed time for order: ${order} is now ${elapsedMinutes} minutes`
         );
 
-        if (elapsedMinutes >= 5) {
-          // Expire the payment if it takes too long
-          stats = await expirePayment({ order });
-
-          // Generate expired email template
-          const templateEmailExpired = await generateTemplateExpiredMegaKonser({
-            email,
-            password: email,
-            tiket: pemesanan,
-          });
-
-          // Send expired email
-          const msgId = await sendEmail({
-            email,
-            html: templateEmailExpired,
-            subject: "Pembelian Tiket Mega Konser Indosat",
-          });
-
-          // Log the expired status
-          console.log(`Order ${order} expired. Notification sent: ${msgId}`);
-
-          // Update the order status to 'expired'
+        if (elapsedMinutes >= 20) {
           await prisma.pemesanan_megakonser.update({
             where: { kode_pemesanan: order },
             data: { status: "expired" },
           });
 
+          const wa_number = pemesanan?.telepon
+            ?.replace(/\D/g, "")
+            ?.replace(/^62/, "0");
+
+          if (wa_number) {
+            const text = `🔴 *Pembayaran Expired*
+        
+        Halo ${
+          pemesanan.nama || "Customer"
+        }, pembayaran Anda telah *gagal / expired* karena melebihi batas waktu.
+        
+        Kode Pemesanan: ${order}
+        Status: *expired*
+        
+        Silakan lakukan pemesanan ulang jika masih berminat.
+        
+        Wassalamu'alaikum Wr Wb.`;
+
+            await sendFonnte({ wa_number, text });
+            console.log(`⚠️ Expired notice sent to ${wa_number}`);
+          } else {
+            console.warn(
+              `⚠️ No phone number found for expired order: ${order}`
+            );
+          }
+
+          console.log(`⏹️ Order ${order} marked as expired and notified.`);
           task.stop();
         }
       }
     } catch (error) {
-      // Log any errors during the process
-      console.error(`Error checking order status for order: ${order}, Error: ${error.message}`);
+      console.error(
+        `🔥 Error checking order status for order: ${order}, Error: ${error.message}`
+      );
     }
   });
 };
+
 const scheduleCekStatusVrfp = async ({
   order,
   nama,
@@ -153,7 +275,7 @@ const scheduleCekStatusVrfp = async ({
   alamat,
   kategori,
   biaya_paket,
-  email
+  email,
 }) => {
   // Log the start of the process for the order
   console.log(`Starting schedule for order: ${order}`);
@@ -270,21 +392,21 @@ const scheduleCekStatus = async ({ uniqueTransactionCode }) => {
   console.log(`Starting schedule for order: ${uniqueTransactionCode}`);
 
   // Cek apakah uniqueTransactionCode sudah memiliki status di tabel log_aj menggunakan Prisma
-  const existingLog = await prisma.log_aj.findFirst({
-    where: {
-      uniqueCode: uniqueTransactionCode,
-      status: {
-        not: null, // Hanya cek jika status tidak null
-      },
-    },
-  });
+  // const existingLog = await prisma.log_aj.findFirst({
+  //   where: {
+  //     uniqueCode: uniqueTransactionCode,
+  //     status: {
+  //       not: null, // Hanya cek jika status tidak null
+  //     },
+  //   },
+  // });
 
-  if (existingLog) {
-    console.log(
-      `Order ${uniqueTransactionCode} already has status: ${existingLog.status}, job will not be started.`
-    );
-    return; // Jika sudah ada status, hentikan eksekusi fungsi
-  }
+  // if (existingLog) {
+  //   console.log(
+  //     `Order ${uniqueTransactionCode} already has status: ${existingLog.status}, job will not be started.`
+  //   );
+  //   return; // Jika sudah ada status, hentikan eksekusi fungsi
+  // }
 
   let elapsedMinutes = 0;
 
@@ -341,19 +463,16 @@ const scheduleCekStatus = async ({ uniqueTransactionCode }) => {
                 program: true,
               },
             });
-            
-
 
             if (qurban) {
-             const totalDana = qurban.detail_qurban.reduce((sum, item) => {
-               return sum + Number(item.total || 0);
-             }, 0);
+              const totalDana = qurban.detail_qurban.reduce((sum, item) => {
+                return sum + Number(item.total || 0);
+              }, 0);
 
-             const formattedDana = new Intl.NumberFormat("id-ID", {
-               style: "currency",
-               currency: "IDR",
-             }).format(totalDana);
-
+              const formattedDana = new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+              }).format(totalDana);
 
               const formattedDate = new Date().toLocaleDateString("id-ID", {
                 day: "numeric",
@@ -400,32 +519,31 @@ const scheduleCekStatus = async ({ uniqueTransactionCode }) => {
             console.log(
               `Status conclusion for order: ${uniqueTransactionCode} is not null, stopping job.`
             );
-             // Ambil data qurban dari DB untuk kirim email expired
-               const qurban = await prisma.activity_qurban.findFirst({
-                 where: {
-                   UTC: uniqueTransactionCode, // pastikan kolom ini memang ada ya!
-                 },
-                 include: {
-                   detail_qurban: {
-                     include: {
-                       activity_paket: true,
-                     },
-                   },
-                   program: true,
-                 },
-               });
-               console.log("lihat qurban", qurban);
-               
+            // Ambil data qurban dari DB untuk kirim email expired
+            const qurban = await prisma.activity_qurban.findFirst({
+              where: {
+                UTC: uniqueTransactionCode, // pastikan kolom ini memang ada ya!
+              },
+              include: {
+                detail_qurban: {
+                  include: {
+                    activity_paket: true,
+                  },
+                },
+                program: true,
+              },
+            });
+            console.log("lihat qurban", qurban);
 
             if (qurban) {
-               const totalDana = qurban.detail_qurban.reduce((sum, item) => {
-                 return sum + Number(item.total || 0);
-               }, 0);
+              const totalDana = qurban.detail_qurban.reduce((sum, item) => {
+                return sum + Number(item.total || 0);
+              }, 0);
 
-               const formattedDana = new Intl.NumberFormat("id-ID", {
-                 style: "currency",
-                 currency: "IDR",
-               }).format(totalDana);
+              const formattedDana = new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+              }).format(totalDana);
 
               const formattedDate = new Date().toLocaleDateString("id-ID", {
                 day: "numeric",
@@ -464,7 +582,7 @@ const scheduleCekStatus = async ({ uniqueTransactionCode }) => {
               );
             }
 
-            task.stop();// Menghentikan eksekusi lebih lanjut
+            task.stop(); // Menghentikan eksekusi lebih lanjut
           }
 
           elapsedMinutes += 1;
@@ -474,28 +592,28 @@ const scheduleCekStatus = async ({ uniqueTransactionCode }) => {
             );
 
             // Ambil data qurban dari DB untuk kirim email expired
-              const qurban = await prisma.activity_qurban.findFirst({
-                where: {
-                  UTC: uniqueTransactionCode, // pastikan kolom ini memang ada ya!
-                },
-                include: {
-                  detail_qurban: {
-                    include: {
-                      activity_paket: true,
-                    },
+            const qurban = await prisma.activity_qurban.findFirst({
+              where: {
+                UTC: uniqueTransactionCode, // pastikan kolom ini memang ada ya!
+              },
+              include: {
+                detail_qurban: {
+                  include: {
+                    activity_paket: true,
                   },
-                  program: true,
                 },
-              });
+                program: true,
+              },
+            });
             if (qurban) {
-               const totalDana = qurban.detail_qurban.reduce((sum, item) => {
-                 return sum + Number(item.total || 0);
-               }, 0);
+              const totalDana = qurban.detail_qurban.reduce((sum, item) => {
+                return sum + Number(item.total || 0);
+              }, 0);
 
-               const formattedDana = new Intl.NumberFormat("id-ID", {
-                 style: "currency",
-                 currency: "IDR",
-               }).format(totalDana);
+              const formattedDana = new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+              }).format(totalDana);
 
               const formattedDate = new Date().toLocaleDateString("id-ID", {
                 day: "numeric",

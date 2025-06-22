@@ -134,12 +134,14 @@ module.exports = {
       console.log(
         "🔹 Mengirim request ke URL:",
         // "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only"
-        "https://ipg.artajasa.co.id:3067/rest/api/sof_payment_only"
+        // "https://ipg.artajasa.co.id:3067/rest/api/sof_payment_only"  //prod
+        "https://im3.artajasa.co.id:20443/rest/api/sof_payment_only"
       );
 
       const response = await axios.post(
         // "https://im3.artajasa.co.id:9443/rest/api/sof_payment_only",
-        "https://ipg.artajasa.co.id:3067/rest/api/sof_payment_only",
+        // "https://ipg.artajasa.co.id:3067/rest/api/sof_payment_only", //prod
+        "https://im3.artajasa.co.id:20443/rest/api/sof_payment_only",
         data,
         {
           headers: {
@@ -295,7 +297,8 @@ module.exports = {
     try {
       const response = await axios.post(
         // "https://im3.artajasa.co.id:9443/rest/api/checkStatusTrx",
-        "https://ipg.artajasa.co.id:3067/rest/api/checkStatusTrx",
+        // "https://ipg.artajasa.co.id:3067/rest/api/checkStatusTrx", //prod
+        "https://im3.artajasa.co.id:20443/rest/api/checkStatusTrx",
         data,
         {
           headers: {

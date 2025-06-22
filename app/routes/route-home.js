@@ -36,26 +36,27 @@ router.get("/rajaOngkirKec/:id", home.checkKec)
 router.post("/rajaOngkirBayar", home.checkOngkir)
 router.get("/checkStat/:id", home.checkStat)
 
-router.get("/getPenjualan", authentication, home.getPenjualan)
+router.get("/getPenjualan", home.getPenjualan);
 
-router.get("/getAllActUser/", authentication, home.getAllActUser)
-router.get("/rajaOngkirKota/:id", home.rajaOngkirKota)
-router.get("/getRef/", home.getRef)
-router.post("/loh", home.loh)
+router.get("/getAllActUser/", authentication, home.getAllActUser);
+router.get("/rajaOngkirKota/:id", home.rajaOngkirKota);
+router.get("/getRef/", home.getRef);
+router.post("/loh", home.loh);
 
-router.post("/postQurban", home.postQurban)
+router.post("/postQurban", home.postQurban);
 
 //Megakonser Portal
-router.post("/pemesananMegaKonser", home.postPemesananMegaKonser)
+router.post("/pemesananMegaKonser", home.postPemesananMegaKonser);
 // router.get("/pemesananMegaKonser/:kode_pemesanan", home.getDetailByKodePemesanan)
-router.get("/tiketMegaKonser", home.getAllTiket)
-router.post("/payment-gateway", home.handlePay)
-router.post("/check-payment", home.checkPay)
-router.post("/cancel-payment", home.cancelPay)
-router.get("/tiket-sold", home.getTiketSold)
+router.get("/tiketMegaKonser", home.getAllTiket);
+router.post("/payment-gateway", home.handlePay);
+router.post("/check-payment", home.checkPay);
+router.post("/cancel-payment", home.cancelPay);
+router.get("/tiket-sold", home.getTiketSold);
 
 //Megakonser ERP
-router.get("/tiketMegaKonserErp", home.getAllTiketErp)
+router.get("/tiketMegaKonserErp", home.getAllTiketErp);
+router.get("/testfonnte", home.testSendFonnte);
 router.get("/pemesanan-megakonser-old", home.getPemesananMegakonserLama),
   router.get(
     "/pemesanan-megakonser",
@@ -84,6 +85,11 @@ router.get(
   "/getPenjualanMegakonser",
   authentication,
   home.getPenjualanMegakonser
+);
+router.get(
+  "/getPenjualanMegakonserLama",
+  authentication,
+  home.getPenjualanMegakonserLama
 );
 router.get(
   "/getPenjualanAffiliator",

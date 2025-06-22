@@ -1,11 +1,11 @@
 const axios = require("axios");
-const sha256 = require('crypto-js/sha256');
+const sha256 = require("crypto-js/sha256");
 //const Base64 = require('crypto-js/enc-base64');
-const CryptoJS = require('crypto-js');
+const CryptoJS = require("crypto-js");
 //const HmacSHA256 = require('crypto-js/hmac-sha256');
 
 const Auth = async () => {
-  const secret = "UoERzONKiwSK";
+  const secret = "secret";
   const username = "zisindosat";
 
   try {
@@ -34,7 +34,7 @@ const sofdigest_sign_id = async () => {
     const jsonData = {
       Version: "8.0",
       timestamp: "300924091809", //nanti dari param aja
-      merchantID: "250111000001",
+      merchantID: "321000000000014",
       uniqueTransactionCode:
         phoneNumber + Math.floor(new Date().getTime() / 1000), //atau dari id aja
       currencyCode: "360",
@@ -59,7 +59,7 @@ const sofdigest_sign_id = async () => {
 
 const postData = async () => {
   try {
-    const secret = "UoERzONKiwSK";
+    const secret = "secret";
     const Strings =
       "POST " +
       "\n" +
@@ -106,7 +106,7 @@ const JWTToken = async () => {
 
 const poPost = async ({ digest, date, url }) => {
   try {
-    const secret = "UoERzONKiwSK";
+    const secret = "secret";
     const Strings = "POST" + "\n" + date + "\n" + url + "\n" + digest;
 
     console.log(Strings);
@@ -132,5 +132,5 @@ module.exports = {
   Auth,
   sofdigest_sign_id,
   postData,
-  poPost
+  poPost,
 };
