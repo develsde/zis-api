@@ -19,7 +19,7 @@ const StatusAJ = async ({ trans_stan, query_stan, query_trans_datetime }) => {
 
   const localDateTime = moment(date).format("YYYYMMDDHHmmss");
 
-  const institusiID = "000146";
+  const institusiID = "000169";
   const countryCode = "ID";
 
   const signatureData =
@@ -101,7 +101,8 @@ const StatusAJ = async ({ trans_stan, query_stan, query_trans_datetime }) => {
 
   try {
     const response = await axios.post(
-      'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      // 'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      'https://disburse.bersamaku.id/Disbursement/servlet/ZiswafIndosat',
       xml,
       {
         headers: {
@@ -220,7 +221,7 @@ const InquiryAJ = async ({ stan, refNumberInquiry, custRefNumber, nama_rekening,
 
   const localDateTime = moment(date).format("YYYYMMDDHHmmss");
 
-  const institusiID = "000146";
+  const institusiID = "000169";
   const customerID = "1234567890123456";
   const senderAccountID = (institusiID + customerID).padEnd(28, '0');
 
@@ -349,7 +350,8 @@ const InquiryAJ = async ({ stan, refNumberInquiry, custRefNumber, nama_rekening,
 
   try {
     const response = await axios.post(
-      'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      // 'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      'https://disburse.bersamaku.id/Disbursement/servlet/ZiswafIndosat',
       xml,
       {
         headers: {
@@ -484,7 +486,7 @@ const BalanceAJ = async ({ stan }) => {
 
   const localDateTime = moment(date).format("YYYYMMDDHHmmss");
 
-  const institusiID = "000146";
+  const institusiID = "000169";
 
   const signatureData =
     stan +
@@ -559,7 +561,8 @@ const BalanceAJ = async ({ stan }) => {
 
   try {
     const response = await axios.post(
-      'https://certapi2.artajasa.co.id:9443/Disburssecure/ApiGetBalanceDisburse/servlet/DisburseZIS',
+      // 'https://certapi2.artajasa.co.id:9443/Disburssecure/ApiGetBalanceDisburse/servlet/DisburseZIS',
+      'https://disburse.bersamaku.id/GetBalanceDisburse/servlet/ZiswafIndosat',
       xml,
       {
         headers: {
@@ -670,7 +673,7 @@ const BalanceAJ = async ({ stan }) => {
 const TransferAJ = async ({ stan, tokenID, refNumberTransfer, beneficiaryName, custRefNumber, amount, beneficiaryInstId, beneficiaryAccountId }) => {
   const pad = (n) => n.toString().padStart(2, '0');
 
-  const institusiID = "000146";
+  const institusiID = "000169";
   const customerID = "1234567890123456";
   const senderAccountID = (institusiID + customerID).padEnd(28, '0');
 
@@ -822,7 +825,8 @@ const TransferAJ = async ({ stan, tokenID, refNumberTransfer, beneficiaryName, c
   try {
     // 🔁 Lakukan POST Transfer
     const transferResponse = await axios.post(
-      'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      // 'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      'https://disburse.bersamaku.id/Disbursement/servlet/ZiswafIndosat',
       xmlTransferFinal,
       {
         headers: {
@@ -950,7 +954,7 @@ const TransferInquiryAJ = async ({ stan, refNumberInquiry, refNumberTransfer, cu
 
   const localDateTime = moment(date).format("YYYYMMDDHHmmss");
 
-  const institusiID = "000146";
+  const institusiID = "000169";
   const customerID = "1234567890123456";
   const senderAccountID = (institusiID + customerID).padEnd(28, '0');
 
@@ -1101,7 +1105,8 @@ const TransferInquiryAJ = async ({ stan, refNumberInquiry, refNumberTransfer, cu
 
   try {
     const response = await axios.post(
-      'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      // 'https://certapi2.artajasa.co.id:9443/Disburssecure/Disbursement/servlet/DisburseZIS',
+      'https://disburse.bersamaku.id/Disbursement/servlet/ZiswafIndosat',
       xml,
       {
         headers: {
