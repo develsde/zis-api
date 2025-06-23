@@ -1267,9 +1267,7 @@ module.exports = {
       const whereCondition = {
         program_id: id_program,
         ...(id_program === 81 && {
-          id: {
-            in: [43, 44],
-          },
+          id: 44, // hanya ambil id 44
         }),
       };
 
