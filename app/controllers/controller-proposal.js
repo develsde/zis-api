@@ -831,17 +831,10 @@ module.exports = {
         await saveToDb(result.data, result.type, refNumberTransfer);
         if (result.errorCode === 'TO' || result.errorCode === '68') {
           const resultBalance = await BalanceAJ({
-            stan
+            stanBalance
           });
           await saveToDbBalance(resultBalance.data, 'checkBalance');
           await handleTransferResult(result.data, refNumberTransfer, 'Pending');
-          // checkStatusDisbursement({
-          //   proposal_id: Number(id),
-          //   query_stan: result.data?.MethodResponse?.TransactionID?.STAN,
-          //   query_trans_datetime: result.data?.MethodResponse?.TransactionID?.TransDateTime,
-          //   refNumber: refNumberTransfer,
-          //   nama
-          // });
           await prisma.disbursement_cron_log.create({
             data: {
               proposal_id: Number(id),
