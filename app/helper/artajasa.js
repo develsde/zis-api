@@ -1,7 +1,8 @@
 const axios = require("axios");
 const xml2js = require('xml2js');
 const fs = require("fs");
-const moment = require("moment");
+// const moment = require("moment");
+const moment = require('moment-timezone');
 const crypto = require('crypto');
 
 const StatusAJ = async ({ trans_stan, query_stan, query_trans_datetime }) => {
@@ -17,7 +18,7 @@ const StatusAJ = async ({ trans_stan, query_stan, query_trans_datetime }) => {
     pad(date.getUTCMinutes()) +
     pad(date.getUTCSeconds());
 
-  const localDateTime = moment(date).format("YYYYMMDDHHmmss");
+  const localDateTime = moment(date).tz("Asia/Jakarta").format("YYYYMMDDHHmmss");
 
   const institusiID = "000169";
   const countryCode = "ID";
@@ -219,7 +220,7 @@ const InquiryAJ = async ({ stan, refNumberInquiry, custRefNumber, nama_rekening,
     pad(date.getUTCMinutes()) +
     pad(date.getUTCSeconds());
 
-  const localDateTime = moment(date).format("YYYYMMDDHHmmss");
+  const localDateTime = moment(date).tz("Asia/Jakarta").format("YYYYMMDDHHmmss");
 
   const institusiID = "000169";
   const customerID = "1234567890123456";
@@ -484,7 +485,7 @@ const BalanceAJ = async ({ stan }) => {
     pad(date.getUTCMinutes()) +
     pad(date.getUTCSeconds());
 
-  const localDateTime = moment(date).format("YYYYMMDDHHmmss");
+  const localDateTime = moment(date).tz("Asia/Jakarta").format("YYYYMMDDHHmmss");
 
   const institusiID = "000169";
 
@@ -709,7 +710,7 @@ const TransferAJ = async ({ stan, tokenID, refNumberTransfer, beneficiaryName, c
     pad(newDate.getUTCMinutes()) +
     pad(newDate.getUTCSeconds());
 
-  const newLocalDateTime = moment(newDate).format("YYYYMMDDHHmmss");
+  const newLocalDateTime = moment(newDate).tz("Asia/Jakarta").format("YYYYMMDDHHmmss");
 
   if (!tokenID) {
     throw new Error("TokenID tidak ditemukan dalam response inquiry");
