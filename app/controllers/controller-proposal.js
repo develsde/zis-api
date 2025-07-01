@@ -768,9 +768,9 @@ module.exports = {
         });
 
         const formattedDate = `${new Date().toLocaleDateString("id-ID", {
-          day: "numeric", month: "long", year: "numeric",
+          day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Jakarta"
         })} ${new Date().toLocaleTimeString("id-ID", {
-          hour: "2-digit", minute: "2-digit", hour12: false,
+          hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta"
         })} WIB`;
 
         const templateEmail = await generateTemplateProposalBayar({
@@ -831,7 +831,7 @@ module.exports = {
         await saveToDb(result.data, result.type, refNumberTransfer);
         if (result.errorCode === 'TO' || result.errorCode === '68') {
           const resultBalance = await BalanceAJ({
-            stanBalance
+            stan: stanBalance
           });
           await saveToDbBalance(resultBalance.data, 'checkBalance');
           await handleTransferResult(result.data, refNumberTransfer, 'Pending');
@@ -856,7 +856,7 @@ module.exports = {
 
       await saveToDb(transfer, 'transfer', refNumberTransfer);
       const resultBalance = await BalanceAJ({
-        stanBalance
+        stan: stanBalance
       });
       await saveToDbBalance(resultBalance.data, 'checkBalance');
       await handleTransferResult(transfer, refNumberTransfer, result.data.MethodResponse.Response.Description);
