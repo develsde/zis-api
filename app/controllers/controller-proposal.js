@@ -1767,7 +1767,10 @@ module.exports = {
             disbursement: {
               where: { type: "checkBalance" },
               take: 1,
-              orderBy: { id: "desc" }
+              orderBy: { id: "desc" },
+              select: {
+                account_balance: true,
+              },
             },
           },
           orderBy: {
