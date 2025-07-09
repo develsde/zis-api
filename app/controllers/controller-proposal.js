@@ -8,7 +8,7 @@ const parsenik = require("parsenik");
 const { sendImkas, checkImkas } = require("../helper/imkas");
 const { generateTemplateProposalBayar, sendEmail, generateTemplateProposalCreate } = require("../helper/email");
 const moment = require("moment");
-const { TransferAJ } = require("../helper/artajasa");
+const { TransferAJ, BalanceAJ } = require("../helper/artajasa");
 const { checkStatusDisbursement } = require("../helper/background-jobs");
 
 module.exports = {
