@@ -241,7 +241,8 @@ module.exports = {
     const auth = await Auth();
     try {
       const response = await axios.post(
-        "https://im3.artajasa.co.id:9443/rest/api/sof_void",
+        // "https://im3.artajasa.co.id:9443/rest/api/sof_void",
+        "https://im3.artajasa.co.id:20443/rest/api/sof_void",
         data,
         {
           headers: {

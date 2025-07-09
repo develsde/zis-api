@@ -380,7 +380,7 @@ module.exports = {
       const user_type = req.query.user_type || "";
       const category = req.query.category || "";
       const sortBy = req.query.sortBy || "id";
-      const sortType = req.query.order || "asc";
+      const sortType = req.query.order || "desc";
 
       const params = {
         OR: [

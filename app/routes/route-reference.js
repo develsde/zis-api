@@ -9,6 +9,7 @@ const { getAllOutlets } = require("../controllers/controller-reference");
 // GET localhost:8080/home => Ambil data semua dari awal
 router.get("/provinces", refData.provinces);
 router.get("/cities/:id", refData.cities);
+router.get("/cities", refData.getAllCities);
 router.get("/districts/:id", refData.districts);
 router.get("/gla", authentication, refData.glaccount);
 router.get("/all-program", authentication, refData.getDataProgram); //new for mt940 Header

@@ -22,113 +22,119 @@ module.exports = {
   async createProposal(req, res) {
     try {
       const userId = req.user_id;
-      const program_id = req.body.program_id;
-      const proposal_kategori = req.body.proposal_kategori;
-      const nik_mustahiq = req.body.nik_mustahiq;
-      const nama = req.body.nama;
-      const alamat_rumah = req.body.alamat_rumah;
-      const kode_pos = req.body.kode_pos;
-      const status_domisili = req.body.status_domisili;
-      const tgl_lahir = req.body.tgl_lahir;
-      const tempat_lahir = req.body.tempat_lahir;
-      const jenis_kelamin = req.body.jenis_kelamin;
-      const status_rumah = req.body.status_rumah;
-      const status_pernikahan = req.body.status_pernikahan;
-      const jumlah_anak = req.body.jumlah_anak;
-      const penghasilan_bulanan = req.body.penghasilan_bulanan;
-      const nama_pasangan = req.body.nama_pasangan;
-      const pekerjaan = req.body.pekerjaan;
-      const pendidikan_terakhir = req.body.pendidikan_terakhir;
-      const nama_sekolah_universitas = req.body.nama_sekolah_universitas;
-      const fakultas = req.body.fakultas;
-      const jurusan = req.body.jurusan;
-      const kelas_semester_saat_ini = req.body.kelas_semester_saat_ini;
-      const alamat_sekolah_kampus = req.body.alamat_sekolah_kampus;
-      const nomor_telp_sekolah_kampus = req.body.nomor_telp_sekolah_kampus;
-      const tempat_mengajar = req.body.tempat_mengajar;
-      const alamat_mengajar = req.body.alamat_mengajar;
-      const sebagai_guru = req.body.sebagai_guru;
-      const biaya_pendidikan_bulanan = req.body.biaya_pendidikan_bulanan;
-      const jumlah_tanggungan = req.body.jumlah_tanggungan;
-      const organisasi_yang_diikuti = req.body.organisasi_yang_diikuti;
-      const nama_ayah = req.body.nama_ayah;
-      const pekerjaan_ayah = req.body.pekerjaan_ayah;
-      const penghasilan_bulanan_ayah = req.body.penghasilan_bulanan_ayah;
-      const nama_ibu = req.body.nama_ibu;
-      const pekerjaan_ibu = req.body.pekerjaan_ibu;
-      const penghasilan_bulanan_ibu = req.body.penghasilan_bulanan_ibu;
-      const jenis_bantuan_kesehatan = req.body.jenis_bantuan_kesehatan;
-      const bantuan_pihak_lain = req.body.bantuan_pihak_lain;
-      const nominal_bantuan = req.body.nominal_bantuan;
-      const biaya_hidup_bulanan = req.body.biaya_hidup_bulanan;
-      const nama_pemberi_rekomendasi = req.body.nama_pemberi_rekomendasi;
-      const alamat_pemberi_rekomendasi = req.body.alamat_pemberi_rekomendasi;
-      const no_telp_pemberi_rekomendasi = req.body.no_telp_pemberi_rekomendasi;
-      const email_pemberi_rekomendasi = req.body.email_pemberi_rekomendasi;
-      const dana_yang_diajukan = req.body.dana_yang_diajukan;
+      const {
+        program_id,
+        proposal_kategori,
+        nik_mustahiq,
+        nama,
+        alamat_rumah,
+        kode_pos,
+        status_domisili,
+        tgl_lahir,
+        tempat_lahir,
+        jenis_kelamin,
+        status_rumah,
+        status_pernikahan,
+        jumlah_anak,
+        penghasilan_bulanan,
+        nama_pasangan,
+        pekerjaan,
+        pendidikan_terakhir,
+        nama_sekolah_universitas,
+        fakultas,
+        jurusan,
+        kelas_semester_saat_ini,
+        alamat_sekolah_kampus,
+        nomor_telp_sekolah_kampus,
+        tempat_mengajar,
+        alamat_mengajar,
+        sebagai_guru,
+        biaya_pendidikan_bulanan,
+        jumlah_tanggungan,
+        organisasi_yang_diikuti,
+        nama_ayah,
+        pekerjaan_ayah,
+        penghasilan_bulanan_ayah,
+        nama_ibu,
+        pekerjaan_ibu,
+        penghasilan_bulanan_ibu,
+        jenis_bantuan_kesehatan,
+        bantuan_pihak_lain,
+        nominal_bantuan,
+        biaya_hidup_bulanan,
+        nama_pemberi_rekomendasi,
+        alamat_pemberi_rekomendasi,
+        no_telp_pemberi_rekomendasi,
+        email_pemberi_rekomendasi,
+        dana_yang_diajukan,
+      } = req.body;
 
-      //console.log(JSON.stringify(req.body))
       const niks = Number(nik_mustahiq);
       const validasi = parsenik.parse(niks);
-      console.log(validasi);
-      if (!nik_mustahiq) {
+
+      if (!nik_mustahiq)
         return res.status(400).json({ message: "NIK wajib diisi" });
-      } else if (!nama) {
-        return res.status(400).json({ message: "Nama wajib diisi" });
-      } else if (!userId) {
+      if (!nama) return res.status(400).json({ message: "Nama wajib diisi" });
+      if (!userId)
         return res.status(400).json({ message: "User ID wajib diisi" });
-      } else if (!program_id) {
+      if (!program_id)
         return res.status(400).json({ message: "Program ID wajib diisi" });
-      } else if (!proposal_kategori) {
+      if (!proposal_kategori)
         return res
           .status(400)
           .json({ message: "Kategori Proposal wajib diisi" });
-      } else if (!nama_pemberi_rekomendasi) {
+      if (!nama_pemberi_rekomendasi)
         return res
           .status(400)
           .json({ message: "Nama Pemberi Rekomendasi wajib diisi" });
-      } else if (!email_pemberi_rekomendasi) {
+      if (!email_pemberi_rekomendasi)
         return res
           .status(400)
           .json({ message: "Email Pemberi Rekomendasi wajib diisi" });
-      } else if (!no_telp_pemberi_rekomendasi) {
+      if (!no_telp_pemberi_rekomendasi)
         return res
           .status(400)
           .json({ message: "Nomor Telepon Pemberi Rekomendasi wajib diisi" });
-      } else if (validasi.valid === false) {
+      if (!validasi.valid)
         return res.status(400).json({ message: "NIK tidak valid" });
-      }
 
+      // Validasi file upload & ekstensi
+      const allowedExtensions = ["pdf", "jpg", "jpeg"];
       const files = {};
+
       for (let i = 1; i <= 7; i++) {
-        const file = req.files[`lampiran${i}`];
-        console.log(file);
-        if (file) {
-          console.log(file?.[0]);
-          files[`lampiran${i}`] = "uploads/" + file?.[0].filename;
+        const fileArray = req.files[`lampiran${i}`];
+
+        if (!fileArray || fileArray.length === 0) {
+          return res.status(400).json({
+            message: `Lampiran ${i} wajib diunggah.`,
+          });
         }
+
+        const file = fileArray[0];
+        const extension = file.originalname.split(".").pop().toLowerCase();
+
+        if (!allowedExtensions.includes(extension)) {
+          return res.status(400).json({
+            message: `Lampiran ${i} harus berformat PDF, JPG, atau JPEG.`,
+          });
+        }
+
+        files[`lampiran${i}`] = "uploads/" + file.filename;
       }
 
       const program = await prisma.program.findUnique({
-        where: {
-          program_id: Number(program_id),
-        },
-        select: {
-          program_title: true,
-        },
+        where: { program_id: Number(program_id) },
+        select: { program_title: true },
       });
 
       const imkas = await prisma.user.findUnique({
-        where: {
-          user_id: Number(userId),
-        },
-        select: {
-          mustahiq: true,
-        },
+        where: { user_id: Number(userId) },
+        select: { mustahiq: true },
       });
 
-      const imkas_number = imkas ? imkas.mustahiq.imkas_number : "";
-      const imkas_name = imkas ? imkas.mustahiq.nama_imkas : "";
+      const imkas_number = imkas?.mustahiq?.imkas_number || "";
+      const imkas_name = imkas?.mustahiq?.nama_imkas || "";
 
       const users = await prisma.institusi.findMany();
       const institute = users.filter(
@@ -145,20 +151,14 @@ module.exports = {
       const sixMonthsAgo = subMonths(new Date(), 6);
       const aDayAgo = subDays(new Date(), 1);
 
-      if (institute < 1) {
+      if (institute.length < 1) {
         const existingProposal = await prisma.proposal.findFirst({
           where: {
             program_id: Number(program_id),
-            program: {
-              program_category_id: { in: [1, 2, 4] },
-            },
+            program: { program_category_id: { in: [1, 2, 4] } },
             nik_mustahiq,
-            create_date: {
-              gte: sixMonthsAgo,
-            },
-            approved: {
-              not: 2,
-            },
+            create_date: { gte: sixMonthsAgo },
+            approved: { not: 2 },
           },
         });
         if (existingProposal) {
@@ -171,42 +171,24 @@ module.exports = {
         const existingProposal = await prisma.proposal.findFirst({
           where: {
             program_id: Number(program_id),
-            program: {
-              program_category_id: { in: [1, 2, 4] },
-            },
+            program: { program_category_id: { in: [1, 2, 4] } },
             nik_mustahiq,
-            create_date: {
-              gte: aDayAgo,
-            },
-            approved: {
-              not: 2,
-            },
+            create_date: { gte: aDayAgo },
+            approved: { not: 2 },
           },
         });
         if (existingProposal) {
           return res.status(400).json({
             message:
-              "Anda telah mengajukan proposal pada program berikut dan baru dapat mengajukan kembali setelah 1 hari",
+              "Anda telah mengajukan proposal dan baru dapat mengajukan kembali setelah 1 hari",
           });
         }
       }
 
-      const program_title = program
-        ? program.program_title
-        : "Program tidak terdaftar";
-
       const ProposalResult = await prisma.proposal.create({
         data: {
-          user: {
-            connect: {
-              user_id: Number(userId),
-            },
-          },
-          program: {
-            connect: {
-              program_id: Number(program_id),
-            },
-          },
+          user: { connect: { user_id: Number(userId) } },
+          program: { connect: { program_id: Number(program_id) } },
           proposal_kategori: Number(proposal_kategori),
           nik_mustahiq,
           no_proposal,
@@ -257,31 +239,15 @@ module.exports = {
       });
 
       if (ProposalResult) {
-        let pn = no_telp_pemberi_rekomendasi;
-        pn = pn.replace(/\D/g, "");
-        if (pn.substring(0, 1) == "0") {
-          pn = "0" + pn.substring(1).trim();
-        } else if (pn.substring(0, 3) == "62") {
-          pn = "0" + pn.substring(3).trim();
-        }
-
-        // const msgId = await sendWhatsapp({
-        //   wa_number: pn.replace(/[^0-9\.]+/g, ""),
-        //   text:
-        //     "Proposal Atas Nama " +
-        //     nama +
-        //     " dan NIK " +
-        //     nik_mustahiq +
-        //     " pada program " +
-        //     program_title +
-        //     " telah kami terima. Mohon lakukan konfirmasi kepada kami apabila terjadi duplikasi maupun kesalahan pada proposal. Terima kasih",
-        // });
+        let pn = no_telp_pemberi_rekomendasi.replace(/\D/g, "");
+        if (pn.startsWith("62")) pn = "0" + pn.substring(2);
+        if (!pn.startsWith("0")) pn = "0" + pn;
 
         try {
           const templateEmail = await generateTemplateProposalCreate({
             nama,
             nik_mustahiq,
-            program_title,
+            program_title: program?.program_title || "-",
           });
 
           const msgId = await sendEmail({
@@ -290,14 +256,12 @@ module.exports = {
             subject: "Proposal Telah Berhasil Dikirim",
           });
 
-          console.log(`Email send success`);
           return res.status(200).json({
             success: true,
             message: `Email berhasil dikirim`,
-            msgId: msgId,
+            msgId,
           });
         } catch (error) {
-          console.error(`Gagal membuat atau mengirim email, error:`, error);
           return res.status(500).json({
             success: false,
             message: `Gagal mengirim email`,
@@ -615,17 +579,17 @@ module.exports = {
 
       // ambil format YYMMDDhhmmss
       const year = now.getFullYear().toString().slice(-2); // 2 digit tahun
-      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 2 digit bulan
-      const day = now.getDate().toString().padStart(2, '0'); // 2 digit tanggal
-      const hour = now.getHours().toString().padStart(2, '0'); // 2 digit jam
-      const minute = now.getMinutes().toString().padStart(2, '0'); // 2 digit menit
-      const second = now.getSeconds().toString().padStart(2, '0'); // 2 digit detik
+      const month = (now.getMonth() + 1).toString().padStart(2, "0"); // 2 digit bulan
+      const day = now.getDate().toString().padStart(2, "0"); // 2 digit tanggal
+      const hour = now.getHours().toString().padStart(2, "0"); // 2 digit jam
+      const minute = now.getMinutes().toString().padStart(2, "0"); // 2 digit menit
+      const second = now.getSeconds().toString().padStart(2, "0"); // 2 digit detik
 
       return year + month + day + hour + minute + second; // 12 digit
     }
     async function generateCustRefNumber(length = 16) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let result = '';
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let result = "";
       for (let i = 0; i < length; i++) {
         result += chars[Math.floor(Math.random() * chars.length)];
       }
@@ -649,36 +613,36 @@ module.exports = {
       const nama = req.body.nama;
       const ref = req.body.ref;
       const tgl_bayar = new Date();
-      const nowWIB = moment().utc().add(7, 'hours').toDate();
+      const nowWIB = moment().utc().add(7, "hours").toDate();
 
       const lastRecord = await prisma.disbursement.findFirst({
         where: {
-          type: 'transfer',
+          type: "transfer",
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: { stan: true },
       });
-      const lastStan = lastRecord?.stan || '0';
+      const lastStan = lastRecord?.stan || "0";
       const newStan = parseInt(lastStan, 10) + 1;
-      const stan = newStan.toString().padStart(6, '0');
+      const stan = newStan.toString().padStart(6, "0");
 
       const lastRecordBalance = await prisma.disbursement.findFirst({
         where: {
-          type: 'checkBalance',
+          type: "checkBalance",
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: { stan: true },
       });
-      const lastStanBalance = lastRecordBalance?.stan || '0';
+      const lastStanBalance = lastRecordBalance?.stan || "0";
       const newStanBalance = parseInt(lastStanBalance, 10) + 1;
-      const stanBalance = newStanBalance.toString().padStart(6, '0');
+      const stanBalance = newStanBalance.toString().padStart(6, "0");
 
       const refNumberTransfer = await generateRRN();
-      const custRefNumber = await generateUniqueCustRefNumber()
+      const custRefNumber = await generateUniqueCustRefNumber();
 
       const saveToDbBalance = async (data, type) => {
         const m = data?.MethodResponse;
@@ -697,7 +661,7 @@ module.exports = {
             account_balance: m.Account.Balance || null,
 
             created_at: nowWIB,
-          }
+          },
         });
       };
 
@@ -735,20 +699,28 @@ module.exports = {
             signature_data: m.Signature?.Data,
 
             created_at: nowWIB,
-          }
+          },
         });
       };
 
-      const handleTransferResult = async (transfer, refNumberTransfer, statusEmail) => {
-
-        const bankCodeNormalized = parseInt(transfer.MethodResponse.BeneficiaryData.InstID, 10).toString();
+      const handleTransferResult = async (
+        transfer,
+        refNumberTransfer,
+        statusEmail
+      ) => {
+        const bankCodeNormalized = parseInt(
+          transfer.MethodResponse.BeneficiaryData.InstID,
+          10
+        ).toString();
         const bank = await prisma.bank.findFirst({
           where: { bank_code: bankCodeNormalized },
-          select: { bank_name: true }
+          select: { bank_name: true },
         });
-        const bank_name = bank?.bank_name || 'Bank tidak ditemukan';
+        const bank_name = bank?.bank_name || "Bank tidak ditemukan";
 
-        const formattedDana = Number(transfer.MethodResponse.BeneficiaryData.Amount).toLocaleString("id-ID", {
+        const formattedDana = Number(
+          transfer.MethodResponse.BeneficiaryData.Amount
+        ).toLocaleString("id-ID", {
           style: "currency",
           currency: "IDR",
           minimumFractionDigits: 0,
@@ -763,26 +735,33 @@ module.exports = {
           },
           include: {
             user: { select: { mustahiq: true, username: true } },
-            program: { select: { program_title: true, program_category: true } }
+            program: {
+              select: { program_title: true, program_category: true },
+            },
           },
         });
 
         const formattedDate = `${new Date().toLocaleDateString("id-ID", {
-          day: "numeric", month: "long", year: "numeric",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
         })} ${new Date().toLocaleTimeString("id-ID", {
-          hour: "2-digit", minute: "2-digit", hour12: false,
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
         })} WIB`;
 
         const templateEmail = await generateTemplateProposalBayar({
           nama,
           formattedDate,
           formattedDana,
-          program: proposal.program?.program_title || '-',
+          program: proposal.program?.program_title || "-",
           bank_name,
-          programCategory: proposal.program.program_category?.name || '-',
+          programCategory: proposal.program.program_category?.name || "-",
           refNumber: refNumberTransfer,
           bank_number: transfer.MethodResponse.BeneficiaryData.AccountID || "-",
-          bank_account_name: transfer.MethodResponse.BeneficiaryData.Name?.trim() || "-",
+          bank_account_name:
+            transfer.MethodResponse.BeneficiaryData.Name?.trim() || "-",
           namaPengirim: transfer.MethodResponse.SenderData.Name?.trim() || "-",
           rekPengirim: transfer.MethodResponse.SenderData.AccountID || "-",
           status: statusEmail,
@@ -791,36 +770,45 @@ module.exports = {
         await sendEmail({
           email: proposal.user.username,
           html: templateEmail,
-          subject: statusEmail === 'Pending'
-            ? "Pembayaran Proposal Dalam Proses Transfer"
-            : "Pembayaran Proposal Telah Berhasil Ditransfer",
+          subject:
+            statusEmail === "Pending"
+              ? "Pembayaran Proposal Dalam Proses Transfer"
+              : "Pembayaran Proposal Telah Berhasil Ditransfer",
         });
-      }
+      };
 
       const inquiry = await prisma.disbursement.findFirst({
         where: {
-          response_code: '00',
-          type: 'inquiry',
+          response_code: "00",
+          type: "inquiry",
           proposal_id: Number(id),
         },
         orderBy: {
-          id: 'desc',
-        }
+          id: "desc",
+        },
       });
 
       if (!inquiry) {
         return res.status(404).json({ error: "Data inquiry tidak ditemukan." });
       }
 
-      const nama_rekening = inquiry.beneficiary_name || '-'
-      const amount = inquiry.beneficiary_amount || '-'
-      const beneficiaryInstId = inquiry.beneficiary_inst_id || '-'
-      const beneficiaryAccountId = inquiry.beneficiary_account_id || '-'
-      const beneficiaryName = inquiry.beneficiary_name || '-'
-      const tokenID = inquiry.token_id || '-'
+      const nama_rekening = inquiry.beneficiary_name || "-";
+      const amount = inquiry.beneficiary_amount || "-";
+      const beneficiaryInstId = inquiry.beneficiary_inst_id || "-";
+      const beneficiaryAccountId = inquiry.beneficiary_account_id || "-";
+      const beneficiaryName = inquiry.beneficiary_name || "-";
+      const tokenID = inquiry.token_id || "-";
 
       const result = await TransferAJ({
-        stan, refNumberTransfer, custRefNumber, nama_rekening, amount, beneficiaryInstId, beneficiaryAccountId, beneficiaryName, tokenID
+        stan,
+        refNumberTransfer,
+        custRefNumber,
+        nama_rekening,
+        amount,
+        beneficiaryInstId,
+        beneficiaryAccountId,
+        beneficiaryName,
+        tokenID,
       });
 
       if (result.error && result.success === false) {
@@ -829,12 +817,12 @@ module.exports = {
 
       if (result?.data && result?.success === false) {
         await saveToDb(result.data, result.type, refNumberTransfer);
-        if (result.errorCode === 'TO' || result.errorCode === '68') {
+        if (result.errorCode === "TO" || result.errorCode === "68") {
           const resultBalance = await BalanceAJ({
-            stan
+            stan,
           });
-          await saveToDbBalance(resultBalance.data, 'checkBalance');
-          await handleTransferResult(result.data, refNumberTransfer, 'Pending');
+          await saveToDbBalance(resultBalance.data, "checkBalance");
+          await handleTransferResult(result.data, refNumberTransfer, "Pending");
           // checkStatusDisbursement({
           //   proposal_id: Number(id),
           //   query_stan: result.data?.MethodResponse?.TransactionID?.STAN,
@@ -846,10 +834,13 @@ module.exports = {
             data: {
               proposal_id: Number(id),
               ref_number: refNumberTransfer,
-              query_stan: result.data?.MethodResponse?.TransactionID?.STAN || null,
-              query_trans_datetime: result.data?.MethodResponse?.TransactionID?.TransDateTime || null,
-              nama: nama || '-',
-              status: 'waiting',
+              query_stan:
+                result.data?.MethodResponse?.TransactionID?.STAN || null,
+              query_trans_datetime:
+                result.data?.MethodResponse?.TransactionID?.TransDateTime ||
+                null,
+              nama: nama || "-",
+              status: "waiting",
               created_at: nowWIB,
               updated_at: nowWIB,
             },
@@ -861,12 +852,16 @@ module.exports = {
 
       const transfer = result?.data;
 
-      await saveToDb(transfer, 'transfer', refNumberTransfer);
+      await saveToDb(transfer, "transfer", refNumberTransfer);
       const resultBalance = await BalanceAJ({
-        stanBalance
+        stanBalance,
       });
-      await saveToDbBalance(resultBalance.data, 'checkBalance');
-      await handleTransferResult(transfer, refNumberTransfer, result.data.MethodResponse.Response.Description);
+      await saveToDbBalance(resultBalance.data, "checkBalance");
+      await handleTransferResult(
+        transfer,
+        refNumberTransfer,
+        result.data.MethodResponse.Response.Description
+      );
 
       // let pn = ref;
       // if (pn.substring(0, 1) == "0") {
@@ -888,7 +883,8 @@ module.exports = {
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({
-        error: error.message || 'Terjadi kesalahan saat memproses inquiry transfer.',
+        error:
+          error.message || "Terjadi kesalahan saat memproses inquiry transfer.",
       });
     }
   },
@@ -1774,7 +1770,7 @@ module.exports = {
             disbursement: {
               where: { type: "checkBalance" },
               take: 1,
-              orderBy: { id: "desc" }
+              orderBy: { id: "desc" },
             },
           },
           orderBy: {
@@ -2060,79 +2056,148 @@ module.exports = {
   },
   async getProposalJktTesting(req, res) {
     try {
+      const { start_date, end_date, city_id } = req.query;
+
+      const startDate = start_date
+        ? new Date(start_date)
+        : new Date("2025-05-01");
+      const endDate = end_date
+        ? new Date(end_date)
+        : new Date("2025-05-31T23:59:59");
+
       const jakartaIds = [152, 153, 154, 155, 156, 157];
       const bogorId = 171;
       const tangerangId = 476;
 
-      // Gabungkan semua ID yang ingin dicari
-      const allTargetIds = [...jakartaIds, bogorId, tangerangId];
-      const cityIdsAsString = allTargetIds.map(String);
+      // === Parse city filter from query ===
+      let filterCityIds = null;
+      if (city_id) {
+        filterCityIds = city_id
+          .split(",")
+          .map((id) => parseInt(id.trim()))
+          .filter(Boolean);
+      }
 
-      // Ambil data kota dari tabel cities
+      const mustahiqs = await prisma.mustahiq.findMany({
+        select: { id: true, kota: true },
+      });
+
+      const allMustahiqIds = mustahiqs.map((m) => m.id);
+      const userIdToCityMap = new Map(
+        mustahiqs.map((m) => [m.id, parseInt(m.kota || "0")])
+      );
+      const uniqueCityIds = [
+        ...new Set(mustahiqs.map((m) => parseInt(m.kota || "0"))),
+      ].filter((id) => id > 0);
+
+      const proposals = await prisma.proposal.findMany({
+        where: {
+          ispaid: 1,
+          user_id: { in: allMustahiqIds },
+          tgl_bayar: { gte: startDate, lte: endDate },
+        },
+        select: {
+          user_id: true,
+          dana_yang_diajukan: true,
+          dana_yang_disetujui: true,
+          tgl_bayar: true,
+        },
+      });
+
+      const resultMap = {};
+      for (const proposal of proposals) {
+        const cityId = userIdToCityMap.get(proposal.user_id);
+        if (!resultMap[cityId]) {
+          resultMap[cityId] = {
+            total_proposal: 0,
+            total_dana_diajukan: 0,
+            total_dana_disetujui: 0,
+          };
+        }
+
+        resultMap[cityId].total_proposal += 1;
+        resultMap[cityId].total_dana_diajukan +=
+          proposal.dana_yang_diajukan || 0;
+        resultMap[cityId].total_dana_disetujui +=
+          proposal.dana_yang_disetujui || 0;
+      }
+
       const cities = await prisma.cities.findMany({
         where: {
-          city_id: {
-            in: allTargetIds,
-          },
+          city_id: { in: uniqueCityIds },
         },
         select: {
           city_id: true,
           city_name: true,
         },
       });
+      const cityMap = new Map(cities.map((c) => [c.city_id, c.city_name]));
 
-      // Ambil jumlah proposal mustahiq berdasarkan kota
-      const grouped = await prisma.mustahiq.groupBy({
-        by: ["kota"],
-        where: {
-          kota: {
-            in: cityIdsAsString,
-          },
-        },
-        _count: {
-          _all: true,
-        },
-      });
+      const result = [];
 
-      // Pisahkan Jakarta Raya dan Bogor
+      // === Jakarta Raya ===
       let totalJakartaProposal = 0;
-      let bogorData = null;
-      let tangerangData = null;
+      let totalJakartaDiajukan = 0;
+      let totalJakartaDisetujui = 0;
+      for (const cityId of jakartaIds) {
+        const data = resultMap[cityId] || {
+          total_proposal: 0,
+          total_dana_diajukan: 0,
+          total_dana_disetujui: 0,
+        };
+        totalJakartaProposal += data.total_proposal;
+        totalJakartaDiajukan += data.total_dana_diajukan;
+        totalJakartaDisetujui += data.total_dana_disetujui;
+      }
 
-      grouped.forEach((item) => {
-        const cityId = parseInt(item.kota);
-        if (jakartaIds.includes(cityId)) {
-          totalJakartaProposal += item._count._all;
-        } else if (cityId === bogorId) {
-          const matchedCity = cities.find((c) => c.city_id === cityId);
-          bogorData = {
-            city_id: matchedCity?.city_id || 171,
-            city_name: matchedCity?.city_name || "Bogor",
-            total_proposal: item._count._all,
-          };
-        } else if (cityId === tangerangId) {
-          const matchedCity = cities.find((c) => c.city_id === cityId);
-          tangerangData = {
-            city_id: matchedCity?.city_id || 476,
-            city_name: matchedCity.city_name || "Tangerang",
-            total_proposal: item._count._all,
-          };
-        }
-      });
-
-      const result = [
-        {
+      if (!filterCityIds || filterCityIds.includes(null)) {
+        result.push({
           city_id: null,
           city_name: "Jakarta Raya",
           total_proposal: totalJakartaProposal,
-        },
-      ];
-
-      if (bogorData) {
-        result.push(bogorData);
+          total_dana_diajukan: totalJakartaDiajukan,
+          total_dana_disetujui: totalJakartaDisetujui,
+        });
       }
-      if (tangerangData) {
-        result.push(tangerangData);
+
+      const excludedIds = new Set([...jakartaIds]);
+      const specialCities = [bogorId, tangerangId];
+
+      // === Bogor & Tangerang ===
+      for (const id of specialCities) {
+        if (filterCityIds && !filterCityIds.includes(id)) continue;
+
+        const data = resultMap[id] || {
+          total_proposal: 0,
+          total_dana_diajukan: 0,
+          total_dana_disetujui: 0,
+        };
+
+        result.push({
+          city_id: id,
+          city_name: cityMap.get(id) || `Kota ID ${id}`,
+          ...data,
+        });
+
+        excludedIds.add(id);
+      }
+
+      // === Kota lain ===
+      for (const cityId of uniqueCityIds) {
+        if (excludedIds.has(cityId)) continue;
+        if (filterCityIds && !filterCityIds.includes(cityId)) continue;
+
+        const data = resultMap[cityId] || {
+          total_proposal: 0,
+          total_dana_diajukan: 0,
+          total_dana_disetujui: 0,
+        };
+
+        result.push({
+          city_id: cityId,
+          city_name: cityMap.get(cityId) || `Kota ID ${cityId}`,
+          ...data,
+        });
       }
 
       return res.status(200).json({
@@ -2149,4 +2214,4 @@ module.exports = {
       });
     }
   },
-};
+};  

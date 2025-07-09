@@ -92,6 +92,28 @@ module.exports = {
       });
     }
   },
+  async getAllCities(req, res) {
+    try {
+      const cities = await prisma.cities.findMany({
+        orderBy: {
+          city_name: "asc",
+        },
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Berhasil mengambil semua data kota",
+        data: cities,
+      });
+    } catch (error) {
+      console.error("Error in getAllCities:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Gagal mengambil data kota",
+        error: error.message,
+      });
+    }
+  },
 
   async districts(req, res) {
     try {

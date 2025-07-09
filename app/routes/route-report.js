@@ -25,6 +25,7 @@ router.get("/all-mutasi-jurnal", authentication, report.getAllMutasi);
 router.get("/all-calk", authentication, report.getAllCalkData);
 router.get("/eb-bank", report.getEndBalance);
 router.get("/eb-justbank", report.getEbBank);
+router.get("/eb-justbankPaginate", report.getEbBankWithPagination);
 router.post("/posting", report.createPosting);
 router.get("/get-posting", report.getPosting);
 router.get("/all-item-perheader/:id", authentication, report.allItemPerHeader);

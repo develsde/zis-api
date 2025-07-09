@@ -906,7 +906,7 @@ module.exports = {
           com_code: com_code,
         },
       });
-      console.log('quer create', createJurnalHeader)
+      console.log("quer create", createJurnalHeader);
 
       return res.status(200).json({
         message: "Sukses membuat jurnal header",
@@ -3831,6 +3831,134 @@ module.exports = {
       res.status(500).json({ message: error.message });
     }
   },
+
+  async getEbBankWithPagination(req, res) {
+    try {
+      let accountNumbers = [
+        "103-00-9526589-4", "103-00-9526546-4", "103-00-0500055-5",
+        "7015.734.188", "7015.738.876", "7015.740.307", "7015.742.644",
+        "8001516176", "99999.1111.8", "99999.3333.2", "7100922503",
+        "9999987874", "7771110171", "7112454009", "5551002006",
+        "3331002002", "1111002009",
+      ];
+      accountNumbers = accountNumbers.map((acc) => acc.replace(/\D/g, ""));
+  
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+  
+      const start = new Date(req.query.start);
+      const end = new Date(req.query.end);
+  
+      const validStart = !isNaN(start.getTime()) ? start : new Date();
+      const validEnd =
+        !isNaN(end.getTime()) && end >= validStart ? end : new Date();
+  
+      validStart.setHours(0, 0, 0, 0);
+      validEnd.setHours(23, 59, 59, 999);
+  
+      if (validStart > validEnd) {
+        return res.status(400).json({ message: "Invalid Date Range" });
+      }
+  
+      const selectedYear = validStart.getFullYear();
+  
+      const allData = await prisma.ebs_staging.findMany({
+        where: {
+          account_number: { in: accountNumbers },
+          bank_date: {
+            gte: validStart,
+            lte: validEnd,
+          },
+        },
+        select: {
+          account_number: true,
+          eb_amount: true,
+          bank_date: true,
+          trans_amount: true,
+          trans_id: true,
+        },
+        orderBy: { bank_date: "asc" },
+      });
+  
+      const dataByAccount = {};
+      const debitCredit = {};
+      let totalBank = 0;
+  
+      allData.forEach((item) => {
+        const accountNum = item.account_number.replace(/\D/g, "");
+        const amount = parseFloat(item.trans_amount) || 0;
+  
+        if (!debitCredit[accountNum]) {
+          debitCredit[accountNum] = {
+            total_debit: 0,
+            total_credit: 0,
+          };
+        }
+  
+        if (item.trans_id === "D") {
+          debitCredit[accountNum].total_debit += amount;
+        } else if (item.trans_id === "C") {
+          debitCredit[accountNum].total_credit += amount;
+        }
+  
+        if (
+          !dataByAccount[accountNum] ||
+          new Date(item.bank_date) > new Date(dataByAccount[accountNum].bank_date)
+        ) {
+          dataByAccount[accountNum] = {
+            account_number: accountNum,
+            year: selectedYear,
+            eb_amount: item.eb_amount?.toString() || "0",
+            bank_date: item.bank_date,
+          };
+        }
+      });
+  
+      accountNumbers.forEach((accNum) => {
+        if (!dataByAccount[accNum]) {
+          dataByAccount[accNum] = {
+            account_number: accNum,
+            year: selectedYear,
+            eb_amount: "0",
+            bank_date: null,
+          };
+        }
+  
+        const debit = debitCredit[accNum]?.total_debit || 0;
+        const credit = debitCredit[accNum]?.total_credit || 0;
+  
+        dataByAccount[accNum].total_debit = debit.toFixed(2);
+        dataByAccount[accNum].total_credit = credit.toFixed(2);
+  
+        totalBank += parseFloat(dataByAccount[accNum].eb_amount) || 0;
+      });
+  
+      const result = Object.values(dataByAccount).sort(
+        (a, b) =>
+          accountNumbers.indexOf(a.account_number) -
+          accountNumbers.indexOf(b.account_number)
+      );
+  
+      const paginated = result.slice(skip, skip + limit);
+  
+      res.status(200).json({
+        message: `Sukses Ambil Data End Balance`,
+        data: {
+          items: paginated,
+          total: result.length,
+          total_bank: totalBank.toFixed(2),
+          page,
+          limit,
+          totalPages: Math.ceil(result.length / limit),
+        },
+      });
+    } catch (error) {
+      console.error("🔴 Error:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  },
+  
 
   async createPosting(req, res) {
     try {

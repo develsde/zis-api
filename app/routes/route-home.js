@@ -83,7 +83,7 @@ router.get(
 );
 router.get(
   "/getPenjualanMegakonser",
-  authentication,
+
   home.getPenjualanMegakonser
 );
 router.get(
