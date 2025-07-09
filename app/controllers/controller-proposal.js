@@ -1698,14 +1698,19 @@ module.exports = {
   async getAllProposalPaid(req, res) {
     try {
       const page = Number(req.query.page || 1);
-      const perPage = Number(req.query.perPage || 10);
+      // const perPage = Number(req.query.perPage || 10);
+      const perPage = req.query.perPage === '-1' ? undefined : Number(req.query.perPage || 10);
       const status = Number(req.query.status || 4);
-      const skip = (page - 1) * perPage;
+      // const skip = (page - 1) * perPage;
+      const skip = perPage ? (page - 1) * perPage : undefined;
       const keyword = req.query.nama || "";
       const user_type = req.query.user_type || "";
       const category = req.query.category || "";
       const sortBy = req.query.sortBy || "tgl_bayar";
       const sortType = req.query.order || "desc";
+      const tanggal_dari = req.query.tanggal_dari;
+      const tanggal_sampai = req.query.tanggal_sampai;
+
 
       const params = {
         nama: {
@@ -1713,6 +1718,13 @@ module.exports = {
         },
         ispaid: 1,
         //approved: 1,
+      };
+
+      if (tanggal_dari || tanggal_sampai) {
+        params.tgl_bayar = {
+          ...(tanggal_dari && { gte: new Date(tanggal_dari) }),
+          ...(tanggal_sampai && { lte: new Date(new Date(tanggal_sampai).setHours(23, 59, 59, 999)) }),
+        };
       };
 
       // const sum = await prisma.proposal.groupBy({
@@ -1767,10 +1779,21 @@ module.exports = {
                 },
               },
             },
+            // include:
             disbursement: {
-              where: { type: "checkBalance" },
-              take: 1,
-              orderBy: { id: "desc" },
+              where: {
+                type: {
+                  in: ["checkBalance", "transfer"],
+                },
+              },
+              orderBy: {
+                id: "desc",
+              },
+              select: {
+                type: true,
+                account_balance: true,
+                beneficiary_amount: true
+              },
             },
           },
           orderBy: {
@@ -1785,12 +1808,30 @@ module.exports = {
       let danaapp = 0;
       const propResult = await Promise.all(
         proposals.map(async (item) => {
-          //item.program_target_amount = undefined
-          //danaapp = danaapp + Number(item.dana_approval)
+          const checkBalance = item.disbursement.find((d) => d.type === "checkBalance");
+          const transfer = item.disbursement.find((d) => d.type === "transfer");
+
           return {
             ...item,
-            //pogram_target_amount: Number(item.program_target_amount),
-            //total_donation: total_donation._sum.amount || 0,
+            disbursement_checkBalance: checkBalance
+              ? {
+                type: checkBalance.type,
+                account_balance: checkBalance.account_balance ?? 0,
+              }
+              : {
+                type: "checkBalance",
+                account_balance: 0,
+              },
+            disbursement_transfer: transfer
+              ? {
+                type: transfer.type,
+                beneficiary_amount: transfer.beneficiary_amount ?? 0,
+              }
+              : {
+                type: "transfer",
+                beneficiary_amount: 0,
+              },
+            disbursement: undefined, // hapus array mentah
           };
         })
       );
