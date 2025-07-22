@@ -221,46 +221,81 @@ module.exports = {
     }
   },
 
-  async cancelPay(req, res) {
-    const now = new Date();
-    const rfc7231Date = now.toUTCString();
-    const username = "zisindosat";
-    const { uniqueID } = req.body;
-    const data = {
-      VoidRequest: {
-        uniqueTransactionCode: uniqueID,
-      },
-    };
-    const hashedData = CryptoJS.SHA256(data);
-    const digested = CryptoJS.enc.Base64.stringify(hashedData);
-    const check = await poPost({
-      date: rfc7231Date,
-      digest: digested,
-      url: "/rest/api/sof_void",
-    });
-    const auth = await Auth();
+  async cancelPay(uniqueID) {
     try {
+      const now = new Date();
+      const timestampHeader = now.toUTCString();
+      const secret = "secret"; // GANTI dengan secret yang benar
+      const username = "zisindosat";
+
+      const data = {
+        VoidRequest: {
+          uniqueTransactionCode: uniqueID,
+        },
+      };
+
+      const uri = "/rest/api/sof_void";
+      const method = "POST";
+
+      const client_id_hmac = CryptoJS.HmacSHA256(username, secret);
+      let client_id_hash = CryptoJS.enc.Base64.stringify(client_id_hmac)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
+
+      const jsonString = JSON.stringify(data);
+      const sha256digest = CryptoJS.SHA256(jsonString);
+      const sha256 = CryptoJS.enc.Hex.stringify(sha256digest);
+      const wordArray = CryptoJS.enc.Utf8.parse(sha256);
+      let content_digest = CryptoJS.enc.Base64.stringify(wordArray)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
+
+      const string_to_sign = `${method}\n${timestampHeader}\n${uri}\n${content_digest}`;
+
+      const hmac_signature = CryptoJS.HmacSHA256(string_to_sign, secret);
+      let base64_encoded_hmac_signature = CryptoJS.enc.Base64.stringify(
+        hmac_signature
+      )
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
+
+      const authorizationHeader = `${client_id_hash}:${base64_encoded_hmac_signature}`;
+
+      const base64Body = Buffer.from(jsonString).toString("base64");
+
+      console.log("📦 Base64 Body yang dikirim ke Artajasa:", base64Body);
+
       const response = await axios.post(
-        // "https://im3.artajasa.co.id:9443/rest/api/sof_void",
         "https://im3.artajasa.co.id:20443/rest/api/sof_void",
-        data,
+        base64Body,
         {
           headers: {
             "Content-Type": "application/json",
-            Date: rfc7231Date,
-            Authorization: `${auth}:${check}`,
+            Date: timestampHeader,
+            Authorization: authorizationHeader,
             Username: username,
           },
         }
       );
 
-      return response;
+      // decode base64 response.data jadi string
+      const decoded = Buffer.from(response.data, "base64").toString("utf-8");
+
+      // parsing string jadi object JSON
+      const jsonResponse = JSON.parse(decoded);
+
+      console.log("📥 Response decoded dari Artajasa:", jsonResponse);
+
+      return response.data;
     } catch (error) {
-      console.error(
-        "Error:",
-        error.response ? error.response.data : error.message
-      );
-      throw error;
+      // Pastikan log error jelas dan tidak menyebabkan error tambahan
+      const errorMsg =
+        error.response?.data || error.message || error.toString();
+      console.error("🔴 Gagal membatalkan di Artajasa:", errorMsg);
+      throw error; // biarkan throw error supaya bisa ditangani di caller
     }
   },
 
@@ -393,8 +428,8 @@ module.exports = {
 
   async transferInquiry(req, res) {
     async function generateRefNumber(length = 12) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let result = '';
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let result = "";
       for (let i = 0; i < length; i++) {
         result += chars[Math.floor(Math.random() * chars.length)];
       }
@@ -413,8 +448,8 @@ module.exports = {
       return ref;
     }
     async function generateCustRefNumber(length = 16) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let result = '';
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let result = "";
       for (let i = 0; i < length; i++) {
         result += chars[Math.floor(Math.random() * chars.length)];
       }
@@ -433,25 +468,25 @@ module.exports = {
       return ref;
     }
     try {
-      const nowWIB = moment().utc().add(7, 'hours').toDate();
+      const nowWIB = moment().utc().add(7, "hours").toDate();
 
       const lastRecord = await prisma.disbursement.findFirst({
         where: {
-          response_code: '00',
-          type: 'transfer',
+          response_code: "00",
+          type: "transfer",
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: { stan: true },
       });
-      const lastStan = lastRecord?.stan || '0';
+      const lastStan = lastRecord?.stan || "0";
       const newStan = parseInt(lastStan, 10) + 1;
-      const stan = newStan.toString().padStart(6, '0');
+      const stan = newStan.toString().padStart(6, "0");
 
       const refNumberInquiry = await generateUniqueRefNumber();
       const refNumberTransfer = await generateUniqueRefNumber();
-      const custRefNumber = await generateUniqueCustRefNumber()
+      const custRefNumber = await generateUniqueCustRefNumber();
 
       const saveToDb = async (data, type, refNumber) => {
         const m = data?.MethodResponse;
@@ -486,15 +521,22 @@ module.exports = {
             signature_data: m.Signature?.Data,
 
             created_at: nowWIB,
-          }
+          },
         });
       };
 
       const result = await TransferInquiryAJ({
-        stan, refNumberInquiry, refNumberTransfer, custRefNumber
+        stan,
+        refNumberInquiry,
+        refNumberTransfer,
+        custRefNumber,
       });
 
-      if (!result?.data?.inquiry || !result?.data?.transfer || result?.success === false) {
+      if (
+        !result?.data?.inquiry ||
+        !result?.data?.transfer ||
+        result?.success === false
+      ) {
         await saveToDb(result.data, result.type, refNumberInquiry);
         return res.status(500).json(result);
       }
@@ -503,13 +545,14 @@ module.exports = {
       const transfer = result?.data?.transfer;
 
       // Simpan inquiry dan transfer
-      await saveToDb(inquiry, 'inquiry', refNumberInquiry);
-      await saveToDb(transfer, 'transfer', refNumberTransfer);
+      await saveToDb(inquiry, "inquiry", refNumberInquiry);
+      await saveToDb(transfer, "transfer", refNumberTransfer);
 
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({
-        error: error.message || 'Terjadi kesalahan saat memproses inquiry transfer.',
+        error:
+          error.message || "Terjadi kesalahan saat memproses inquiry transfer.",
       });
     }
   },
@@ -520,17 +563,17 @@ module.exports = {
 
       // ambil format YYMMDDhhmmss
       const year = now.getFullYear().toString().slice(-2); // 2 digit tahun
-      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 2 digit bulan
-      const day = now.getDate().toString().padStart(2, '0'); // 2 digit tanggal
-      const hour = now.getHours().toString().padStart(2, '0'); // 2 digit jam
-      const minute = now.getMinutes().toString().padStart(2, '0'); // 2 digit menit
-      const second = now.getSeconds().toString().padStart(2, '0'); // 2 digit detik
+      const month = (now.getMonth() + 1).toString().padStart(2, "0"); // 2 digit bulan
+      const day = now.getDate().toString().padStart(2, "0"); // 2 digit tanggal
+      const hour = now.getHours().toString().padStart(2, "0"); // 2 digit jam
+      const minute = now.getMinutes().toString().padStart(2, "0"); // 2 digit menit
+      const second = now.getSeconds().toString().padStart(2, "0"); // 2 digit detik
 
       return year + month + day + hour + minute + second; // 12 digit
     }
     async function generateCustRefNumber(length = 16) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let result = '';
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let result = "";
       for (let i = 0; i < length; i++) {
         result += chars[Math.floor(Math.random() * chars.length)];
       }
@@ -550,20 +593,20 @@ module.exports = {
     }
     try {
       const id = req.params.id;
-      const nowWIB = moment().utc().add(7, 'hours').toDate();
+      const nowWIB = moment().utc().add(7, "hours").toDate();
 
       const lastRecord = await prisma.disbursement.findFirst({
         where: {
-          type: 'inquiry',
+          type: "inquiry",
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: { stan: true },
       });
-      const lastStan = lastRecord?.stan || '0';
+      const lastStan = lastRecord?.stan || "0";
       const newStan = parseInt(lastStan, 10) + 1;
-      const stan = newStan.toString().padStart(6, '0');
+      const stan = newStan.toString().padStart(6, "0");
 
       const refNumberInquiry = await generateRRN();
       const custRefNumber = await generateUniqueCustRefNumber();
@@ -602,27 +645,33 @@ module.exports = {
             signature_data: m.Signature?.Data,
 
             created_at: nowWIB,
-          }
+          },
         });
       };
 
       const prop = await prisma.proposal.findUnique({
         where: {
-          id: Number(id)
+          id: Number(id),
         },
         include: {
           user: {
             include: {
-              mustahiq: true
-            }
-          }
-        }
-      })
+              mustahiq: true,
+            },
+          },
+        },
+      });
 
-      const nama_rekening = (prop.nama_rekening ?? '').trim() || (prop.user?.mustahiq?.bank_account_name ?? '').trim() || '-';
-      const nama_bank = prop.nama_bank || prop.user?.mustahiq?.bank_name || '-';
-      const norek = (prop.nomor_rekening ?? '').trim() || (prop.user?.mustahiq?.bank_number ?? '').trim() || '-';
-      const dana_yang_disetujui = prop.dana_yang_disetujui
+      const nama_rekening =
+        (prop.nama_rekening ?? "").trim() ||
+        (prop.user?.mustahiq?.bank_account_name ?? "").trim() ||
+        "-";
+      const nama_bank = prop.nama_bank || prop.user?.mustahiq?.bank_name || "-";
+      const norek =
+        (prop.nomor_rekening ?? "").trim() ||
+        (prop.user?.mustahiq?.bank_number ?? "").trim() ||
+        "-";
+      const dana_yang_disetujui = prop.dana_yang_disetujui;
 
       const bank = await prisma.bank.findFirst({
         where: {
@@ -635,13 +684,21 @@ module.exports = {
       });
 
       if (!bank?.bank_code) {
-        throw new Error('Bank tidak ditemukan, minta mustahiq memperbarui profil di portal');
+        throw new Error(
+          "Bank tidak ditemukan, minta mustahiq memperbarui profil di portal"
+        );
       }
 
-      const bank_code = bank.bank_code.padStart(3, '0').trim();
+      const bank_code = bank.bank_code.padStart(3, "0").trim();
 
       const result = await InquiryAJ({
-        stan, refNumberInquiry, custRefNumber, nama_rekening, amount: dana_yang_disetujui, beneficiaryInstId: bank_code, beneficiaryAccountId: norek
+        stan,
+        refNumberInquiry,
+        custRefNumber,
+        nama_rekening,
+        amount: dana_yang_disetujui,
+        beneficiaryInstId: bank_code,
+        beneficiaryAccountId: norek,
       });
 
       if (result.error && result.success === false) {
@@ -658,26 +715,27 @@ module.exports = {
 
       const bankName = await prisma.bank.findFirst({
         where: {
-          bank_code: bankCodeNormalized
+          bank_code: bankCodeNormalized,
         },
         select: {
-          bank_name: true
-        }
+          bank_name: true,
+        },
       });
-      const bank_name = bankName.bank_name || 'Bank tidak ditemukan'
+      const bank_name = bankName.bank_name || "Bank tidak ditemukan";
 
       const inquiry = result?.data;
 
       // Simpan inquiry dan transfer
-      await saveToDb(inquiry, 'inquiry', refNumberInquiry);
+      await saveToDb(inquiry, "inquiry", refNumberInquiry);
 
       res.status(200).json({
         ...result,
-        bank_name
+        bank_name,
       });
     } catch (error) {
       res.status(500).json({
-        error: error.message || 'Terjadi kesalahan saat memproses inquiry transfer.',
+        error:
+          error.message || "Terjadi kesalahan saat memproses inquiry transfer.",
       });
     }
   },
@@ -686,7 +744,7 @@ module.exports = {
     // const query_stan = req.body.query_stan
     // const query_trans_datetime = req.body.query_trans_datetime
     const id = req.params.id;
-    const nowWIB = moment().utc().add(7, 'hours').toDate();
+    const nowWIB = moment().utc().add(7, "hours").toDate();
 
     try {
       const saveToDb = async (data, type) => {
@@ -708,57 +766,61 @@ module.exports = {
             beneficiary_account_id: m.TransferData.BeneficiaryData?.AccountID,
             beneficiary_curr_code: m.TransferData.BeneficiaryData?.CurrCode,
             beneficiary_amount: m.TransferData.BeneficiaryData?.Amount,
-            beneficiary_cust_ref_number: m.TransferData.BeneficiaryData?.CustRefNumber,
+            beneficiary_cust_ref_number:
+              m.TransferData.BeneficiaryData?.CustRefNumber,
             beneficiary_name: m.TransferData.BeneficiaryData?.Name?.trim(),
-            beneficiary_regency_code: m.TransferData.BeneficiaryData?.RegencyCode,
+            beneficiary_regency_code:
+              m.TransferData.BeneficiaryData?.RegencyCode,
 
             response_code: m.TransferData.Response?.Code,
             response_description: m.TransferData.Response?.Description,
             signature_data: m.Signature?.Data,
 
             created_at: nowWIB,
-          }
+          },
         });
       };
 
       const propDisb = await prisma.disbursement.findFirst({
         where: {
           proposal_id: Number(id),
-          type: 'transfer',
+          type: "transfer",
           // response_code: '00',
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: {
           stan: true,
           trans_datetime: true,
-          ref_number: true
-        }
-      })
+          ref_number: true,
+        },
+      });
 
       if (!propDisb) {
-        throw new Error('Transaksi tidak ditemukan')
+        throw new Error("Transaksi tidak ditemukan");
       }
 
       const lastRecord = await prisma.disbursement.findFirst({
         where: {
-          type: 'status',
+          type: "status",
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: { stan: true },
       });
-      const lastStan = lastRecord?.stan || '0';
+      const lastStan = lastRecord?.stan || "0";
       const newStan = parseInt(lastStan, 10) + 1;
-      const stan = newStan.toString().padStart(6, '0');
+      const stan = newStan.toString().padStart(6, "0");
 
       const query_stan = propDisb.stan;
       const query_trans_datetime = propDisb.trans_datetime;
 
       const result = await StatusAJ({
-        trans_stan: stan, query_stan, query_trans_datetime
+        trans_stan: stan,
+        query_stan,
+        query_trans_datetime,
       });
 
       if (result?.success === false) {
@@ -766,37 +828,39 @@ module.exports = {
         return res.status(500).json(result);
       }
 
-      const rawBankCode = result.MethodResponse.TransferData.BeneficiaryData.InstID;
+      const rawBankCode =
+        result.MethodResponse.TransferData.BeneficiaryData.InstID;
       const bankCodeNormalized = parseInt(rawBankCode, 10).toString(); // '001' → 1 → '1'
 
       const bank = await prisma.bank.findFirst({
         where: {
-          bank_code: bankCodeNormalized
+          bank_code: bankCodeNormalized,
         },
         select: {
-          bank_name: true
-        }
+          bank_name: true,
+        },
       });
-      const bank_name = bank.bank_name || 'Bank tidak ditemukan'
+      const bank_name = bank.bank_name || "Bank tidak ditemukan";
 
-      await saveToDb(result, 'status');
+      await saveToDb(result, "status");
       res.status(200).json({
         success: true,
         message: "Check Status Inquiry berhasil",
-        signature: '✅Status Inquiry Signature Valid',
+        signature: "✅Status Inquiry Signature Valid",
         bank: bank_name,
         refNumber: propDisb.ref_number,
         data: result,
       });
     } catch (error) {
       res.status(500).json({
-        error: error.message || 'Terjadi kesalahan saat memproses inquiry transfer.',
+        error:
+          error.message || "Terjadi kesalahan saat memproses inquiry transfer.",
       });
     }
   },
 
   async checkBalance(req, res) {
-    const nowWIB = moment().utc().add(7, 'hours').toDate();
+    const nowWIB = moment().utc().add(7, "hours").toDate();
 
     try {
       const saveToDb = async (data, type) => {
@@ -815,36 +879,37 @@ module.exports = {
             account_balance: m.Account.Balance || null,
 
             created_at: nowWIB,
-          }
+          },
         });
       };
 
       const lastRecord = await prisma.disbursement.findFirst({
         where: {
-          type: 'checkBalance',
+          type: "checkBalance",
         },
         orderBy: {
-          id: 'desc',
+          id: "desc",
         },
         select: { stan: true },
       });
-      const lastStan = lastRecord?.stan || '0';
+      const lastStan = lastRecord?.stan || "0";
       const newStan = parseInt(lastStan, 10) + 1;
-      const stan = newStan.toString().padStart(6, '0');
+      const stan = newStan.toString().padStart(6, "0");
 
       const result = await BalanceAJ({
-        stan
+        stan,
       });
 
       if (result?.success === false) {
         await saveToDb(result.data, result.type);
         return res.status(500).json(result);
       }
-      await saveToDb(result.data, 'checkBalance');
+      await saveToDb(result.data, "checkBalance");
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({
-        error: error.message || 'Terjadi kesalahan saat memproses inquiry transfer.',
+        error:
+          error.message || "Terjadi kesalahan saat memproses inquiry transfer.",
       });
     }
   },

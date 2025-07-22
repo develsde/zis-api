@@ -101,27 +101,32 @@ module.exports = {
       // Validasi file upload & ekstensi
       const allowedExtensions = ["pdf", "jpg", "jpeg"];
       const files = {};
+      let uploadedLampiranCount = 0;
 
       for (let i = 1; i <= 7; i++) {
         const fileArray = req.files[`lampiran${i}`];
 
-        if (!fileArray || fileArray.length === 0) {
-          return res.status(400).json({
-            message: `Lampiran ${i} wajib diunggah.`,
-          });
+        if (fileArray && fileArray.length > 0) {
+          const file = fileArray[0];
+          const extension = file.originalname.split(".").pop().toLowerCase();
+
+          if (!allowedExtensions.includes(extension)) {
+            return res.status(400).json({
+              message: `Lampiran ${i} harus berformat PDF, JPG, atau JPEG.`,
+            });
+          }
+
+          files[`lampiran${i}`] = "uploads/" + file.filename;
+          uploadedLampiranCount++;
         }
-
-        const file = fileArray[0];
-        const extension = file.originalname.split(".").pop().toLowerCase();
-
-        if (!allowedExtensions.includes(extension)) {
-          return res.status(400).json({
-            message: `Lampiran ${i} harus berformat PDF, JPG, atau JPEG.`,
-          });
-        }
-
-        files[`lampiran${i}`] = "uploads/" + file.filename;
       }
+
+      if (uploadedLampiranCount === 0) {
+        return res.status(400).json({
+          message: "Minimal 1 lampiran harus diunggah.",
+        });
+      }
+      
 
       const program = await prisma.program.findUnique({
         where: { program_id: Number(program_id) },

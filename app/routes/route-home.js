@@ -112,6 +112,7 @@ router.get("/getReportQutab", home.getReportQutab);
 router.get("/getReportQuray", home.getReportQuray);
 router.get("/LaporanPenjualanQutab", home.getPenjualanQutab);
 router.get("/sendEmailQurban/:UTC", home.sendEmailQurban);
+router.post("/cancelPayQurban/:UTC", home.cancelPayQurban);
 router.get("/sendEmailSuccess/:UTC", home.sendEmailQurbanSuccess);
 
 //management affiliator

@@ -13,7 +13,7 @@ const {
   generateOrderId,
   getTransactionStatus,
 } = require("../helper/midtrans");
-const { reqPay } = require("../controllers/controller-payment");
+const { reqPay, cancelPay } = require("../controllers/controller-payment");
 const {
   scheduleCekStatus,
   scheduleCekStatusKonser,
@@ -1087,6 +1087,62 @@ module.exports = {
       return res.status(500).json({
         success: false,
         message: "Terjadi kesalahan saat mengirim ulang email",
+        error: error.message,
+      });
+    }
+  },
+
+  async cancelPayQurban(req, res) {
+    try {
+      const { UTC } = req.params;
+
+      const pemesanan = await prisma.activity_qurban.findFirst({
+        where: { UTC },
+      });
+
+      if (!pemesanan) {
+        return res.status(404).json({
+          success: false,
+          message: `Pemesanan dengan kode ${UTC} tidak ditemukan.`,
+        });
+      }
+
+      const uniqueID = pemesanan.UTC;
+
+      if (!uniqueID) {
+        return res.status(400).json({
+          success: false,
+          message: `Kode transaksi (uniqueTransactionCode) tidak ditemukan.`,
+          data: pemesanan,
+        });
+      }
+
+      try {
+        const resultData = await cancelPay(uniqueID);
+
+        return res.status(200).json({
+          success: true,
+          message: `Pembayaran untuk transaksi ${UTC} berhasil dibatalkan.`,
+          data: resultData,
+        });
+      } catch (error) {
+        // Periksa apakah error.response ada, jika tidak gunakan error.message saja
+        const statusCode = error.response?.status || 500;
+        const errorData = error.response?.data || error.message;
+
+        console.error("🔴 Gagal membatalkan di Artajasa:", errorData);
+
+        return res.status(statusCode).json({
+          success: false,
+          message: `Gagal membatalkan pembayaran untuk transaksi ${UTC}.`,
+          error: errorData,
+        });
+      }
+    } catch (error) {
+      console.error("🔴 Error umum:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan internal.",
         error: error.message,
       });
     }
@@ -2324,7 +2380,7 @@ module.exports = {
       if (Number(bank) === 20) {
         phoneNumber = "081411010204";
       } else if (Number(bank) === 2) {
-        phoneNumber = "085640966502"; // Jika berhasil
+        phoneNumber = "08975947480 "; // Jika berhasil
       } else if (Number(bank) === 14) {
         phoneNumber = "0817345545";
       } else {
@@ -3731,7 +3787,10 @@ module.exports = {
       );
 
       const filtered = withSpecificTiket.filter((p, index) => {
-        return statusResults[index].data.transaction_status === "settlement";
+        const isSettlement =
+          statusResults[index].data.transaction_status === "settlement";
+        const isForceIncluded = p.id === 4787;
+        return isSettlement || isForceIncluded;
       });
 
       const count = filtered.length;
