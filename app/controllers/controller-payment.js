@@ -1,6 +1,7 @@
 const { prisma } = require("../../prisma/client");
 const CryptoJS = require("crypto-js");
 const moment = require("moment");
+const momentTimezone = require('moment-timezone');
 
 const axios = require("axios");
 const {
@@ -910,6 +911,219 @@ module.exports = {
       res.status(500).json({
         error:
           error.message || "Terjadi kesalahan saat memproses inquiry transfer.",
+      });
+    }
+  },
+
+  async cashflow(req, res) {
+    try {
+      const page = Number(req.query.page || 1);
+      const perPage = req.query.perPage === '-1' ? undefined : Number(req.query.perPage || 10);
+      const sortBy = req.query.sortBy || "created_at";
+      const sortType = req.query.order || "desc";
+      const status = req.query.status || "";
+      const keyword = req.query.nama || "";
+      const tanggal_dari = req.query.tanggal_dari;
+      const tanggal_sampai = req.query.tanggal_sampai;
+
+      const whereClause = {
+        OR: [
+          {
+            AND: [
+              { type: { in: ["transfer", "checkBalance"] } },
+              { proposal_id: { not: null } },
+              { proposal: { nama: { contains: keyword } } },
+            ],
+          },
+          {
+            type: "topUp",
+          },
+        ],
+      };
+
+      if (Array.isArray(status) && status.length > 0) {
+        const includeCodes = [];
+        const excludeCodes = [];
+
+        status.forEach(code => {
+          if (code.startsWith('!')) {
+            excludeCodes.push(code.substring(1));
+          } else {
+            includeCodes.push(code);
+          }
+        });
+
+        if (includeCodes.length > 0 && excludeCodes.length > 0) {
+          whereClause.response_code = {
+            in: includeCodes,
+            notIn: excludeCodes,
+          };
+        } else if (includeCodes.length > 0) {
+          whereClause.response_code = { in: includeCodes };
+        } else if (excludeCodes.length > 0) {
+          whereClause.response_code = { notIn: excludeCodes };
+        }
+      }
+
+      if (tanggal_dari || tanggal_sampai) {
+        whereClause["created_at"] = {
+          ...(tanggal_dari && { gte: new Date(tanggal_dari) }),
+          ...(tanggal_sampai && {
+            lte: new Date(new Date(tanggal_sampai).setHours(23, 59, 59, 999)),
+          }),
+        };
+      }
+
+      const disbursements = await prisma.disbursement.findMany({
+        where: whereClause,
+        include: {
+          proposal: { select: { nama: true } },
+        },
+        orderBy: { [sortBy]: sortType },
+      });
+
+      // Ambil kode bank unik (tanpa leading zero)
+      const kodeBankSet = new Set();
+      disbursements.forEach(d => {
+        if (d.beneficiary_inst_id) {
+          const cleanKode = d.beneficiary_inst_id.replace(/^0+/, '');
+          if (cleanKode) kodeBankSet.add(cleanKode);
+        }
+      });
+
+      const kodeBankList = Array.from(kodeBankSet);
+
+      const banks = await prisma.bank.findMany({
+        where: {
+          bank_code: { in: kodeBankList },
+        },
+        select: {
+          bank_code: true,
+          bank_name: true,
+        },
+      });
+
+      const bankMap = {};
+      banks.forEach(bank => {
+        bankMap[bank.bank_code] = bank.bank_name;
+      });
+
+      // Pisahkan topUp dan non-topUp
+      const topUps = disbursements.filter(d => d.type === 'topUp');
+      const others = disbursements.filter(d => d.type !== 'topUp');
+
+      // Group by proposal_id untuk transfer dan checkBalance
+      const grouped = {};
+      others.forEach((item) => {
+        const pid = item.proposal_id;
+        if (!grouped[pid]) grouped[pid] = { transfer: null, checkBalance: null };
+        if (item.type === 'transfer') grouped[pid].transfer = item;
+        else if (item.type === 'checkBalance') grouped[pid].checkBalance = item;
+      });
+
+      const groupedResults = Object.values(grouped)
+        .filter(group => group.transfer)
+        .map(({ transfer, checkBalance }) => {
+          let formattedTransDatetime = null;
+          if (transfer.trans_datetime) {
+            const raw = transfer.trans_datetime;
+            const year = parseInt(raw.slice(0, 4));
+            const month = parseInt(raw.slice(4, 6)) - 1;
+            const day = parseInt(raw.slice(6, 8));
+            const hour = parseInt(raw.slice(8, 10));
+            const minute = parseInt(raw.slice(10, 12));
+            const second = parseInt(raw.slice(12, 14));
+            const datetime = new Date(Date.UTC(year, month, day, hour, minute, second));
+            formattedTransDatetime = moment(datetime)
+              .tz('Asia/Jakarta')
+              .format('DD-MM-YYYY HH:mm:ss') + ' WIB';
+          }
+
+          const kodeBank = transfer.beneficiary_inst_id?.replace(/^0+/, '') || '';
+          const namaBank = bankMap[kodeBank] || transfer.beneficiary_inst_id;
+
+          return {
+            ...transfer,
+            id: transfer.id.toString(),
+            trans_datetime: formattedTransDatetime,
+            beneficiary_inst_id: namaBank,
+            saldo_akhir: checkBalance?.account_balance || null,
+          };
+        });
+
+      // Mapping topUp ke format final juga
+      const topUpResults = topUps.map(topup => {
+        const isoString = topup.created_at instanceof Date
+          ? topup.created_at.toISOString()
+          : topup.created_at;
+
+        const formatted = isoString.slice(0, 19).replace('T', ' ') + ' WIB';
+
+        return {
+          ...topup,
+          id: topup.id.toString(),
+          trans_datetime: formatted,
+          beneficiary_inst_id: '-', // atau kamu bisa kosongin/ganti label lain
+          saldo_akhir: null,
+        };
+      });
+
+      // Gabungkan semuanya
+      const finalResult = [...groupedResults, ...topUpResults];
+
+      // Urutkan berdasarkan created_at
+      finalResult.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      const total = finalResult.length;
+      const paginatedResult = perPage
+        ? finalResult.slice((page - 1) * perPage, page * perPage)
+        : finalResult;
+
+      res.status(200).json({
+        message: "Sukses Ambil Data Disbursement",
+        data: paginatedResult,
+        pagination: {
+          total,
+          page,
+          hasNext: perPage ? total > page * perPage : false,
+          totalPage: perPage ? Math.ceil(total / perPage) : 1,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message || "Terjadi kesalahan.",
+      });
+    }
+  },
+
+  async topUp(req, res) {
+    try {
+      const { nominal, datetime } = req.body;
+
+      if (!nominal || !datetime) {
+        return res.status(400).json({ message: 'nominal dan datetime wajib diisi.' });
+      }
+
+      const jakartaTime = moment.utc(datetime).tz('Asia/Jakarta').toDate();
+
+      const disbursement = await prisma.disbursement.create({
+        data: {
+          topup_balance: nominal,
+          created_at: jakartaTime,
+          type: 'topUp',
+        },
+      });
+
+      res.status(200).json({
+        message: 'Top Up berhasil dicatat.',
+        data: {
+          ...disbursement,
+          id: disbursement.id?.toString()// jika BigInt
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message || "Terjadi kesalahan.",
       });
     }
   },

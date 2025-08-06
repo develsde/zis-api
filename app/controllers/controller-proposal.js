@@ -126,7 +126,7 @@ module.exports = {
           message: "Minimal 1 lampiran harus diunggah.",
         });
       }
-      
+
 
       const program = await prisma.program.findUnique({
         where: { program_id: Number(program_id) },
@@ -824,7 +824,7 @@ module.exports = {
         await saveToDb(result.data, result.type, refNumberTransfer);
         if (result.errorCode === "TO" || result.errorCode === "68") {
           const resultBalance = await BalanceAJ({
-            stan,
+            stan: stanBalance,
           });
           await saveToDbBalance(resultBalance.data, "checkBalance");
           await handleTransferResult(result.data, refNumberTransfer, "Pending");
@@ -859,7 +859,7 @@ module.exports = {
 
       await saveToDb(transfer, "transfer", refNumberTransfer);
       const resultBalance = await BalanceAJ({
-        stanBalance,
+        stan: stanBalance,
       });
       await saveToDbBalance(resultBalance.data, "checkBalance");
       await handleTransferResult(

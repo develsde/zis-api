@@ -1517,6 +1517,7 @@ model disbursement {
   response_description        String?            @db.VarChar(100)
   signature_data              String?            @db.Text
   account_balance             String?            @db.VarChar(50)
+  topup_balance               String?            @db.VarChar(50)
   created_at                  DateTime?          @db.DateTime(0)
   proposal                    proposal?          @relation(fields: [proposal_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_disbursement_proposal")
 
@@ -1540,9 +1541,17 @@ model disbursement_cron_log {
   updated_at           DateTime? @default(now()) @db.DateTime(0)
 }
 
+model bank_backup {
+  id        Int     @id @default(autoincrement())
+  bank_name String? @db.VarChar(100)
+  bank_code String? @db.VarChar(50)
+  isactive  Int?    @default(1)
+}
+
 enum disbursement_type {
   inquiry
   transfer
   status
   checkBalance
+  topUp
 }

@@ -15,5 +15,7 @@ router.post("/disbursement", authentication, payment.transferInquiry)
 router.post("/inquiry-disbursement/:id", authentication, payment.inquiry)
 router.post("/status-disbursement/:id", authentication, payment.statusInquiry)
 router.post("/balance-disbursement", authentication, payment.checkBalance)
+router.get("/cashflow-disbursement", payment.cashflow);
+router.post("/topup-disbursement", authentication, payment.topUp)
 
 module.exports = router;
