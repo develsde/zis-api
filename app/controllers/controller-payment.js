@@ -922,6 +922,7 @@ module.exports = {
       const sortBy = req.query.sortBy || "created_at";
       const sortType = req.query.order || "desc";
       const status = req.query.status || "";
+      const type = req.query.type || "";
       const keyword = req.query.nama || "";
       const tanggal_dari = req.query.tanggal_dari;
       const tanggal_sampai = req.query.tanggal_sampai;
@@ -932,11 +933,22 @@ module.exports = {
             AND: [
               { type: { in: ["transfer", "checkBalance"] } },
               { proposal_id: { not: null } },
-              { proposal: { nama: { contains: keyword } } },
+              ...(type ? [{ type }] : []), // filter type di sini
+              {
+                OR: [
+                  { proposal: { nama: { contains: keyword } } },
+                  { beneficiary_name: { contains: keyword } },
+                  { beneficiary_account_id: { contains: keyword } },
+                  ...(keyword ? [{ ref_number: keyword }] : [])
+                ]
+              },
             ],
           },
           {
-            type: "topUp",
+            AND: [
+              { type: "topUp" },
+              ...(type ? [{ type }] : []), // filter type juga di sini
+            ]
           },
         ],
       };
@@ -1016,15 +1028,17 @@ module.exports = {
       const grouped = {};
       others.forEach((item) => {
         const pid = item.proposal_id;
-        if (!grouped[pid]) grouped[pid] = { transfer: null, checkBalance: null };
-        if (item.type === 'transfer') grouped[pid].transfer = item;
-        else if (item.type === 'checkBalance') grouped[pid].checkBalance = item;
+        if (!grouped[pid]) grouped[pid] = { transfers: [], checkBalances: [] };
+        if (item.type === 'transfer') grouped[pid].transfers.push(item);
+        else if (item.type === 'checkBalance') grouped[pid].checkBalances.push(item);
       });
 
-      const groupedResults = Object.values(grouped)
-        .filter(group => group.transfer)
-        .map(({ transfer, checkBalance }) => {
+      const groupedResults = [];
+
+      Object.values(grouped).forEach(({ transfers, checkBalances }) => {
+        transfers.forEach((transfer) => {
           let formattedTransDatetime = null;
+
           if (transfer.trans_datetime) {
             const raw = transfer.trans_datetime;
             const year = parseInt(raw.slice(0, 4));
@@ -1042,29 +1056,40 @@ module.exports = {
           const kodeBank = transfer.beneficiary_inst_id?.replace(/^0+/, '') || '';
           const namaBank = bankMap[kodeBank] || transfer.beneficiary_inst_id;
 
-          return {
+          // Ambil check balance terbaru sebelum transfer ini (jika ada)
+          const saldoAkhir = checkBalances
+            .filter(cb => cb.account_balance !== null && new Date(cb.created_at) <= new Date(transfer.created_at))
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]?.account_balance || null;
+
+          groupedResults.push({
             ...transfer,
             id: transfer.id.toString(),
             trans_datetime: formattedTransDatetime,
             beneficiary_inst_id: namaBank,
-            saldo_akhir: checkBalance?.account_balance || null,
-          };
+            saldo_akhir: saldoAkhir,
+          });
         });
+      });
 
       // Mapping topUp ke format final juga
       const topUpResults = topUps.map(topup => {
-        const isoString = topup.created_at instanceof Date
-          ? topup.created_at.toISOString()
-          : topup.created_at;
+        const createdAt = new Date(topup.created_at);
+        const formatted = createdAt.toISOString().slice(0, 19).replace('T', ' ') + ' WIB';
 
-        const formatted = isoString.slice(0, 19).replace('T', ' ') + ' WIB';
+        const latestBalanceBeforeTopup = others
+          .filter(d => d.type === 'checkBalance' && d.account_balance !== null && new Date(d.created_at) < createdAt)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+
+        const saldoAkhir = latestBalanceBeforeTopup
+          ? Number(topup.topup_balance) + Number(latestBalanceBeforeTopup.account_balance)
+          : Number(topup.topup_balance);
 
         return {
           ...topup,
           id: topup.id.toString(),
           trans_datetime: formatted,
           beneficiary_inst_id: '-', // atau kamu bisa kosongin/ganti label lain
-          saldo_akhir: null,
+          saldo_akhir: saldoAkhir,
         };
       });
 
@@ -1078,10 +1103,15 @@ module.exports = {
       const paginatedResult = perPage
         ? finalResult.slice((page - 1) * perPage, page * perPage)
         : finalResult;
+      const totalDisalurkan = finalResult
+        .filter(item => item.type === 'transfer' && item.beneficiary_amount)
+        .reduce((sum, item) => sum + Number(item.beneficiary_amount), 0);
+
 
       res.status(200).json({
         message: "Sukses Ambil Data Disbursement",
         data: paginatedResult,
+        summarize: totalDisalurkan,
         pagination: {
           total,
           page,
@@ -1124,6 +1154,43 @@ module.exports = {
     } catch (error) {
       res.status(500).json({
         message: error?.message || "Terjadi kesalahan.",
+      });
+    }
+  },
+
+  async deleteTopUp(req, res) {
+    try {
+      const id = req.body.id;
+
+      if (!id) {
+        return res.status(400).json({ message: 'ID wajib diisi.' });
+      }
+
+      // Cari dulu data topUp
+      const topUpRecord = await prisma.disbursement.findUnique({
+        where: { id: BigInt(id) },
+      });
+
+      if (!topUpRecord) {
+        return res.status(404).json({ message: 'Top Up tidak ditemukan.' });
+      }
+
+      if (topUpRecord.type !== 'topUp') {
+        return res.status(400).json({ message: 'Data ini bukan Top Up.' });
+      }
+
+      // Hapus data
+      await prisma.disbursement.delete({
+        where: { id: BigInt(id) },
+      });
+
+      res.status(200).json({
+        message: 'Top Up berhasil dihapus.',
+        data: { id: id.toString() }, // pastikan string untuk BigInt
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message || 'Terjadi kesalahan.',
       });
     }
   },
