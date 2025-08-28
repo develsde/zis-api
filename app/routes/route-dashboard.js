@@ -5,7 +5,7 @@ const { authentication, authorization } = require("../../config/auth");
 const { upload } = require("../helper/upload");
 
 // GET localhost:8080/home => Ambil data semua dari awal
-router.get("/total-mustahiq", authentication, dashboard.checkTotalMustahiq);
+router.get("/total-mustahiq", dashboard.checkTotalMustahiq);
 router.get("/data-penyaluran", authentication, dashboard.graphPenyaluran);
 router.get("/data-perprogram", authentication, dashboard.graphPerprogram);
 router.get("/data-referentor", authentication, dashboard.dataRekapReferentor);

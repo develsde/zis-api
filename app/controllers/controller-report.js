@@ -3991,6 +3991,31 @@ module.exports = {
         return res.status(400).json({ message: "Month and year are required" });
       }
 
+      // 🔹 Ambil period terakhir (anggap ini periode aktif)
+      const activePeriod = await prisma.period.findFirst({
+        orderBy: { id: "desc" },
+      });
+
+      if (!activePeriod) {
+        return res.status(400).json({
+          message: "Data period tidak ditemukan, posting tidak bisa dilakukan",
+        });
+      }
+
+      const { from_period, to_period, from_year, to_year } = activePeriod;
+
+      // 🔹 Validasi apakah bulan & tahun request ada dalam range periode aktif
+      const isValidPeriod =
+        (year > from_year ||
+          (year === from_year && month >= parseInt(from_period))) &&
+        (year < to_year || (year === to_year && month <= parseInt(to_period)));
+
+      if (!isValidPeriod) {
+        return res.status(400).json({
+          message: `Posting hanya diperbolehkan antara periode ${from_period}/${from_year} sampai ${to_period}/${to_year}`,
+        });
+      }
+
       const accountMapping = {
         25: "5022100020",
         28: "5022100050",
@@ -4084,7 +4109,7 @@ module.exports = {
         195: "1032000010",
       };
 
-      // Fetch transactions for the requested month
+      // 🔹 Ambil transaksi bulan yg diminta
       const transactions = await prisma.jurnal_lk.groupBy({
         by: ["jurnal_gl_account"],
         where: {
@@ -4107,7 +4132,7 @@ module.exports = {
           ? transaction._sum.jurnal_nominal || 0
           : 0;
 
-        // Fetch previous month ending balance
+        // 🔹 Ambil saldo bulan sebelumnya
         const prevMonth = month - 1 === 0 ? 12 : month - 1;
         const prevYear = month - 1 === 0 ? year - 1 : year;
 
@@ -4126,14 +4151,14 @@ module.exports = {
         insertData.push({
           account: accountNumber,
           year,
-          period: String(month).padStart(2, "0"), // Ensure period is a string with two digits
+          period: String(month).padStart(2, "0"),
           currency: "IDR",
           beginning_balance: beginningBalance,
           total_transaction: totalTransaction,
           ending_balance: endingBalance,
           last_change: new Date(),
           changes_by: userId,
-          gla_id: parseInt(accountKey), // Ambil id dari accountKey
+          gla_id: parseInt(accountKey),
         });
       }
 

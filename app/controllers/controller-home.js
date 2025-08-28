@@ -2380,7 +2380,7 @@ module.exports = {
       if (Number(bank) === 20) {
         phoneNumber = "081411010204";
       } else if (Number(bank) === 2) {
-        phoneNumber = "08975947480 "; // Jika berhasil
+        phoneNumber = "085640966502"; // Jika berhasil
       } else if (Number(bank) === 14) {
         phoneNumber = "0817345545";
       } else {
