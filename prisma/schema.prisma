@@ -117,6 +117,7 @@ model user {
   mitra                 mitra[]
   mitra_approval        mitra_approval[]
   notification          notification[]
+  period                period[]
   pettycash             pettycash[]
   pettycash_request     pettycash_request[]
   proposal              proposal[]
@@ -1447,6 +1448,9 @@ model period {
   aenam       Int?
   aedat       DateTime? @db.Date
   aetim       DateTime? @db.Time(0)
+  user        user?     @relation(fields: [aenam], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "FK_period_user")
+
+  @@index([aenam], map: "Index 3")
 }
 
 model posting {
