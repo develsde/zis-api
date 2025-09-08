@@ -42,13 +42,13 @@ module.exports = {
 
       // Proposal approved (all time di tahun berjalan)
       const getAllId = await prisma.$queryRaw`
-      select p.id as id, u.mustahiq_id
-      from proposal p 
-      join user u on u.user_id = p.user_id 
-      where p.approved = 1
-      and u.mustahiq_id is not null 
-      and YEAR(p.create_date) = ${tahun}
-      group by p.id, u.mustahiq_id;`;
+        select p.id as id, u.mustahiq_id
+        from proposal p 
+        join user u on u.user_id = p.user_id 
+        where p.approved = 1
+        and u.mustahiq_id is not null 
+        and YEAR(p.create_date) = ${tahun}
+        group by p.id, u.mustahiq_id;`;
 
       const getCurrentId = getAllId;
 
@@ -59,9 +59,27 @@ module.exports = {
       getCurrentId.map((item) => arrCurrentId.push(item.id));
 
       // 🔹 Hitung mustahiq penerima manfaat (distinct mustahiq_id yang punya proposal approved)
-      const mustahiqPenerimaManfaat = new Set(
-        getAllId.map((item) => item.mustahiq_id)
-      ).size;
+      // 🔹 Hitung mustahiq penerima manfaat dengan filter tanggal registrasi
+      const mustahiqPenerimaManfaatResult = await prisma.user.groupBy({
+        by: ["mustahiq_id"],
+        where: {
+          NOT: { mustahiq_id: null },
+          user_reg_date: {
+            gte: new Date(tahun, bulan - 1, 1),
+            lt: new Date(tahun, bulan, 1),
+          },
+          proposal: {
+            some: {
+              approved: 1,
+            },
+          },
+        },
+        _count: {
+          mustahiq_id: true,
+        },
+      });
+
+      const mustahiqPenerimaManfaat = mustahiqPenerimaManfaatResult.length;
 
       // Total Muzaki
       const totalMuzaki = await prisma.user.count({
@@ -75,12 +93,12 @@ module.exports = {
 
       // Semua mitra mustahiq
       const getAllMitraProp = await prisma.$queryRaw`
-      select p.id as id, count(p.id) as jumlah
-      from mitra p 
-      join user u on u.user_id = p.mitra_user_id 
-      where u.mustahiq_id is not null 
-      and YEAR(p.created_date) = ${tahun}
-      group by p.id;`;
+        select p.id as id, count(p.id) as jumlah
+        from mitra p 
+        join user u on u.user_id = p.mitra_user_id 
+        where u.mustahiq_id is not null 
+        and YEAR(p.created_date) = ${tahun}
+        group by p.id;`;
 
       getAllMitraProp.map((item) => arrIdMitra.push(item.id));
 
@@ -121,9 +139,9 @@ module.exports = {
             icon: "bx bxs-user-rectangle",
             title: "MUSTAHIQ PENERIMA MANFAAT",
             value: mustahiqPenerimaManfaat + " Orang",
-            badgeValue: "Dari Proposal Approved",
+            badgeValue: `Bulan ${bulan}-${tahun}`,
             color: "success",
-            desc: "Mustahiq yang sudah menerima manfaat",
+            desc: "Mustahiq penerima manfaat",
           },
           {
             icon: "bx bx-purchase-tag-alt",
