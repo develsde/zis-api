@@ -18,5 +18,6 @@ router.post("/balance-disbursement", authentication, payment.checkBalance)
 router.get("/cashflow-disbursement", payment.cashflow);
 router.post("/topup-disbursement", authentication, payment.topUp)
 router.delete("/delete-topup-disbursement", authentication, payment.deleteTopUp)
+router.put("/edit-topup-disbursement", authentication, payment.editTopUp)
 
 module.exports = router;

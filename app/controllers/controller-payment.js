@@ -920,7 +920,7 @@ module.exports = {
       const page = Number(req.query.page || 1);
       const perPage = req.query.perPage === '-1' ? undefined : Number(req.query.perPage || 10);
       const sortBy = req.query.sortBy || "created_at";
-      const sortType = req.query.order || "desc";
+      const sortType = req.query.order || "asc";
       const status = req.query.status || "";
       const type = req.query.type || "";
       const keyword = req.query.nama || "";
@@ -937,6 +937,7 @@ module.exports = {
               {
                 OR: [
                   { proposal: { nama: { contains: keyword } } },
+                  { proposal: { program: { program_title: { contains: keyword } } } },
                   { beneficiary_name: { contains: keyword } },
                   { beneficiary_account_id: { contains: keyword } },
                   ...(keyword ? [{ ref_number: keyword }] : [])
@@ -947,7 +948,16 @@ module.exports = {
           {
             AND: [
               { type: "topUp" },
-              ...(type ? [{ type }] : []), // filter type juga di sini
+              ...(type ? [{ type }] : []),
+              ...(keyword ? [{
+                OR: [
+                  { proposal: { nama: { contains: keyword } } },
+                  { proposal: { program: { program_title: { contains: keyword } } } },
+                  { beneficiary_name: { contains: keyword } },
+                  { beneficiary_account_id: { contains: keyword } },
+                  ...(keyword ? [{ ref_number: keyword }] : [])
+                ]
+              }] : [])
             ]
           },
         ],
@@ -989,7 +999,14 @@ module.exports = {
       const disbursements = await prisma.disbursement.findMany({
         where: whereClause,
         include: {
-          proposal: { select: { nama: true } },
+          proposal: {
+            select: {
+              nama: true,
+              program: {
+                select: { program_title: true }
+              }
+            }
+          },
         },
         orderBy: { [sortBy]: sortType },
       });
@@ -1074,22 +1091,17 @@ module.exports = {
       // Mapping topUp ke format final juga
       const topUpResults = topUps.map(topup => {
         const createdAt = new Date(topup.created_at);
-        const formatted = createdAt.toISOString().slice(0, 19).replace('T', ' ') + ' WIB';
-
-        const latestBalanceBeforeTopup = others
-          .filter(d => d.type === 'checkBalance' && d.account_balance !== null && new Date(d.created_at) < createdAt)
-          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
-
-        const saldoAkhir = latestBalanceBeforeTopup
-          ? Number(topup.topup_balance) + Number(latestBalanceBeforeTopup.account_balance)
-          : Number(topup.topup_balance);
+        const iso = new Date(createdAt).toISOString().slice(0, 19);
+        const [datePart, timePart] = iso.split("T");
+        const [year, month, day] = datePart.split("-");
+        const formatted = `${day}-${month}-${year} ${timePart} WIB`;
 
         return {
           ...topup,
           id: topup.id.toString(),
           trans_datetime: formatted,
-          beneficiary_inst_id: '-', // atau kamu bisa kosongin/ganti label lain
-          saldo_akhir: saldoAkhir,
+          beneficiary_inst_id: '-', // atau bisa lo kosongin
+          saldo_akhir: Number(topup.account_balance), // langsung pakai account_balance
         };
       });
 
@@ -1097,7 +1109,7 @@ module.exports = {
       const finalResult = [...groupedResults, ...topUpResults];
 
       // Urutkan berdasarkan created_at
-      finalResult.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      finalResult.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
       const total = finalResult.length;
       const paginatedResult = perPage
@@ -1136,9 +1148,26 @@ module.exports = {
 
       const jakartaTime = moment.utc(datetime).tz('Asia/Jakarta').toDate();
 
+      // Cari checkBalance terakhir sebelum topUp datetime
+      const latestCheckBalance = await prisma.disbursement.findFirst({
+        where: {
+          type: 'checkBalance',
+          account_balance: { not: null },
+          created_at: { lte: jakartaTime },
+        },
+        orderBy: { created_at: 'desc' },
+      });
+
+      // Hitung saldo akhir
+      const saldoAkhir = latestCheckBalance
+        ? Number(nominal) + Number(latestCheckBalance.account_balance)
+        : Number(nominal);
+
+      // Simpan ke DB
       const disbursement = await prisma.disbursement.create({
         data: {
           topup_balance: nominal,
+          account_balance: String(saldoAkhir), // langsung set saldo akhir
           created_at: jakartaTime,
           type: 'topUp',
         },
@@ -1148,7 +1177,7 @@ module.exports = {
         message: 'Top Up berhasil dicatat.',
         data: {
           ...disbursement,
-          id: disbursement.id?.toString()// jika BigInt
+          id: disbursement.id?.toString(), // kalau BigInt
         },
       });
     } catch (error) {
@@ -1187,6 +1216,67 @@ module.exports = {
       res.status(200).json({
         message: 'Top Up berhasil dihapus.',
         data: { id: id.toString() }, // pastikan string untuk BigInt
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: error?.message || 'Terjadi kesalahan.',
+      });
+    }
+  },
+
+  async editTopUp(req, res) {
+    try {
+      const { id, nominal, datetime } = req.body;
+
+      if (!id || !nominal || !datetime) {
+        return res.status(400).json({ message: 'ID, nominal, dan datetime wajib diisi.' });
+      }
+
+      // Cari dulu data topUp
+      const topUpRecord = await prisma.disbursement.findUnique({
+        where: { id: BigInt(id) },
+      });
+
+      if (!topUpRecord) {
+        return res.status(404).json({ message: 'Top Up tidak ditemukan.' });
+      }
+
+      if (topUpRecord.type !== 'topUp') {
+        return res.status(400).json({ message: 'Data ini bukan Top Up.' });
+      }
+
+      const jakartaTime = moment.utc(datetime).tz('Asia/Jakarta').toDate();
+
+      // Cari checkBalance terakhir sebelum datetime topUp (untuk saldo akhir)
+      const latestCheckBalance = await prisma.disbursement.findFirst({
+        where: {
+          type: 'checkBalance',
+          account_balance: { not: null },
+          created_at: { lte: jakartaTime },
+        },
+        orderBy: { created_at: 'desc' },
+      });
+
+      const saldoAkhir = latestCheckBalance
+        ? Number(nominal) + Number(latestCheckBalance.account_balance)
+        : Number(nominal);
+
+      // Update data topUp
+      const updatedTopUp = await prisma.disbursement.update({
+        where: { id: BigInt(id) },
+        data: {
+          topup_balance: String(nominal),
+          account_balance: String(saldoAkhir),
+          created_at: jakartaTime,
+        },
+      });
+
+      res.status(200).json({
+        message: 'Top Up berhasil diubah.',
+        data: {
+          ...updatedTopUp,
+          id: updatedTopUp.id.toString(), // pastikan string untuk BigInt
+        },
       });
     } catch (error) {
       res.status(500).json({
