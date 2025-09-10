@@ -42,8 +42,8 @@ module.exports = {
       const keyword = req.query.keyword || "";
       const user_type = req.query.user_type || "";
       const category = req.query.category || "";
-      const sortBy = req.query.sortBy || "status";
-      const sortType = req.query.order || "asc";
+      const sortBy = req.query.sortBy || "request_date";
+      const sortType = req.query.order || "desc";
 
       const params = {
         deskripsi: {
